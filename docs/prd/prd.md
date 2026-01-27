@@ -138,7 +138,15 @@ Existing local AI agents commonly fail on:
 | Skills marketplace monetization | Validate core product first | v2+ |
 | Mandatory cloud sync | Conflicts with sovereignty principle | Never mandatory |
 | Local LLM inference | API-first for MVP simplicity | v1.5+ |
+| Mobile native apps | Focus on desktop/server first | v2+ |
+| Skills marketplace monetization | Validate core product first | v2+ |
+| Mandatory cloud sync | Conflicts with sovereignty principle | Never mandatory |
+| Local LLM inference | API-first for MVP simplicity | v1.5+ |
 | Voice wake word | Complexity vs value | v2+ |
+
+### 5.3 Technical Constraints
+- **Development Runtime**: Bun v1.3.7+ required for all TypeScript/JS tooling.
+- **Node.js**: Explicitly avoided for development and runtime.
 
 ---
 
@@ -320,7 +328,8 @@ pryx mcp auth <name>                     # Authenticate with MCP server (OAuth)
 |-------|------------|-----------|
 | **Host** | Rust + Tauri v2 | Native performance, security, sidecar supervision |
 | **Runtime** | Go | High concurrency, single binary, fast compilation |
-| **UI** | React + TypeScript + Vite | Modern DX, hot reload, SPA performance |
+| **TUI** | SolidJS + OpenTUI | Rich terminal UI, component-based, compiled via Bun |
+| **Web UI** | Astro + React + TypeScript + Vite | (Optional) Modern DX, SPA |
 | **Edge** | Cloudflare Workers (TypeScript) | Global distribution, serverless, low ops burden |
 | **Storage** | SQLite + OS Keychain | Local-first, secure secrets, no external DB |
 | **Protocol** | MCP (Model Context Protocol) | Standard tool interface, dynamic discovery |
@@ -618,7 +627,14 @@ Scenario: PII redaction
 | FR7.1 | One-liner install | <60s | `curl \| sh` completes in under 60 seconds |
 | FR7.2 | No external deps | 0 deps | Works without Node.js, Python, Docker |
 | FR7.3 | Native bundles | 3 platforms | macOS (.dmg), Windows (.exe), Linux (.AppImage) |
-| FR7.4 | Auto-update | Background | Check for updates on startup, notify user |
+| FR7.4 | Auto-update | Background | Support Main/Beta/Alpha build channels; check on startup; background download; toast notifications |
+| FR7.4.1 | Build channel selection | N/A | Users can select Main, Beta, or Alpha channel |
+| FR7.4.2 | Version check on startup | <5s | Check for updates within 5 seconds of startup |
+| FR7.4.3 | Background download | N/A | Download updates while user continues using Pryx |
+| FR7.4.4 | Toast notifications | N/A | Show "Update Available", "Download Progress", "Update Ready" toasts |
+| FR7.4.5 | What's New modal | N/A | Display release notes after successful update |
+| FR7.4.6 | Graceful restart | <30s | Apply update and restart within 30 seconds of user approval |
+| FR7.4.7 | Build channel switching | N/A | Allow users to switch between Main, Beta, Alpha channels |
 | FR7.5 | Safe rollback | <30s | Rollback to previous version in under 30s |
 | FR7.6 | Service mode | systemd/launchd | `pryx install-service` works on macOS/Linux |
 | FR7.7 | Clean uninstall | Complete | Remove binaries, service, optionally data |
@@ -2112,7 +2128,123 @@ interface TelemetryEvent {
 
 ---
 
-## 12) API Specifications
+## 12) Auto-Update Mechanism
+
+### 12.1 Build Channel Architecture
+
+**Different Build Channels**:
+
+| Channel | Use Case | Update Mechanism |
+|---------|-----------|------------------|
+| **Main/Stable** (Production) | Production users on `main` branch | Auto-update enabled by default |
+| **Beta/Development** | Beta testers on development branch | Auto-update for beta builds only |
+| **Alpha/Canary** | Early access users | Manual updates only, notifications available |
+
+### 12.2 User Experience - Production Build (Main Pool)
+
+**Update Flow**:
+1. **Version Check (Startup)**: Pryx checks for updates on startup, compares current version with latest
+2. **Update Available Notification**: Toast notification appears with actions: Update Now, Remind Me Later, Skip
+3. **Background Download**: Update downloaded in background while user continues using Pryx
+4. **Update Installation**: Toast shows "Update ready! Restart to apply", user clicks "Restart Now"
+5. **Graceful Restart**: Pryx shuts down gracefully, applies update, restarts automatically
+
+**Toast Notification Types**:
+
+| Toast Type | When Shown | Actions | Auto-Dismiss |
+|-----------|-------------|---------|--------------|
+| Update Available | New version detected | Update Now, Remind Me Later, Skip | 30s |
+| Download Progress | Update downloading | Show Progress, Cancel | Never |
+| Update Ready | Download complete | Restart Now | 60s |
+| Update Installed | Restart complete | What's New, Changelog | Never (shows modal) |
+
+**What's New Modal**: Displays after successful update with new features, improvements, and fixes.
+
+### 12.3 User Experience - Beta Build Channel
+
+**Update Flow** (similar to production, but with beta-specific features):
+1. **Beta Version Check**: Same version check mechanism
+2. **Beta Update Available**: Toast shows 🧪 icon, "Beta build - may contain bugs" warning
+3. **User Actions**: Update to beta, Report bug, Stable only mode toggle
+
+**Beta-Specific UX**:
+- 🧪 Icon distinguishes beta from stable
+- Warning message on beta updates
+- "Stable only" mode to disable beta updates
+- Direct link to bug reporting for beta builds
+
+### 12.4 User Experience - Switching Build Channels
+
+**User Flow**:
+1. User clicks "Switch to Beta Channel" (or similar)
+2. Confirmation dialog shows warning and available beta versions
+3. Pryx restarts with new channel config
+4. Future update checks target the selected channel
+
+### 12.5 Background Update Mechanism
+
+**Key Requirements**:
+
+| Requirement | Implementation | Notes |
+|------------|----------------|--------|
+| Silent downloads | Downloads in background, user can continue using Pryx |  |
+| Progress indicators | Show download progress in UI toast |  |
+| Graceful shutdown | App restarts cleanly after update |  |
+| Rollback capability | If update fails, rollback to previous version |  |
+| Update history | Track update history for debugging |  |
+| Update scheduling | Respect "remind me later" user preference |  |
+
+**Implementation Details** (TypeScript interface):
+```typescript
+interface UpdateConfig {
+  currentVersion: string;
+  latestVersion: string;
+  buildChannel: 'main' | 'beta' | 'alpha';
+  autoUpdateEnabled: boolean;
+  lastCheckAt: Date;
+  downloadProgress?: {
+    downloadedBytes: number;
+    totalBytes: number;
+    percentage: number;
+  };
+}
+```
+
+### 12.6 Configuration API
+
+**User Config Structure**:
+```json
+{
+  "update": {
+    "enabled": true,
+    "buildChannel": "main",
+    "autoCheckOnStartup": true,
+    "checkIntervalHours": 24,
+    "downloadInBackground": true,
+    "allowBetaUpdates": false,
+    "remindMeLater": "1h"
+  }
+}
+```
+
+**Configuration UI Settings**:
+- Automatic Updates: Check on startup, download in background, ask before downloading
+- Build Channel selector: Main (Stable), Beta (Development), Alpha (Early Access)
+- Update Frequency: Daily (recommended), Weekly, Manual only
+- Notification preferences: New stable releases, Beta releases, Security updates only
+
+### 12.7 Success Metrics
+
+| Metric | v1 Target | v1.1 Target | v2 Target |
+|--------|-----------|-------------|----------|
+| Update success rate | >98% | >99% | >99.5% |
+| Rollback success rate | N/A | >95% | >98% |
+| Update adoption rate | 60% of users | 70% of users | 80% of users |
+| Update awareness | Users know update available in <1 day | Users aware within 1 day | Users aware within 1 day |
+
+---
+
+## 13) API Specifications
 
 ### 12.1 REST API (pryx-core)
 
@@ -2221,9 +2353,9 @@ Connect: `ws://localhost:{port}/api/v1/ws`
 
 ---
 
-## 13) Error Handling
+## 14) Error Handling
 
-### 13.1 Error Categories
+### 14.1 Error Categories
 
 | Category | HTTP Code | Retry Strategy |
 |----------|-----------|----------------|
@@ -2235,7 +2367,7 @@ Connect: `ws://localhost:{port}/api/v1/ws`
 | Server Error | 5xx | Exponential backoff, max 3 retries |
 | Network Error | N/A | Exponential backoff, max 5 retries |
 
-### 13.2 Error Response Format
+### 14.2 Error Response Format
 
 ```json
 {
@@ -2250,10 +2382,9 @@ Connect: `ws://localhost:{port}/api/v1/ws`
     "request_id": "req-123",
     "timestamp": "2026-01-27T12:00:00Z"
   }
-}
 ```
 
-### 13.3 Circuit Breaker
+### 14.3 Circuit Breaker
 
 For external integrations (Telegram, Discord, etc.):
 
@@ -2263,7 +2394,7 @@ For external integrations (Telegram, Discord, etc.):
 | Open | Fail fast (after 5 consecutive failures) |
 | Half-Open | Allow 1 request every 30s to test recovery |
 
-### 13.4 Error Surface Architecture (Rust + Go)
+### 14.4 Error Surface Architecture (Rust + Go)
 
 **Why two languages?** Error handling needs to work at every layer:
 
@@ -2343,9 +2474,9 @@ For external integrations (Telegram, Discord, etc.):
 
 ---
 
-## 14) Deployment Architecture
+## 15) Deployment Architecture
 
-### 14.1 End-User Installation
+### 15.1 End-User Installation
 
 ```bash
 # macOS/Linux
@@ -2577,9 +2708,9 @@ pryx.dev/mesh/         → Device mesh management
 
 ---
 
-## 15) Success Metrics
+## 16) Success Metrics
 
-### 15.1 Quantitative Metrics
+### 16.1 Quantitative Metrics
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
@@ -2591,8 +2722,12 @@ pryx.dev/mesh/         → Device mesh management
 | UI startup time | <3 seconds | Time to first paint |
 | Memory footprint (idle) | <200MB | Host + sidecar combined |
 | Concurrent channel handling | ≥50 events | Without degradation |
+| Update success rate | >98% (v1), >99% (v1.1), >99.5% (v2) | Successful updates / total update attempts |
+| Rollback success rate | >95% (v1.1), >98% (v2) | Successful rollbacks / total rollback attempts |
+| Update adoption rate | 60% (v1), 70% (v1.1), 80% (v2) | Users who update within 1 week |
+| Update awareness | Users aware within 1 day | Time from release to user awareness |
 
-### 15.2 Qualitative Metrics
+### 16.2 Qualitative Metrics
 
 | Metric | Target | Method |
 |--------|--------|--------|
@@ -3781,6 +3916,7 @@ User can then:
 
 ### B. Related Documents
 
+- `docs/prd/PRD-UPDATES.md` - Auto-Update mechanism specification (research complete, integrated into this PRD)
 - `docs/plan/plan-a.md` - Original Pryx PRD (superseded)
 - `docs/plan/plan-b.md` - Clawdbot Reborn strategy (superseded)
 - `docs/final-prd.md` - Unified PRD draft v0.1 (superseded)

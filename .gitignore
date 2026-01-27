@@ -51,3 +51,5 @@ temp/
 *.key
 secrets/
 secrets/
+
+node_modules/

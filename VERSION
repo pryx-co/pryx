@@ -1,8 +1,1 @@
-# Pryx Version
-
-This file contains the current version of Pryx and is used by the build system.
-
-Format: MAJOR.MINOR.PATCH
-Example: 1.0.0
-
-**DO NOT EDIT MANUALLY** - Use `make version-bump-{major|minor|patch}` instead.
+0.1.0
