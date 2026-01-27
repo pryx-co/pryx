@@ -1,0 +1,95 @@
+# Pre-commit hooks for Pryx
+# Framework: pre-commit v4.5.1
+# Config: https://pre-commit.com
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Check for merge conflict markers
+      - id: check-merge-conflict
+      # Check for large files (>500KB)
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      # Check JSON syntax
+      - id: check-json
+      # Check TOML syntax
+      - id: check-toml
+      # Check YAML syntax
+      - id: check-yaml
+      # Detect trailing whitespace
+      - id: trailing-whitespace
+      # Detect mixed line endings (CRLF vs LF)
+      - id: mixed-line-ending
+      # Fix end of file (ensure newline at EOF)
+      - id: end-of-file-fixer
+      # Check for symlinks that don't point anywhere
+      - id: check-symlinks
+
+  # Rust-specific hooks
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0.0
+    hooks:
+      # Rust format check
+      - id: cargo-fmt
+        args: ['--', '----check']
+      # Rust clippy linting
+      - id: cargo-check
+        args: ['--all-targets']
+      # Rust clippy with warnings as errors
+      - id: clippy
+        args: ['--all-targets', '--', '-D', 'warnings']
+
+  # Go-specific hooks
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v0.60.1
+    hooks:
+      # Go format check
+      - id: golangci-lint
+        args:
+          - --disable-all
+          - --enable=gofmt,unused,ineffassign,staticcheck,structcheck,errcheck
+
+  # JavaScript/TypeScript hooks (Oxlint + Oxfmt)
+  - repo: local
+    hooks:
+      - id: oxfmt
+        name: Format with Oxfmt
+        entry: npx oxfmt
+        language: system
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, md, markdown, yaml]
+        exclude: |
+          (?x)^(
+            node_modules/|
+            dist/|
+            .next/|
+            .git/|
+            package-lock\.json|
+            Cargo\.lock|
+            go\.sum|
+            vendor/
+          )
+      - id: oxlint
+        name: Lint with Oxlint
+        entry: npx oxlint
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        exclude: |
+          (?x)^(
+            node_modules/|
+            dist/|
+            \.test\.(js|ts|tsx)$|
+            \.spec\.(js|ts|tsx)$
+          )
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from {config_path}
+
+  autofix_prs: true
+  autoupdate_branch: develop
+  autoupdate_commit_msg: 'chore: update pre-commit hooks'
+  autoupdate_schedule: monthly
+  skip: [poetry-update, poetry-lock-update]

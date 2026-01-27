@@ -1,0 +1,53 @@
+# Pryx .gitignore
+
+# Build artifacts
+/host/target/
+/host/target/
+/runtime/bin/
+/ui/dist/
+/ui/node_modules/
+/ui/.vite/
+/edge/dist/
+/edge/node_modules/
+
+# Dependencies lockfiles (some may want to be committed)
+# Cargo.lock - Uncomment if you want to commit Rust lockfile
+# go.sum - Uncomment if you want to commit Go lockfile
+# package-lock.json - Uncomment if you want to commit npm lockfiles
+
+# Testing
+/coverage/
+*.coverprofile
+*.prof
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Secrets (never commit)
+*.pem
+*.key
+secrets/
+secrets/

@@ -1,0 +1,47 @@
+{
+  "name": "pryx",
+  "version": "0.1.0",
+  "description": "Sovereign AI agent with local-first control center",
+  "private": true,
+  "scripts": {
+    "dev": "make build && echo 'Use specific component dev commands: cd host && cargo tauri dev, cd ui && npm run dev'",
+    "build": "make build",
+    "test": "make test",
+    "lint": "make lint",
+    "format": "make format",
+    "clean": "make clean",
+    "check": "make check",
+    "install": "make install",
+    "version:bump": "make version-bump-patch",
+    "version:tag": "make version-tag",
+    "info": "make info"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/pryx.git"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "local-first",
+    "sovereign",
+    "rust",
+    "go",
+    "tauri",
+    "react",
+    "typescript",
+    "cloudflare-workers"
+  ],
+  "author": "Pryx Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0",
+    "rust": ">=1.70.0",
+    "go": ">=1.22.0"
+  },
+  "devDependencies": {
+    "oxlint": "^0.0.0",
+    "@commitlint/cli": "^19.7.1",
+    "husky": "^9.1.7"
+  }
+}
