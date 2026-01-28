@@ -1,0 +1,46 @@
+{
+    "productName": "Pryx",
+    "version": "0.1.0",
+    "identifier": "com.pryx.app",
+    "build": {
+        "beforeDevCommand": "",
+        "beforeBuildCommand": "",
+        "devUrl": "http://localhost:1420",
+        "frontendDist": "../dist"
+    },
+    "app": {
+        "windows": [
+            {
+                "title": "Pryx",
+                "width": 800,
+                "height": 600
+            }
+        ],
+        "security": {
+            "csp": null
+        },
+        "plugins": {
+            "updater": {
+                "endpoints": [
+                    "http://localhost:4321/api/update/manifest?platform={{target}}&arch={{arch}}"
+                ],
+                "pubkey": "dW5zZWxlY3RlZAo="
+            }
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "publisher": "Pryx",
+        "category": "DeveloperTool",
+        "shortDescription": "AI-powered coding assistant",
+        "longDescription": "Pryx is an AI-powered coding assistant that runs locally on your machine."
+    }
+}

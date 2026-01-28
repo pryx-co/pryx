@@ -4,7 +4,7 @@
   "description": "Sovereign AI agent with local-first control center",
   "private": true,
   "scripts": {
-    "dev": "make build && echo 'Use specific component dev commands: cd host && cargo tauri dev, cd ui && npm run dev'",
+    "dev": "make build && echo 'Use specific component dev commands: cd apps/host && cargo tauri dev, cd apps/tui && bun run build'",
     "build": "make build",
     "test": "make test",
     "lint": "make lint",
@@ -36,6 +36,7 @@
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0",
+    "bun": "1.3.7",
     "rust": ">=1.70.0",
     "go": ">=1.22.0"
   },

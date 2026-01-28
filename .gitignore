@@ -1,17 +1,13 @@
 # Pryx .gitignore
 
 # Build artifacts
-/host/target/
-/host/target/
-/runtime/bin/
+/apps/host/target/
+/apps/runtime/bin/
 # TUI Binaries
-tui/pryx-tui
-tui/.188e9d9fffd775db-00000000.bun-build
-/ui/dist/
-/ui/node_modules/
-/ui/.vite/
-/edge/dist/
-/edge/node_modules/
+/apps/tui/pryx-tui
+/apps/tui/.188e9d9fffd775db-00000000.bun-build
+/apps/tui/dist/
+/apps/tui/node_modules/
 
 # Dependencies lockfiles (some may want to be committed)
 # Cargo.lock - Uncomment if you want to commit Rust lockfile
@@ -52,7 +48,6 @@ temp/
 # Secrets (never commit)
 *.pem
 *.key
-secrets/
 secrets/
 
 node_modules/

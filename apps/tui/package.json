@@ -1,0 +1,20 @@
+{
+    "name": "pryx-tui",
+    "version": "0.1.0",
+    "module": "index.tsx",
+    "type": "module",
+    "scripts": {
+        "build": "bun build --compile ./index.tsx --outfile pryx-tui",
+        "build:ci": "bun build --target=bun ./index.tsx --outdir dist"
+    },
+    "dependencies": {
+        "@opentui/core": "latest",
+        "@opentui/solid": "latest",
+        "solid-js": "latest",
+        "ws": "latest"
+    },
+    "devDependencies": {
+        "@types/ws": "latest",
+        "bun-types": "latest"
+    }
+}

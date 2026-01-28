@@ -21,6 +21,7 @@ This document consolidates all PRD improvements based on user questions about mu
 7. ✅ Long-running task autocompletion - Pump-dump, streaming, hybrid strategies
 8. ✅ Plugin architecture - Based on OpenCode research
 9. ✅ Auto-update mechanism - Production vs Beta build channels
+10. ✅ Telegram bot operational model - Cloud webhook vs device polling, BYOK constraints + monetization (Channels Cloud)
 
 ---
 
@@ -513,6 +514,7 @@ class PryxUpdateManager {
 | **Q7**: Autocompletion for long tasks? | ✅ Pump-dump/streaming/hybrid | Section 10.7 + v2 Section 5.2.1 |
 | **Q8**: Plugin architecture? | ✅ Based on OpenCode | v2 Section 6.1 (TODO) |
 | **Q9**: Auto-update on CI builds? | ✅ Production vs Beta | This document (TODO) |
+| **Q10**: What configs/integrations are visible/manageable in the web dashboard? | ✅ Cloud dashboard is “must-know” only by default; full config stays local unless opt-in sync/backup is enabled | [auth-sync-dashboard.md](../auth-sync-dashboard.md) + PRD Section 7.4 |
 
 ---
 

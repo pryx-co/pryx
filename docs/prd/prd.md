@@ -238,6 +238,16 @@ pryx mcp auth <name>                     # Authenticate with MCP server (OAuth)
 | Deep linking | `pryx://` protocol for sessions/settings/auth |
 | Auto-updates | Background check + rollback capability |
 
+### 7.4 Cloud Web Dashboard (Account + Devices)
+
+Pryx’s “web platform” dashboard is intentionally privacy-preserving by default:
+
+- It manages account login and device linking (OAuth Device Flow / pairing flows).
+- It shows device list + health + sanitized telemetry and error summaries.
+- It does not expose raw secrets, prompts, or full local logs unless the user explicitly exports.
+
+Detailed contract: [auth-sync-dashboard.md](../auth-sync-dashboard.md).
+
 ---
 
 ## 8) Architecture
@@ -328,7 +338,7 @@ pryx mcp auth <name>                     # Authenticate with MCP server (OAuth)
 |-------|------------|-----------|
 | **Host** | Rust + Tauri v2 | Native performance, security, sidecar supervision |
 | **Runtime** | Go | High concurrency, single binary, fast compilation |
-| **TUI** | SolidJS + OpenTUI | Rich terminal UI, component-based, compiled via Bun |
+| **TUI** | SolidJS + OpenTUI | Rich terminal UI, component-based, compiled via Bun (OpenTUI build toolchain requires Zig) |
 | **Web UI** | Astro + React + TypeScript + Vite | (Optional) Modern DX, SPA |
 | **Edge** | Cloudflare Workers (TypeScript) | Global distribution, serverless, low ops burden |
 | **Storage** | SQLite + OS Keychain | Local-first, secure secrets, no external DB |
@@ -572,7 +582,7 @@ Scenario: Trace timeline visualization
 | ID | Requirement | Metric | Acceptance Criteria |
 |----|-------------|--------|---------------------|
 | FR5.1 | Channel abstraction | N/A | Unified interface for all channels |
-| FR5.2 | MVP channels | 2 channels | Telegram + generic webhooks functional |
+| FR5.2 | MVP channels | 2 channels | Telegram (cloud-hosted webhook mode) + generic webhooks functional |
 | FR5.3 | Routing rules | N/A | Map channels to agents/workspaces |
 | FR5.4 | Rate limiting | Configurable | Per-channel rate limits enforced |
 | FR5.5 | Status indicators | Real-time | Connection state visible in UI |
@@ -580,12 +590,23 @@ Scenario: Trace timeline visualization
 
 **FR5 Acceptance Tests**:
 ```gherkin
-Scenario: Telegram integration
-  Given user has Telegram bot token
-  When user enters token in integration wizard
-  Then bot connects within 10 seconds
-  And status shows "connected" with green indicator
-  And incoming messages route to configured agent
+Scenario: Telegram integration (cloud-hosted)
+  Given user has completed registration
+  And user has configured a model provider key (e.g., OpenRouter for GLM-4.x)
+  And user has a Telegram bot token (from BotFather)
+  When user connects Telegram integration in onboarding wizard
+  Then Pryx verifies bot token using Telegram getMe
+  And Pryx sets a webhook to Pryx Edge with a per-bot secret
+  And user can link a chat using /start
+  And incoming messages route to configured agent and produce replies
+
+Scenario: Telegram integration (device-hosted, no key stored in cloud)
+  Given user has installed pryx-core locally
+  And user configured their model provider via local env/OS keychain
+  And user has a Telegram bot token
+  When user enables Telegram channel in local pryx-core
+  Then pryx-core polls Telegram updates and processes messages locally
+  And no model API key is sent to Pryx cloud
 
 Scenario: Rate limiting
   Given channel rate limit is 10 requests/minute
@@ -593,6 +614,38 @@ Scenario: Rate limiting
   Then first 10 are processed
   And remaining 5 return 429 status
 ```
+
+#### Telegram Bot Operational Requirements (Clarified)
+
+Telegram does not “run” user code. It only delivers updates to a bot via either **webhook** (recommended) or **long polling**. This yields two viable execution models:
+
+1) **Cloud-hosted webhook mode (recommended for MVP)**  
+   - **User does not need pryx-core installed**.  
+   - Pryx hosts the bot logic and receives updates from Telegram via HTTPS webhook.  
+   - **Constraint**: Telegram webhooks cannot include a user-provided Authorization header, so Pryx must either:
+     - store the user’s model provider key (encrypted at rest) and use it server-side, or
+     - route processing to a user-hosted runtime (device-hosted mode).
+
+2) **Device-hosted polling mode (privacy-first / offline-ish)**  
+   - User runs pryx-core which polls Telegram (getUpdates) and calls the AI model locally using the user’s key.  
+   - **Constraint**: polling must run on exactly one device per bot token to avoid duplicated handling; Mesh can coordinate “active bot host”.
+
+**Minimum Pryx-hosted components for cloud-hosted mode**:
+- Edge API that implements Telegram webhook receiver + integration management endpoints.
+- Persistent storage for: bot tokens (encrypted), per-bot webhook secret, chat links, routing config, per-user model keys (encrypted) if BYOK-in-cloud is enabled.
+- Worker-side message processing pipeline: dedupe updates, policy checks, call model, send reply.
+
+**Minimum user-provided inputs**:
+- Telegram bot token (BotFather)
+- Linked chat (via /start, allowlist, or explicit chat binding)
+- Model provider credentials (e.g., OpenRouter key for GLM-4.x / GLM-4.7) depending on chosen execution model
+
+**Proposed Edge API surface (cloud-hosted mode)**:
+- `POST /api/v1/integrations/telegram/bots` (user auth) create bot integration, verify token, persist encrypted token
+- `POST /api/v1/integrations/telegram/bots/{bot_id}/sync-webhook` (user auth) setWebhook + secret token
+- `POST /api/v1/integrations/telegram/bots/{bot_id}/link-code` (user auth) generate chat link code
+- `POST /api/v1/integrations/telegram/webhook/{bot_id}` (Telegram webhook) verify secret header, ingest updates
+- `POST /api/v1/integrations/telegram/bots/{bot_id}/pause|resume|rotate-secret|delete` (user auth) lifecycle ops
 
 ### FR6: Auth & Edge Control Plane
 
@@ -2760,7 +2813,15 @@ pryx.dev/mesh/         → Device mesh management
 - [ ] TUI with chat and approvals
 
 ### M2: Integration (Weeks 4-6)
-- [ ] Telegram channel adapter
+- [ ] Telegram integration (cloud-hosted webhook mode)
+  - [ ] Bot token verification (getMe) + webhook registration (setWebhook + secret token)
+  - [ ] Chat linking (/start + link code) + allowlist
+  - [ ] Message ingest pipeline (dedupe update_id, retries, timeouts)
+  - [ ] Per-user model key isolation + rate limits
+  - [ ] User controls: pause/resume, rotate secret, revoke token
+- [ ] Telegram integration (device-hosted polling mode, optional)
+  - [ ] Local channels.json wiring + auto-connect in pryx-core
+  - [ ] Single-active-host enforcement (Mesh coordinator integration)
 - [ ] Webhook channel adapter
 - [ ] Web UI dashboard
 - [ ] Onboarding wizard

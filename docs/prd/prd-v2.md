@@ -84,6 +84,10 @@ These principles from v1 remain inviolable:
 > **Key Insight (Clawdbot Pattern)**: No native mobile app needed. Users already have 
 > Telegram/WhatsApp/Discord on their phones. These chat integrations ARE the mobile interface.
 
+**Telegram execution model (clarified)**:
+- **Cloud-hosted webhook** is the default “zero-install” path (Pryx Channels Cloud): Pryx hosts the webhook receiver + bot logic; users only provide bot token and link a chat. This is a monetizable cloud convenience feature.
+- **Device-hosted polling** remains a sovereignty option: pryx-core can run the bot locally so model API keys never leave the user’s device; Mesh ensures only one active poller per bot token.
+
 ---
 
 ## 2) Features Deferred from v1
@@ -196,6 +200,11 @@ Scenario: Hybrid routing
 | Permission model | Granular permissions (network, fs, shell) | Per-plugin approval |
 | Hot reload | Live reload during development | <1s reload time |
 | Plugin CLI | `pryx plugin init/dev/build/publish` | Full development lifecycle |
+
+**Permission Approval UX (v1 → v2)**:
+- **Primary surface (CLI/TUI)**: approvals render inline in the terminal UI (fast `y/n` prompt) because this is the first interaction surface.
+- **Desktop host (optional)**: if a Tauri host app is running, approvals may use native OS dialogs for stronger modality.
+- **Pluggable transport**: runtime emits `approval.needed` events and accepts `approval.resolve` responses over its local WS bus so any surface (TUI, desktop, web) can drive approvals.
 
 **Plugin Structure**:
 ```
@@ -755,9 +764,9 @@ Beyond plugins - full agent templates:
 ### 8.2 Principles (Revised)
 
 1. **Core is 100% free forever**: All local functionality, unlimited channels, all plugins
-2. **Pay only for cloud services**: Things that require our infrastructure
-3. **BYOK always supported**: Users who bring their own keys never pay us for API
-4. **Optional convenience layer**: Pryx-hosted models for users who don't want to manage keys
+2. **Pay only for cloud services**: Things that require our infrastructure (sync, hosted webhooks, hosted routing, hosted key vault)
+3. **BYOK always supported**: Users who bring their own model keys can stay local-only, or optionally use BYOK-in-cloud for hosted integrations
+4. **Optional convenience layers**: Pryx-hosted models and Pryx-hosted channel webhooks for users who don't want to run always-on devices
 5. **Compete with free**: Be more generous than Clawdbot to win users
 
 ### 8.3 Revenue Streams
@@ -765,6 +774,7 @@ Beyond plugins - full agent templates:
 | Stream | Description | Timeline | Margin |
 |--------|-------------|----------|--------|
 | **Pryx Gateway** | Hosted model access (no BYOK needed) | v2.0 | ~10% on API costs |
+| **Pryx Channels Cloud** | Hosted channel webhooks + routing (Telegram webhook, managed secrets, delivery retries) | v2.0 | High |
 | **Pryx Sync** | Cloud backup of config, sessions, policies | v2.1 | High (storage is cheap) |
 | **Pryx Publish** | Public dashboards for observability | v2.2 | High |
 | **Team Features** | Admin console, shared workspaces, audit export | v2.2 | High |
@@ -779,7 +789,8 @@ Beyond plugins - full agent templates:
 | Feature | Limit | Notes |
 |---------|-------|-------|
 | **All core features** | Unlimited | Chat, channels, tools, plugins |
-| **Channels** | Unlimited | Telegram, WhatsApp, Discord, Slack, webhooks |
+| **Channels (device-hosted)** | Unlimited | Telegram polling, Discord polling, local webhooks, etc. (no Pryx hosting) |
+| **Channels Cloud (hosted webhooks)** | Limited | 1 Telegram bot / 1 linked chat to demo zero-install onboarding |
 | **Sessions** | Unlimited | Stored locally |
 | **Plugins** | All community plugins | Free forever |
 | **Local LLM** | Unlimited | Ollama, llama.cpp, MLX |
@@ -813,6 +824,7 @@ For power users who want cloud features:
 | Feature | Description |
 |---------|-------------|
 | **Pryx Sync** | Cloud backup of config, policies, session metadata |
+| **Pryx Channels Cloud** | Hosted Telegram webhook mode (no always-on device), bot token vault, retries, integration status |
 | **Unlimited workspaces** | No limit on workspace count |
 | **Unlimited devices** | Full Pryx Mesh access |
 | **Telemetry retention** | 90 days (cloud-stored) |

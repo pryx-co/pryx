@@ -26,8 +26,9 @@ See [BUILD_SYSTEM.md](BUILD_SYSTEM.md) for complete build system documentation.
 
 - **Host** (Rust + Tauri v2) - Desktop wrapper with native dialogs
 - **Runtime** (Go) - Core agent runtime with HTTP+WebSocket API
-- **UI** (React + TypeScript + Vite) - Web-based control center
-- **Edge** (Cloudflare Workers) - OAuth and telemetry workers
+- **TUI** (TypeScript + Solid + OpenTUI) - Terminal UI surface
+- **Web Apps** (Astro + React + Bun) - Planned edge-deployed services (telemetry/auth/installer)
+- **Edge** (Cloudflare Workers) - Planned OAuth and telemetry workers
 
 ### Documentation
 

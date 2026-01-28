@@ -1,26 +1,21 @@
 # Changelog
 
-All notable changes to Pryx will be documented in this file.
+All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## [Unreleased] - 2026-01-28
 
 ### Added
-- Initial project setup
-
-### Changed
-- N/A
-
-### Deprecated
-- N/A
-
-### Removed
-- N/A
+- **Host Native Integration**:
+    - `pryx-ntf`: Native OS Notifications support via JSON-RPC (`notification.show`).
+    - `pryx-clp`: Clipboard Read/Write support via JSON-RPC (`clipboard.writeText`, `clipboard.readText`).
+    - `pryx-td7`: Auto-Update mechanism via JSON-RPC (`updater.check`, `updater.install`).
+    - `pryx-l27`: Deep Linking support. Host forwards `deeplink.opened` events to Runtime.
+- **Sidecar Management**:
+    - Robust process lifecycle management (start, stop, monitor).
+    - Port discovery and health checking.
+    - JSON-RPC over Stdio transport layer.
 
 ### Fixed
-- N/A
-
-### Security
-- N/A
+- Resolved concurrency (`Send`/`Sync`) issues in `SidecarProcess` to ensure thread-safe async operation.
+- Fixed `tauri.conf.json` implementation to support new plugins.
+- Refactored `sidecar.rs` to cleaner, modular RPC handling.

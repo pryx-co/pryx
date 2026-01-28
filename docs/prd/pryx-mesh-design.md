@@ -481,6 +481,8 @@ function resolveConflict(conflict: MergeConflict): any {
 
 Integrations (Telegram Bot, GitHub) are **Mesh-Global** but **Device-Hosted**.
 
+**Clarification**: This section describes the sovereignty-first mode where the integration is hosted on a user device (e.g., pryx-core long-polls Telegram). Pryx also supports a cloud-hosted webhook mode where the "device" is Pryx Edge (no user-side install) and Mesh only needs to coordinate routing and permissions, not webhook ownership.
+
 - **Registration**: Device A registers "I host the Telegram Bot".
 - **Registry**: Coordinator marks Device A as the handler for `channel:telegram`.
 - **Routing**: 

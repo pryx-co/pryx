@@ -1,0 +1,186 @@
+{
+    "exact": {
+        "anthropic/claude-4.5-sonnet": {
+            "context_window": 500000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "supports_thinking": true,
+            "input_price_1m": 2.50,
+            "output_price_1m": 10.00
+        },
+        "anthropic/claude-4.5-opus": {
+            "context_window": 500000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "supports_thinking": true,
+            "input_price_1m": 10.00,
+            "output_price_1m": 30.00
+        },
+        "openai/gpt-5-turbo": {
+            "context_window": 200000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 4.00,
+            "output_price_1m": 12.00
+        },
+        "google/gemini-3-flash-preview": {
+            "context_window": 2097152,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.05,
+            "output_price_1m": 0.20
+        },
+        "google/gemini-2.5-pro": {
+            "context_window": 2097152,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 1.00,
+            "output_price_1m": 3.00
+        },
+        "meta-llama/llama-3.3-70b-instruct": {
+            "context_window": 128000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.30,
+            "output_price_1m": 0.35,
+            "fallback_model": "meta-llama/llama-4-405b"
+        },
+        "xiaomi/mimo-v2-flash": {
+            "context_window": 128000,
+            "max_output_tokens": 8192,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.10,
+            "output_price_1m": 0.10
+        },
+        "deepseek/deepseek-v3.2": {
+            "context_window": 128000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.12,
+            "output_price_1m": 0.24
+        },
+        "x-ai/grok-code-fast-1": {
+            "context_window": 128000,
+            "max_output_tokens": 8192,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.50,
+            "output_price_1m": 0.50
+        }
+    },
+    "patterns": {
+        "^anthropic/claude-4.*": {
+            "context_window": 500000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "supports_thinking": true,
+            "input_price_1m": 3.0,
+            "output_price_1m": 12.0
+        },
+        "^openai/gpt-5.*": {
+            "context_window": 200000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 5.0,
+            "output_price_1m": 15.0
+        },
+        "^openai/gpt-4.*": {
+            "context_window": 128000,
+            "max_output_tokens": 4096,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 2.5,
+            "output_price_1m": 10.0
+        },
+        "^google/gemini-[23].*": {
+            "context_window": 2097152,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.5,
+            "output_price_1m": 1.5
+        },
+        "^meta-llama/llama-[34].*": {
+            "context_window": 128000,
+            "max_output_tokens": 4096,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.2,
+            "output_price_1m": 0.2
+        },
+        "^deepseek/deepseek.*": {
+            "context_window": 128000,
+            "max_output_tokens": 8192,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.12,
+            "output_price_1m": 0.24
+        },
+        "^x-ai/grok.*": {
+            "context_window": 128000,
+            "max_output_tokens": 8192,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.5,
+            "output_price_1m": 0.5
+        },
+        "^qwen/qwen-2.*": {
+            "context_window": 32000,
+            "max_output_tokens": 4096,
+            "supports_vision": true,
+            "supports_tools": true,
+            "input_price_1m": 0.15,
+            "output_price_1m": 0.20
+        },
+        "^mistralai/.*": {
+            "context_window": 32000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.25,
+            "output_price_1m": 0.75
+        },
+        "^cohere/command.*": {
+            "context_window": 128000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.5,
+            "output_price_1m": 0.5
+        },
+        "^databricks/dbrx.*": {
+            "context_window": 32000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": true,
+            "input_price_1m": 0.5,
+            "output_price_1m": 1.0
+        },
+        "^microsoft/phi.*": {
+            "context_window": 128000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": false,
+            "input_price_1m": 0.1,
+            "output_price_1m": 0.1
+        },
+        "^perplexity/.*": {
+            "context_window": 32000,
+            "max_output_tokens": 4096,
+            "supports_vision": false,
+            "supports_tools": false,
+            "input_price_1m": 0.5,
+            "output_price_1m": 0.5
+        }
+    }
+}

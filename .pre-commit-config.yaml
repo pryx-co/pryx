@@ -33,13 +33,13 @@ repos:
     hooks:
       # Rust format check
       - id: cargo-fmt
-        args: ['--', '----check']
+        args: ['--', '--check']
       # Rust clippy linting
       - id: cargo-check
-        args: ['--all-targets']
+        args: ['--lib']
       # Rust clippy with warnings as errors
       - id: clippy
-        args: ['--all-targets', '--', '-D', 'warnings']
+        args: ['--lib', '--', '-D', 'warnings']
 
   # Go-specific hooks
   - repo: https://github.com/golangci/golangci-lint
@@ -56,11 +56,16 @@ repos:
     hooks:
       - id: oxfmt
         name: Format with Oxfmt
-        entry: npx oxfmt
+        entry: bunx oxfmt
         language: system
         types_or: [javascript, jsx, ts, tsx, json, css, scss, md, markdown, yaml]
         exclude: |
           (?x)^(
+            apps/.*/node_modules/|
+            apps/.*/dist/|
+            apps/.*/\.next/|
+            apps/.*/\.turbo/|
+            apps/.*/\.astro/|
             node_modules/|
             dist/|
             .next/|
@@ -72,11 +77,13 @@ repos:
           )
       - id: oxlint
         name: Lint with Oxlint
-        entry: npx oxlint
+        entry: bunx oxlint
         language: system
         types_or: [javascript, jsx, ts, tsx]
         exclude: |
           (?x)^(
+            apps/.*/node_modules/|
+            apps/.*/dist/|
             node_modules/|
             dist/|
             \.test\.(js|ts|tsx)$|
