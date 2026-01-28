@@ -4,6 +4,8 @@ use tauri_plugin_updater::UpdaterExt;
 use pryx_host::sidecar::*;
 use pryx_host::sidecar::permissions::*;
 
+mod tray;
+
 // Command to get sidecar status
 #[tauri::command]
 fn get_sidecar_status(state: State<Arc<SidecarProcess>>) -> SidecarStatus {
@@ -80,9 +82,26 @@ async fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+            _ => {}
+        })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             app.manage(Arc::new(SidecarProcess::new(SidecarConfig::default(), app.handle().clone())));
+            // Deep Link Handler
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+
+            // System Tray
+            tray::create_tray(app.handle())?;
+
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Ok(updater) = handle.updater() {

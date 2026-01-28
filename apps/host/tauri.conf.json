@@ -21,6 +21,11 @@
         }
     },
     "plugins": {
+        "deep-link": {
+            "schemes": [
+                "pryx"
+            ]
+        },
         "updater": {
             "endpoints": [
                 "http://localhost:4321/api/update/manifest?platform={{target}}&arch={{arch}}"
@@ -36,7 +41,6 @@
         ],
         "publisher": "Pryx",
         "category": "DeveloperTool",
-        "shortDescription": "AI-powered coding assistant",
         "longDescription": "Pryx is an AI-powered coding assistant that runs locally on your machine."
     }
 }
