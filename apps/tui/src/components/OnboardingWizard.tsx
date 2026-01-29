@@ -1,7 +1,8 @@
-// @ts-nocheck
 import { Box, Text, Input } from "@opentui/core";
 import { createSignal, Show, Switch, Match } from "solid-js";
-import { send } from "../services/ws";
+import { Effect } from "effect";
+import { useEffectService } from "../lib/hooks";
+import { WebSocketService } from "../services/ws";
 
 type Step = 1 | 2 | 3 | "done";
 
@@ -20,6 +21,7 @@ interface IntegrationConfig {
 }
 
 export default function OnboardingWizard(props: { onComplete: () => void }) {
+    const ws = useEffectService(WebSocketService);
     const [step, setStep] = createSignal<Step>(1);
     const [workspace, setWorkspace] = createSignal<WorkspaceConfig>({ name: "", path: "" });
     const [provider, setProvider] = createSignal<ProviderConfig>({ provider: "", apiKey: "" });
@@ -30,6 +32,7 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
     const handleSubmit = (value: string) => {
         const currentStep = step();
         const currentField = field();
+        const service = ws();
 
         if (currentStep === 1) {
             if (currentField === "name") {
@@ -52,14 +55,16 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
         } else if (currentStep === 3) {
             setIntegration({ botToken: value });
             // Save configuration
-            send({
-                event: "config.save",
-                payload: {
-                    workspace: workspace(),
-                    provider: provider(),
-                    integration: { type: "telegram", ...integration() }
-                }
-            });
+            if (service) {
+                Effect.runFork(service.send({
+                    event: "config.save",
+                    payload: {
+                        workspace: workspace(),
+                        provider: provider(),
+                        integration: { type: "telegram", botToken: value }
+                    }
+                }));
+            }
             setStep("done");
             setTimeout(() => props.onComplete(), 1500);
         }
@@ -98,54 +103,36 @@ export default function OnboardingWizard(props: { onComplete: () => void }) {
                 </Text>
             </Box>
 
-            <Box borderStyle="round" padding={1} flexGrow={1}>
+            <Box flexDirection="column" flexGrow={1} borderStyle="round" padding={1}>
                 <Switch>
                     <Match when={step() === 1}>
-                        <Box flexDirection="column">
-                            <Text bold>Step 1: Configure Workspace</Text>
-                            <Text color="gray">Set up your project workspace</Text>
-                            <Show when={workspace().name}>
-                                <Text color="green">✓ Name: {workspace().name}</Text>
-                            </Show>
-                        </Box>
+                        <Text bold>Workspace Setup</Text>
+                        <Text color="gray">{field() === "name" ? "Enter a name for your workspace" : "Enter the path to your workspace"}</Text>
                     </Match>
                     <Match when={step() === 2}>
-                        <Box flexDirection="column">
-                            <Text bold>Step 2: Select Model Provider</Text>
-                            <Text color="gray">Connect your AI provider</Text>
-                            <Show when={provider().provider}>
-                                <Text color="green">✓ Provider: {provider().provider}</Text>
-                            </Show>
-                        </Box>
+                        <Text bold>AI Provider Setup</Text>
+                        <Text color="gray">{field() === "provider" ? "Choose your AI provider" : "Enter your API key"}</Text>
                     </Match>
                     <Match when={step() === 3}>
-                        <Box flexDirection="column">
-                            <Text bold>Step 3: Connect Telegram</Text>
-                            <Text color="gray">Enable mobile access via Telegram</Text>
-                        </Box>
+                        <Text bold>Integration Setup</Text>
+                        <Text color="gray">Enter your Telegram bot token</Text>
                     </Match>
                     <Match when={step() === "done"}>
-                        <Box flexDirection="column">
-                            <Text bold color="green">✓ Setup Complete!</Text>
-                            <Text color="gray">Starting Pryx...</Text>
-                        </Box>
+                        <Text bold color="green">✓ Setup Complete!</Text>
+                        <Text color="gray">Redirecting to main interface...</Text>
                     </Match>
                 </Switch>
-            </Box>
 
-            <Show when={step() !== "done"}>
-                <Box borderStyle="single" marginTop={1}>
-                    <Input
-                        placeholder={getPlaceholder()}
-                        value={input()}
-                        onChange={setInput}
-                        onSubmit={handleSubmit}
-                    />
-                </Box>
-            </Show>
-
-            <Box marginTop={1}>
-                <Text color="gray">Enter to continue │ Esc to skip │ Ctrl+C to exit</Text>
+                <Show when={step() !== "done"}>
+                    <Box marginTop={1}>
+                        <Input
+                            placeholder={getPlaceholder()}
+                            value={input()}
+                            onChange={setInput}
+                            onSubmit={handleSubmit}
+                        />
+                    </Box>
+                </Show>
             </Box>
         </Box>
     );

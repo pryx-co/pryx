@@ -4,13 +4,16 @@
     "module": "index.tsx",
     "type": "module",
     "scripts": {
-        "build": "bun build --compile ./index.tsx --outfile pryx-tui",
-        "build:ci": "bun build --target=bun ./index.tsx --outdir dist"
+        "build": "bun -e 'import solidPlugin from \"@opentui/solid/bun-plugin\"; const platform = process.platform === \"win32\" ? \"windows\" : process.platform; const target = `bun-${platform}-${process.arch}`; const result = await Bun.build({ entrypoints: [\"./index.tsx\"], target: \"bun\", outdir: \".\", plugins: [solidPlugin], compile: { target, outfile: \"pryx-tui\" } }); if (!result.success) process.exit(1);'",
+        "build:ci": "bun -e 'import solidPlugin from \"@opentui/solid/bun-plugin\"; const result = await Bun.build({ entrypoints: [\"./index.tsx\"], target: \"bun\", outdir: \"dist\", plugins: [solidPlugin] }); if (!result.success) process.exit(1);'"
     },
     "dependencies": {
         "@opentui/core": "latest",
         "@opentui/solid": "latest",
-        "solid-js": "latest",
+        "@types/js-yaml": "^4.0.9",
+        "effect": "latest",
+        "js-yaml": "^4.1.1",
+        "solid-js": "^1.8.0",
         "ws": "latest"
     },
     "devDependencies": {

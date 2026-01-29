@@ -17,7 +17,8 @@ const (
 type Message struct {
 	ID        string            `json:"id"`
 	Content   string            `json:"content"`
-	ChannelID string            `json:"channel_id"`
+	Source    string            `json:"source"`     // Channel instance ID (e.g., "telegram-main")
+	ChannelID string            `json:"channel_id"` // External chat/conversation ID
 	SenderID  string            `json:"sender_id"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
 	CreatedAt time.Time         `json:"created_at"`

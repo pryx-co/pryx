@@ -2,20 +2,21 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"pryx-core/internal/auth"
+	// 	"pryx-core/internal/auth"
+
+	"pryx-core/internal/agent"
 	"pryx-core/internal/bus"
+	"pryx-core/internal/channels"
+	"pryx-core/internal/channels/telegram"
 	"pryx-core/internal/config"
 	"pryx-core/internal/doctor"
 	"pryx-core/internal/keychain"
@@ -23,7 +24,6 @@ import (
 	"pryx-core/internal/mesh"
 	"pryx-core/internal/server"
 	"pryx-core/internal/store"
-	"pryx-core/internal/skills"
 )
 
 var (
@@ -37,11 +37,13 @@ func main() {
 		case "skills":
 			os.Exit(runSkills(os.Args[2:]))
 		case "mcp":
-			os.Exit(runMCPServer(os.Args[2:]))
+			os.Exit(runMCP(os.Args[2:]))
 		case "doctor":
 			os.Exit(runDoctor())
-		case "login":
-			os.Exit(runLogin())
+			// 		case "login":
+			// 			os.Exit(runLogin())
+		case "config":
+			os.Exit(runConfig(os.Args[2:]))
 		case "help", "-h", "--help":
 			usage()
 			return
@@ -52,8 +54,6 @@ func main() {
 
 	cfg := config.Load()
 
-	b := bus.New()
-
 	s, err := store.New(cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("Failed to initialize store: %v", err)
@@ -62,32 +62,42 @@ func main() {
 
 	kc := keychain.New("pryx")
 
+	// server.New creates the Bus internally
+	srv := server.New(cfg, s.DB, kc)
+	b := srv.Bus()
+
 	meshMgr := mesh.NewManager(cfg, b, s, kc)
 	meshMgr.Start(context.Background())
 
-	srv := server.New(cfg, s.DB, kc)
+	// Channels
+	chanMgr := channels.NewManager(b)
+	if cfg.TelegramEnabled && cfg.TelegramToken != "" {
+		log.Println("Starting Telegram Bot...")
+		tg := telegram.NewTelegramChannel("telegram-main", cfg.TelegramToken, b)
+		if err := chanMgr.Register(tg); err != nil {
+			log.Printf("Failed to register Telegram: %v", err)
+		}
+	}
+	defer chanMgr.Shutdown()
+
+	// Agent (AI Orchestrator)
+	agt, err := agent.New(cfg, b)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize Agent: %v", err)
+	} else {
+		log.Println("Starting AI Agent...")
+		go agt.Run(context.Background())
+	}
+
 	srv.Bus().Publish(bus.NewEvent(bus.EventTraceEvent, "", map[string]interface{}{
 		"kind":      "runtime.started",
 		"version":   Version,
 		"buildDate": BuildDate,
 	}))
 
-	l, err := net.Listen("tcp", cfg.ListenAddr)
-	if err != nil {
-		log.Fatalf("listen error: %v", err)
-	}
-	actualAddr := l.Addr().String()
-	host, portStr, err := net.SplitHostPort(actualAddr)
-	if err != nil || strings.TrimSpace(portStr) == "" {
-		fmt.Printf("PRYX_CORE_LISTEN_ADDR=%s\n", actualAddr)
-	} else {
-		port, _ := strconv.Atoi(portStr)
-		fmt.Printf("PRYX_CORE_LISTEN_ADDR=http://127.0.0.1:%d\n", port)
-	}
-
+	// Start server in background (with dynamic port allocation)
 	go func() {
-		log.Printf("Listening on %s", actualAddr)
-		if err := srv.Serve(l); err != nil && err != http.ErrServerClosed {
+		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
@@ -110,7 +120,9 @@ func usage() {
 	log.Println("  pryx-core skills <command>")
 	log.Println("  pryx-core mcp <filesystem|shell|browser|clipboard>")
 	log.Println("  pryx-core doctor")
+	log.Println("  pryx-core doctor")
 	log.Println("  pryx-core login")
+	log.Println("  pryx-core config <set|get|list>")
 	log.Println("")
 	log.Println("Commands:")
 	log.Println("  skills")
@@ -176,35 +188,35 @@ func runDoctor() int {
 	return exitCode
 }
 
-func runLogin() int {
-	cfg := config.Load()
-	kc := keychain.New("pryx")
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
+// func runLogin() int {
+// 	cfg := config.Load()
+// 	kc := keychain.New("pryx")
+// 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+// 	defer cancel()
 
-	fmt.Println("Attempting to log in to Pryx Cloud...")
-	res, err := auth.StartDeviceFlow(cfg.CloudAPIUrl)
-	if err != nil {
-		log.Printf("\nLogin failed: %v", err)
-		return 1
-	}
+// 	fmt.Println("Attempting to log in to Pryx Cloud...")
+// 	res, err := auth.StartDeviceFlow(cfg.CloudAPIUrl)
+// 	if err != nil {
+// 		log.Printf("\nLogin failed: %v", err)
+// 		return 1
+// 	}
 
-	fmt.Printf("\nVerification URL: %s\n", res.VerificationURI)
-	fmt.Printf("User Code: %s\n", res.UserCode)
-	fmt.Println("Please open the URL above and enter the code to authorize this device.")
-	fmt.Println("Waiting for authorization...")
+// 	fmt.Printf("\nVerification URL: %s\n", res.VerificationURI)
+// 	fmt.Printf("User Code: %s\n", res.UserCode)
+// 	fmt.Println("Please open the URL above and enter the code to authorize this device.")
+// 	fmt.Println("Waiting for authorization...")
 
-	token, err := auth.PollForToken(cfg.CloudAPIUrl, res.DeviceCode)
-	if err != nil {
-		log.Printf("\nLogin failed: %v", err)
-		return 1
-	}
+// 	token, err := auth.PollForToken(cfg.CloudAPIUrl, res.DeviceCode)
+// 	if err != nil {
+// 		log.Printf("\nLogin failed: %v", err)
+// 		return 1
+// 	}
 
-	if err := kc.Set("cloud_access_token", token.AccessToken); err != nil {
-		log.Printf("\nFailed to store token: %v", err)
-		return 1
-	}
+// 	if err := kc.Set("cloud_access_token", token.AccessToken) {
+// 		log.Printf("\nFailed to store token: %v", err)
+// 		return 1
+// 	}
 
-	fmt.Println("\nSuccessfully logged in!")
-	return 0
-}
+// 	fmt.Println("\nSuccessfully logged in!")
+// 	return 0
+// }

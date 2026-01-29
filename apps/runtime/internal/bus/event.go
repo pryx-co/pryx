@@ -6,17 +6,19 @@ import "time"
 type EventType string
 
 const (
-	EventSessionMessage   EventType = "session.message"
-	EventSessionTyping    EventType = "session.typing"
-	EventToolRequest      EventType = "tool.request"
-	EventToolExecuting    EventType = "tool.executing"
-	EventToolComplete     EventType = "tool.complete"
-	EventApprovalNeeded   EventType = "approval.needed"
-	EventApprovalResolved EventType = "approval.resolved"
-	EventTraceEvent       EventType = "trace.event"
-	EventErrorOccurred    EventType = "error.occurred"
-	EventChannelStatus    EventType = "channel.status"
-	EventChannelMessage   EventType = "channel.message"
+	EventSessionMessage         EventType = "session.message"
+	EventSessionTyping          EventType = "session.typing"
+	EventToolRequest            EventType = "tool.request"
+	EventToolExecuting          EventType = "tool.executing"
+	EventToolComplete           EventType = "tool.complete"
+	EventApprovalNeeded         EventType = "approval.needed"
+	EventApprovalResolved       EventType = "approval.resolved"
+	EventTraceEvent             EventType = "trace.event"
+	EventErrorOccurred          EventType = "error.occurred"
+	EventChannelStatus          EventType = "channel.status"
+	EventChannelMessage         EventType = "channel.message"
+	EventChannelOutboundMessage EventType = "channel.outbound_message"
+	EventChatRequest            EventType = "chat.request"
 )
 
 // Event represents a single event in the system

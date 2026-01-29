@@ -52,6 +52,12 @@ func (t *TelegramChannel) Connect(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	t.cancel = cancel
 
+	// Subscribe to outbound messages
+	if t.eventBus != nil {
+		outbound, unsub := t.eventBus.Subscribe(bus.EventChannelOutboundMessage)
+		go t.handleOutbound(ctx, outbound, unsub)
+	}
+
 	// Start polling in background
 	go t.poll(ctx)
 
@@ -156,6 +162,7 @@ func (t *TelegramChannel) handleMessage(msg *tgbotapi.Message) {
 	channelMsg := channels.Message{
 		ID:        strconv.Itoa(msg.MessageID),
 		Content:   content,
+		Source:    t.id,
 		ChannelID: strconv.FormatInt(msg.Chat.ID, 10),
 		SenderID:  strconv.FormatInt(msg.From.ID, 10),
 		CreatedAt: time.Unix(int64(msg.Date), 0),
@@ -167,4 +174,35 @@ func (t *TelegramChannel) handleMessage(msg *tgbotapi.Message) {
 	}
 
 	t.eventBus.Publish(bus.NewEvent(bus.EventChannelMessage, "", channelMsg))
+}
+
+func (t *TelegramChannel) handleOutbound(ctx context.Context, events <-chan bus.Event, unsub func()) {
+	defer unsub()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case evt, ok := <-events:
+			if !ok {
+				return
+			}
+			// Parse payload
+			if payload, ok := evt.Payload.(map[string]interface{}); ok {
+				source, _ := payload["source"].(string)
+				if source != t.id {
+					continue // Not for this channel instance
+				}
+				chatID, _ := payload["channel_id"].(string)
+				content, _ := payload["content"].(string)
+				if chatID != "" && content != "" {
+					// Send message
+					msg := channels.Message{
+						ChannelID: chatID,
+						Content:   content,
+					}
+					_ = t.Send(context.Background(), msg)
+				}
+			}
+		}
+	}
 }

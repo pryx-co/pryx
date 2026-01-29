@@ -60,6 +60,21 @@ help: ## Show this help message
 	@echo "$(BLUE)Usage:$(NC)"
 	@echo "  make <target>"
 
+## Development targets
+dev: ## Run local development stack (Web + Runtime)
+	@bash scripts/dev-runner.sh
+
+dev-tui: ## Run TUI + Runtime together
+	@bash scripts/tui-runner.sh
+
+dev-tui-debug: ## Run TUI + Runtime with full debug logging
+	@bash scripts/tui-runner-debug.sh
+
+tui: ## Build and run TUI client (requires Runtime to be running separately!)
+	@echo "$(BLUE)Building and Starting TUI...$(NC)"
+	@echo "$(YELLOW)Note: Runtime must be running on :3000. Use 'make dev-tui' to run both.$(NC)"
+	@cd apps/tui && bun install && bun run build && ./pryx-tui
+
 ## Build targets
 build: build-host build-runtime build-tui ## Build all components
 

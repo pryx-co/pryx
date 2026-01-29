@@ -1,0 +1,199 @@
+{
+  "version": "1.0.0",
+  "project": "pryx",
+  "tasks": [
+    {
+      "id": "1",
+      "title": "Debug make dev-tui - Fix immediate issues",
+      "status": "completed",
+      "priority": "high",
+      "description": "Fix Settings.tsx import error, WebSocket multiple connections, and add debugging tools",
+      "files_modified": [
+        "apps/tui/src/components/Settings.tsx",
+        "apps/tui/src/services/ws.ts",
+        "apps/tui/src/components/App.tsx",
+        "apps/tui/src/components/Chat.tsx",
+        "apps/tui/src/components/SessionExplorer.tsx",
+        "apps/tui/index.tsx",
+        "scripts/tui-runner.sh",
+        "scripts/tui-runner-debug.sh",
+        "Makefile"
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Effect-TS Migration - Phase 1: Setup",
+      "status": "pending",
+      "priority": "high",
+      "description": "Install Effect-TS and create infrastructure for migration",
+      "subtasks": [
+        {
+          "id": "2.1",
+          "title": "Install effect package in apps/tui",
+          "status": "pending"
+        },
+        {
+          "id": "2.2",
+          "title": "Install effect package in apps/web",
+          "status": "pending"
+        },
+        {
+          "id": "2.3",
+          "title": "Create Effect configuration (tsconfig, eslint)",
+          "status": "pending"
+        },
+        {
+          "id": "2.4",
+          "title": "Create base Effect utilities and helpers",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": "Effect-TS Migration - Phase 2: Core Services (TUI)",
+      "status": "pending",
+      "priority": "high",
+      "description": "Migrate core services to Effect-TS with proper resource management",
+      "subtasks": [
+        {
+          "id": "3.1",
+          "title": "Migrate ws.ts to Effect-based WebSocket service",
+          "status": "pending"
+        },
+        {
+          "id": "3.2",
+          "title": "Migrate config.ts to Effect-based file operations",
+          "status": "pending"
+        },
+        {
+          "id": "3.3",
+          "title": "Create Effect Layers for dependency injection",
+          "status": "pending"
+        },
+        {
+          "id": "3.4",
+          "title": "Add WebSocket resource management with Scope",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": "Effect-TS Migration - Phase 3: TUI Components",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Migrate all TUI components to use Effect-TS",
+      "subtasks": [
+        {
+          "id": "4.1",
+          "title": "Create useEffectRunner hook for SolidJS",
+          "status": "pending"
+        },
+        {
+          "id": "4.2",
+          "title": "Migrate App.tsx to use Effect",
+          "status": "pending"
+        },
+        {
+          "id": "4.3",
+          "title": "Migrate Chat.tsx WebSocket handling",
+          "status": "pending"
+        },
+        {
+          "id": "4.4",
+          "title": "Migrate SessionExplorer.tsx",
+          "status": "pending"
+        },
+        {
+          "id": "4.5",
+          "title": "Migrate Settings.tsx",
+          "status": "pending"
+        },
+        {
+          "id": "4.6",
+          "title": "Migrate Channels.tsx",
+          "status": "pending"
+        },
+        {
+          "id": "4.7",
+          "title": "Migrate Skills.tsx",
+          "status": "pending"
+        },
+        {
+          "id": "4.8",
+          "title": "Migrate Notifications.tsx",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "title": "Effect-TS Migration - Phase 4: Web App",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Migrate web application to Effect-TS",
+      "subtasks": [
+        {
+          "id": "5.1",
+          "title": "Install and configure effect in apps/web",
+          "status": "pending"
+        },
+        {
+          "id": "5.2",
+          "title": "Create React hooks for Effect",
+          "status": "pending"
+        },
+        {
+          "id": "5.3",
+          "title": "Migrate Dashboard components",
+          "status": "pending"
+        },
+        {
+          "id": "5.4",
+          "title": "Migrate SkillCard component",
+          "status": "pending"
+        },
+        {
+          "id": "5.5",
+          "title": "Migrate DeviceCard/DeviceList components",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": "Effect-TS Migration - Phase 5: Testing & Validation",
+      "status": "pending",
+      "priority": "high",
+      "description": "Ensure no race conditions or memory leaks after migration",
+      "subtasks": [
+        {
+          "id": "6.1",
+          "title": "Test WebSocket connection handling",
+          "status": "pending"
+        },
+        {
+          "id": "6.2",
+          "title": "Memory profiling to verify no leaks",
+          "status": "pending"
+        },
+        {
+          "id": "6.3",
+          "title": "Race condition testing",
+          "status": "pending"
+        },
+        {
+          "id": "6.4",
+          "title": "Error handling verification",
+          "status": "pending"
+        },
+        {
+          "id": "6.5",
+          "title": "Performance benchmarks",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}

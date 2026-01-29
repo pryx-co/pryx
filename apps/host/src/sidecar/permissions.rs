@@ -233,3 +233,43 @@ pub async fn show_permission_dialog(app: AppHandle, message: String, title: Stri
 
 	Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_default() {
+        let config = PermissionDialogConfig::default();
+        assert_eq!(config.show_native_dialog, false);
+        assert_eq!(config.approval_required_for_critical, false);
+    }
+
+    #[test]
+    fn test_manager_initialization() {
+        let config = PermissionDialogConfig {
+            show_native_dialog: true,
+            dialog_timeout_ms: 5000,
+            approval_required_for_critical: true,
+        };
+        let manager = PermissionManager::new(config);
+        
+        let pending = manager.list_pending();
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn test_approval_request_struct() {
+        let req = ApprovalRequest {
+            request_id: "req-123".into(),
+            tool_name: "test-tool".into(),
+            tool_description: "test description".into(),
+            args: serde_json::json!({ "foo": "bar" }),
+            session_id: "sess-1".into(),
+            is_critical: true,
+        };
+        
+        assert_eq!(req.tool_name, "test-tool");
+        assert!(req.is_critical);
+    }
+}

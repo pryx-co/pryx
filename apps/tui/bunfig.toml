@@ -1,0 +1,7 @@
+preload = ["@opentui/solid/preload"]
+
+[loaders]
+".scm" = "file"
+
+[test]
+jsxImportSource = "solid-js"

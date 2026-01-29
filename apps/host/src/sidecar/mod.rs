@@ -18,6 +18,8 @@ use tokio::{
 
 use serde::{Deserialize, Serialize};
 pub mod permissions;
+#[cfg(test)]
+mod tests;
 use serde_json::Value;
 
 /// Sidecar process state

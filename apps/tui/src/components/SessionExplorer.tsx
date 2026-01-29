@@ -1,7 +1,11 @@
-// @ts-nocheck
 import { Box, Text, Input } from "@opentui/core";
-import { createSignal, For, createEffect } from "solid-js";
-import { connect, send, RuntimeEvent } from "../services/ws";
+import { createSignal, For, createEffect, onCleanup } from "solid-js";
+import { Effect, Stream, Fiber } from "effect";
+import { useEffectService, TUIRuntime } from "../lib/hooks";
+import { WebSocketService } from "../services/ws";
+
+// Define locally
+type RuntimeEvent = any;
 
 interface Session {
     id: string;
@@ -14,23 +18,31 @@ interface Session {
 }
 
 export default function SessionExplorer() {
+    const ws = useEffectService(WebSocketService);
     const [sessions, setSessions] = createSignal<Session[]>([]);
     const [searchQuery, setSearchQuery] = createSignal("");
     const [selectedIndex, setSelectedIndex] = createSignal(0);
     const [loading, setLoading] = createSignal(true);
 
     createEffect(() => {
-        connect(
-            () => { },
-            (evt: RuntimeEvent) => {
+        const service = ws();
+        if (!service) return;
+
+        const fiber = Effect.runFork(service.messages.pipe(
+            Stream.runForEach((evt: RuntimeEvent) => Effect.sync(() => {
                 if (evt.event === "sessions.list") {
                     setSessions(evt.payload?.sessions ?? []);
                     setLoading(false);
                 }
-            }
-        );
+            }))
+        ));
+
+        onCleanup(() => {
+            Effect.runFork(Fiber.interrupt(fiber));
+        });
+
         // Request sessions on mount
-        send({ event: "sessions.list", payload: {} });
+        Effect.runFork(service.send({ event: "sessions.list", payload: {} }));
     });
 
     const filteredSessions = () => {
@@ -49,8 +61,9 @@ export default function SessionExplorer() {
 
     const handleSelect = () => {
         const session = filteredSessions()[selectedIndex()];
-        if (session) {
-            send({ event: "session.resume", payload: { session_id: session.id } });
+        const service = ws();
+        if (session && service) {
+            Effect.runFork(service.send({ event: "session.resume", payload: { session_id: session.id } }));
         }
     };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DeviceList from './dashboard/DeviceList';
 
 interface TraceEvent {
     id: string;
@@ -70,9 +71,17 @@ export default function Dashboard() {
     const timeWindow = 60000; // 60s window
 
     return (
-        <div style={{ padding: '1rem', fontFamily: 'system-ui' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Observability Dashboard</h1>
+        <div style={{ padding: '1rem', fontFamily: 'system-ui', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>⚡</span> Pryx Cloud
+                    </h1>
+                    <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem' }}>
+                        <a href="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold' }}>Dashboard</a>
+                        <a href="/skills" style={{ color: '#9ca3af', textDecoration: 'none' }}>Skills</a>
+                    </nav>
+                </div>
                 <span style={{
                     color: connected ? '#10b981' : '#ef4444',
                     display: 'flex',
@@ -85,23 +94,27 @@ export default function Dashboard() {
                         borderRadius: '50%',
                         backgroundColor: connected ? '#10b981' : '#ef4444'
                     }} />
-                    {connected ? 'Connected' : 'Disconnected'}
+                    {connected ? 'Live' : 'Offline'}
                 </span>
             </header>
 
-            {stats && (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
-                    gap: '1rem',
-                    marginBottom: '1.5rem'
-                }}>
-                    <StatCard label="Cost" value={formatCost(stats.cost)} color="#f59e0b" />
-                    <StatCard label="Tokens" value={stats.tokens.toLocaleString()} color="#3b82f6" />
-                    <StatCard label="Duration" value={formatDuration(stats.duration)} color="#10b981" />
-                    <StatCard label="Events" value={stats.eventCount.toString()} color="#8b5cf6" />
-                </div>
-            )}
+            <DeviceList />
+
+            {
+                stats && (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '1rem',
+                        marginBottom: '1.5rem'
+                    }}>
+                        <StatCard label="Cost" value={formatCost(stats.cost)} color="#f59e0b" />
+                        <StatCard label="Tokens" value={stats.tokens.toLocaleString()} color="#3b82f6" />
+                        <StatCard label="Duration" value={formatDuration(stats.duration)} color="#10b981" />
+                        <StatCard label="Events" value={stats.eventCount.toString()} color="#8b5cf6" />
+                    </div>
+                )
+            }
 
             <section>
                 <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Trace Timeline</h2>
@@ -146,30 +159,32 @@ export default function Dashboard() {
                 </div>
             </section>
 
-            {selectedEvent && (
-                <section style={{ marginTop: '1rem' }}>
-                    <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Event Details</h2>
-                    <div style={{
-                        border: '1px solid #333',
-                        borderRadius: 8,
-                        padding: '1rem',
-                        backgroundColor: '#111',
-                        fontSize: '0.875rem'
-                    }}>
-                        <p><strong>ID:</strong> {selectedEvent.id}</p>
-                        <p><strong>Type:</strong> {selectedEvent.type}</p>
-                        <p><strong>Name:</strong> {selectedEvent.name}</p>
-                        <p><strong>Status:</strong> {selectedEvent.status}</p>
-                        <p><strong>Duration:</strong> {formatDuration(selectedEvent.duration)}</p>
-                        {selectedEvent.correlationId && (
-                            <p><strong>Correlation ID:</strong> {selectedEvent.correlationId}</p>
-                        )}
-                        {selectedEvent.error && (
-                            <p style={{ color: '#ef4444' }}><strong>Error:</strong> {selectedEvent.error}</p>
-                        )}
-                    </div>
-                </section>
-            )}
+            {
+                selectedEvent && (
+                    <section style={{ marginTop: '1rem' }}>
+                        <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Event Details</h2>
+                        <div style={{
+                            border: '1px solid #333',
+                            borderRadius: 8,
+                            padding: '1rem',
+                            backgroundColor: '#111',
+                            fontSize: '0.875rem'
+                        }}>
+                            <p><strong>ID:</strong> {selectedEvent.id}</p>
+                            <p><strong>Type:</strong> {selectedEvent.type}</p>
+                            <p><strong>Name:</strong> {selectedEvent.name}</p>
+                            <p><strong>Status:</strong> {selectedEvent.status}</p>
+                            <p><strong>Duration:</strong> {formatDuration(selectedEvent.duration)}</p>
+                            {selectedEvent.correlationId && (
+                                <p><strong>Correlation ID:</strong> {selectedEvent.correlationId}</p>
+                            )}
+                            {selectedEvent.error && (
+                                <p style={{ color: '#ef4444' }}><strong>Error:</strong> {selectedEvent.error}</p>
+                            )}
+                        </div>
+                    </section>
+                )
+            }
 
             <section style={{ marginTop: '1rem' }}>
                 <h2 style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Recent Events</h2>
@@ -206,7 +221,7 @@ export default function Dashboard() {
                     ))}
                 </div>
             </section>
-        </div>
+        </div >
     );
 }
 

@@ -40,6 +40,11 @@ tmp/
 temp/
 *.tmp
 
+# Temporary reference codebases (for AI code model context)
+# - moltbot: AI agent architecture reference
+# - opencode: UI/UX design reference
+.temp_refs/
+
 # Environment files
 .env
 .env.local

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -39,6 +41,7 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(corsMiddleware)
 
 	p := policy.NewEngine(nil)
 
@@ -181,7 +184,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Reader loop: Keep connection alive and handle incoming messages if needed
+	// Reader loop: Keep connection alive and handle incoming messages
 	for {
 		msgType, data, err := c.Read(ctx)
 		if err != nil {
@@ -191,16 +194,35 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		// Parse generic message structure
 		in := struct {
-			Type       string `json:"type"`
-			ApprovalID string `json:"approval_id"`
-			Approved   bool   `json:"approved"`
+			Event      string                 `json:"event"`
+			Type       string                 `json:"type"`
+			SessionID  string                 `json:"session_id"`
+			Payload    map[string]interface{} `json:"payload"`
+			ApprovalID string                 `json:"approval_id"`
+			Approved   bool                   `json:"approved"`
 		}{}
 		if err := json.Unmarshal(data, &in); err != nil {
 			continue
 		}
-		if in.Type == "approval.resolve" && strings.TrimSpace(in.ApprovalID) != "" {
-			_ = s.mcp.ResolveApproval(in.ApprovalID, in.Approved)
+
+		// Handle different message types
+		eventType := in.Event
+		if eventType == "" {
+			eventType = in.Type
+		}
+
+		switch eventType {
+		case "approval.resolve":
+			if strings.TrimSpace(in.ApprovalID) != "" {
+				_ = s.mcp.ResolveApproval(in.ApprovalID, in.Approved)
+			}
+		case "chat.send":
+			if in.Payload != nil && in.Payload["content"] != nil {
+				// Publish chat request for Agent to handle
+				s.bus.Publish(bus.NewEvent(bus.EventChatRequest, sessionFilter, in.Payload))
+			}
 		}
 	}
 
@@ -345,7 +367,36 @@ func (s *Server) handleSkillsBody(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Start() error {
-	return http.ListenAndServe(s.cfg.ListenAddr, s.router)
+	// Find an available port if not explicitly set or if set to :0
+	addr := s.cfg.ListenAddr
+	var port int
+
+	if addr == ":3000" || addr == ":0" || addr == "" {
+		// Dynamic port allocation
+		availablePort, err := GetAvailablePort()
+		if err != nil {
+			return fmt.Errorf("failed to find available port: %w", err)
+		}
+		port = availablePort
+		addr = fmt.Sprintf(":%d", port)
+
+		// Write port to file for clients to discover
+		if err := WritePortFile(port); err != nil {
+			log.Printf("Warning: failed to write port file: %v", err)
+		} else {
+			log.Printf("Runtime port written to ~/.pryx/runtime.port: %d", port)
+		}
+
+		// Clean up port file on shutdown
+		defer func() {
+			if err := CleanupPortFile(); err != nil {
+				log.Printf("Warning: failed to cleanup port file: %v", err)
+			}
+		}()
+	}
+
+	log.Printf("Starting server on http://localhost%s", addr)
+	return http.ListenAndServe(addr, s.router)
 }
 
 func (s *Server) Serve(l net.Listener) error {
@@ -369,4 +420,20 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return srv.Shutdown(ctx)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
