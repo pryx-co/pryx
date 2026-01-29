@@ -20,10 +20,10 @@ import (
 	"pryx-core/internal/config"
 	"pryx-core/internal/doctor"
 	"pryx-core/internal/keychain"
-	"pryx-core/internal/mcp"
 	"pryx-core/internal/mesh"
 	"pryx-core/internal/server"
 	"pryx-core/internal/store"
+	"pryx-core/internal/telemetry"
 )
 
 var (
@@ -40,6 +40,8 @@ func main() {
 			os.Exit(runMCP(os.Args[2:]))
 		case "doctor":
 			os.Exit(runDoctor())
+		case "cost":
+			os.Exit(runCost(os.Args[2:]))
 			// 		case "login":
 			// 			os.Exit(runLogin())
 		case "config":
@@ -62,12 +64,21 @@ func main() {
 
 	kc := keychain.New("pryx")
 
+	telProvider, err := telemetry.NewProvider(cfg, kc)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize telemetry: %v", err)
+	} else if telProvider.Enabled() {
+		log.Printf("Telemetry enabled (device: %s)", telProvider.DeviceID())
+		defer telProvider.Shutdown(context.Background())
+	}
+
 	// server.New creates the Bus internally
 	srv := server.New(cfg, s.DB, kc)
 	b := srv.Bus()
 
 	meshMgr := mesh.NewManager(cfg, b, s, kc)
 	meshMgr.Start(context.Background())
+	defer meshMgr.Stop()
 
 	// Channels
 	chanMgr := channels.NewManager(b)
@@ -120,7 +131,7 @@ func usage() {
 	log.Println("  pryx-core skills <command>")
 	log.Println("  pryx-core mcp <filesystem|shell|browser|clipboard>")
 	log.Println("  pryx-core doctor")
-	log.Println("  pryx-core doctor")
+	log.Println("  pryx-core cost <command>")
 	log.Println("  pryx-core login")
 	log.Println("  pryx-core config <set|get|list>")
 	log.Println("")
@@ -136,35 +147,17 @@ func usage() {
 	log.Println("  mcp")
 	log.Println("    <name> <subcommand>                 Run MCP server")
 	log.Println("")
+	log.Println("  cost")
+	log.Println("    summary                              Show total cost summary")
+	log.Println("    daily [days]                         Show daily cost breakdown")
+	log.Println("    monthly [months]                      Show monthly cost breakdown")
+	log.Println("    budget                               Manage cost budget")
+	log.Println("    pricing                              Show model pricing")
+	log.Println("    optimize                             Show optimization suggestions")
+	log.Println("")
 	log.Println("  doctor                               Run diagnostics")
 	log.Println("  login                                Log in to Pryx Cloud")
 	log.Println("  help, -h, --help                    Show this help message")
-}
-
-func runMCPServer(args []string) int {
-	if len(args) < 1 || strings.TrimSpace(args[0]) == "" {
-		usage()
-		return 2
-	}
-	name := strings.TrimSpace(args[0])
-
-	provider, err := mcp.BundledProvider(name)
-	if err != nil {
-		log.Printf("unknown mcp server: %s", name)
-		return 1
-	}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
-	if err := mcp.ServeStdio(ctx, provider); err != nil {
-		if err == context.Canceled {
-			return 0
-		}
-		log.Printf("mcp server error: %v", err)
-		return 1
-	}
-	return 0
 }
 
 func runDoctor() int {

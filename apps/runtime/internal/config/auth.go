@@ -7,12 +7,12 @@ import (
 )
 
 type OAuthProvider struct {
-	Name           string `json:"name"`
-	ClientID       string `json:"client_id"`
-	ClientSecret   string `json:"client_secret"`
-	AuthURL       string `json:"auth_url"`
-	TokenURL      string `json:"token_url"`
-	Scopes        []string `json:"scopes"`
+	Name         string   `json:"name"`
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	AuthURL      string   `json:"auth_url"`
+	TokenURL     string   `json:"token_url"`
+	Scopes       []string `json:"scopes"`
 }
 
 type AuthConfig struct {

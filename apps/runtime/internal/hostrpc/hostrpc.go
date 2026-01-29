@@ -104,4 +104,3 @@ func (c *Client) RequestPermission(req PermissionRequest) (bool, error) {
 	}
 	return pr.Approved, nil
 }
-

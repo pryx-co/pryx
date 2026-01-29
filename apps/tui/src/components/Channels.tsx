@@ -1,5 +1,3 @@
-// @ts-nocheck
-import { Box, Text, Input } from "@opentui/core";
 import { createSignal, onMount, onCleanup, Show, For } from "solid-js";
 import { loadConfig, saveConfig } from "../services/config";
 
@@ -17,19 +15,17 @@ export default function Channels() {
         { id: "h1", type: "header", label: "TELEGRAM BOT" },
         { id: "tg_status", type: "toggle", key: "telegram_enabled", label: "Status" },
         { id: "tg_token", type: "input", key: "telegram_token", label: "Bot Token", placeholder: "123456:ABC-..." },
-        { id: "sep1", type: "header", label: " " }, // Spacer
+        { id: "sep1", type: "header", label: " " },
         { id: "h2", type: "header", label: "GENERIC WEBHOOK" },
-        { id: "wh_status", type: "toggle", key: "webhook_enabled", label: "Status" }, // Future
+        { id: "wh_status", type: "toggle", key: "webhook_enabled", label: "Status" },
     ]);
-    const [selectedIndex, setSelectedIndex] = createSignal(1); // Start at status
+    const [selectedIndex, setSelectedIndex] = createSignal(1);
     const [isEditing, setIsEditing] = createSignal(false);
     const [status, setStatus] = createSignal("");
 
-    // Helper to skip headers
     const moveSelection = (dir: 1 | -1) => {
         let next = selectedIndex();
         const len = fields().length;
-        // Max attempts to find non-header
         for (let i = 0; i < len; i++) {
             next = (next + dir + len) % len;
             if (fields()[next].type !== "header") break;
@@ -41,19 +37,18 @@ export default function Channels() {
         if (isEditing()) return;
 
         const key = data.toString();
-        if (key === '\u001B\u005B\u0041') { // Up
+        if (key === '\u001B\u005B\u0041') {
             moveSelection(-1);
-        } else if (key === '\u001B\u005B\u0042') { // Down
+        } else if (key === '\u001B\u005B\u0042') {
             moveSelection(1);
-        } else if (key === '\r' || key === '\n') { // Enter
+        } else if (key === '\r' || key === '\n') {
             const field = fields()[selectedIndex()];
             if (field.type === "input") {
                 setIsEditing(true);
             } else if (field.type === "toggle") {
-                // Toggle immediately
                 toggleValue(field.key!);
             }
-        } else if (key === ' ') { // Space
+        } else if (key === ' ') {
             const field = fields()[selectedIndex()];
             if (field.type === "toggle") {
                 toggleValue(field.key!);
@@ -92,59 +87,54 @@ export default function Channels() {
     const renderValue = (field: ChannelField) => {
         const val = config()[field.key!];
         if (field.type === "toggle") {
-            return val ? <Text color="green">ENABLED</Text> : <Text color="gray">DISABLED</Text>;
+            return val ? <text fg="green">ENABLED</text> : <text fg="gray">DISABLED</text>;
         }
-        if (!val) return <Text color="gray" italic>empty</Text>;
-        // Mask token partially
+        if (!val) return <text fg="gray">empty</text>;
         if (field.key?.includes("token")) {
-            return <Text>{val.substring(0, 4)}...{val.substring(val.length - 4)}</Text>;
+            return <text>{val.substring(0, 4)}...{val.substring(val.length - 4)}</text>;
         }
-        return <Text>{val}</Text>;
+        return <text>{val}</text>;
     };
 
     return (
-        <Box flexDirection="column" flexGrow={1}>
-            <Text bold color="magenta">Channel Setup</Text>
-            <Text color="gray">Config Path: ~/.pryx/config.yaml</Text>
+        <box flexDirection="column" flexGrow={1}>
+            <text fg="magenta">Channel Setup</text>
+            <text fg="gray">Config Path: ~/.pryx/config.yaml</text>
 
-            <Box marginTop={1} flexDirection="column" borderStyle="round" padding={1}>
+            <box marginTop={1} flexDirection="column" borderStyle="rounded" padding={1}>
                 <For each={fields()}>
                     {(field, index) => {
                         if (field.type === "header") {
-                            return <Box marginTop={field.label === " " ? 0 : 1} marginBottom={0}>
-                                <Text bold color="cyan">{field.label}</Text>
-                            </Box>;
+                            return <box marginTop={field.label === " " ? 0 : 1} marginBottom={0}>
+                                <text fg="cyan">{field.label}</text>
+                            </box>;
                         }
 
                         const isSelected = index() === selectedIndex();
                         return (
-                            <Box flexDirection="row" marginBottom={0}>
-                                <Text color={isSelected ? "cyan" : "gray"}>
+                            <box flexDirection="row" marginBottom={0}>
+                                <text fg={isSelected ? "cyan" : "gray"}>
                                     {isSelected ? "❯ " : "  "}
-                                </Text>
-                                <Box width={15}>
-                                    <Text bold={isSelected}>
-                                        {field.label}:
-                                    </Text>
-                                </Box>
+                                </text>
+                                <box width={15}>
+                                    <text>{field.label}:</text>
+                                </box>
 
                                 <Show when={isEditing() && isSelected} fallback={renderValue(field)}>
-                                    <Input
-                                        value={config()[field.key!] || ""}
-                                        placeholder={field.placeholder}
-                                        onSubmit={(val) => handleSave(field.key!, val)}
-                                    />
+                                    <box>
+                                        <text fg="cyan">▌{config()[field.key!] || ""}</text>
+                                    </box>
                                 </Show>
-                            </Box>
+                            </box>
                         );
                     }}
                 </For>
-            </Box>
+            </box>
 
-            <Box marginTop={1}>
-                <Text color="green">{status()}</Text>
-            </Box>
-            <Text color="gray">↑↓ Select │ Enter/Space Toggle │ Enter Edit</Text>
-        </Box>
+            <box marginTop={1}>
+                <text fg="green">{status()}</text>
+            </box>
+            <text fg="gray">↑↓ Select │ Enter/Space Toggle │ Enter Edit</text>
+        </box>
     );
 }

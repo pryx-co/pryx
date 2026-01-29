@@ -48,11 +48,11 @@ func NewManager(b *bus.Bus, p *policy.Engine, kc *keychain.Keychain) *Manager {
 		p = policy.NewEngine(nil)
 	}
 	return &Manager{
-		bus:      b,
-		policy:   p,
-		keychain: kc,
-		clients:  map[string]*Client{},
-		cache:    map[string]cachedTools{},
+		bus:              b,
+		policy:           p,
+		keychain:         kc,
+		clients:          map[string]*Client{},
+		cache:            map[string]cachedTools{},
 		pendingApprovals: map[string]pendingApproval{},
 	}
 }

@@ -18,9 +18,7 @@ func NewResolver(catalog *Catalog) *Resolver {
 func (r *Resolver) CalculateCost(req Request, caps ModelCapabilities) CostEstimate {
 	inputCost := (float64(req.PromptTokens) / 1000000.0) * caps.InputPrice1M
 	outputCost := (float64(req.OutputTokens) / 1000000.0) * caps.OutputPrice1M
-	thinkingCost := (float64(req.ThinkingTokens) / 1000000.0) * caps.InputPrice1M // Assuming thinking tokens cost same as input usually, or specific if needed. Often treated as output. Let's use Output assuming it's generated.
-	// Actually thinking tokens are usually output tokens.
-	thinkingCost = (float64(req.ThinkingTokens) / 1000000.0) * caps.OutputPrice1M
+	thinkingCost := (float64(req.ThinkingTokens) / 1000000.0) * caps.OutputPrice1M
 
 	total := inputCost + outputCost + thinkingCost + caps.RequestFixedCostUSD
 
@@ -31,31 +29,6 @@ func (r *Resolver) CalculateCost(req Request, caps ModelCapabilities) CostEstima
 		FixedCost:          caps.RequestFixedCostUSD,
 		TotalUSD:           total,
 	}
-}
-
-func (r *Resolver) findFallbackModel(modelID string, req Request) (string, bool) {
-	caps, ok := r.catalog.Get(modelID)
-	if !ok {
-		return "", false
-	}
-
-	for _, fallbackID := range caps.FallbackChain {
-		fbCaps, ok := r.catalog.Get(fallbackID)
-		if !ok {
-			continue
-		}
-
-		totalTokens := req.PromptTokens + req.OutputTokens
-		if totalTokens <= fbCaps.ContextWindow {
-			if fbCaps.MaxOutputTokens == 0 || req.OutputTokens <= fbCaps.MaxOutputTokens {
-				if req.ThinkingTokens == 0 || req.ThinkingTokens <= fbCaps.MaxThinkingTokens {
-					return fallbackID, true
-				}
-			}
-		}
-	}
-
-	return "", false
 }
 
 func (r *Resolver) Resolve(req Request) Resolution {

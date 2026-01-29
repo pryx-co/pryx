@@ -162,5 +162,4 @@ func readSSEForResponse(r io.Reader, reqID interface{}) (RPCResponse, error) {
 		return RPCResponse{}, err
 	}
 	return RPCResponse{}, errors.New("no response in sse stream")
-	return RPCResponse{}, errors.New("no response in sse stream")
 }

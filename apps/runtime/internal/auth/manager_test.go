@@ -3,23 +3,18 @@ package auth_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"pryx-core/internal/auth"
-	"pryx-core/internal/bus"
 	"pryx-core/internal/config"
-	"pryx-core/internal/keychain"
 )
 
 func TestNewManager(t *testing.T) {
 	cfg := &config.AuthConfig{
 		OAuthProviders: map[string]*config.OAuthProvider{},
 	}
-	kc := &mockKeychain{}
-	store := &mockStore{}
-	bus := &mockBus{}
+	kc := newMockKeychain()
 
-	manager := auth.NewManager(cfg, kc, store, bus)
+	manager := auth.NewManager(cfg, kc)
 
 	if manager == nil {
 		t.Error("Expected non-nil manager")
@@ -31,21 +26,19 @@ func TestInitiateDeviceFlow(t *testing.T) {
 	cfg := &config.AuthConfig{
 		OAuthProviders: map[string]*config.OAuthProvider{
 			"test_provider": {
-				Name:     "Test Provider",
-				ClientID: "test_client",
+				Name:         "Test Provider",
+				ClientID:     "test_client",
 				ClientSecret: "test_secret",
-				AuthURL:    "https://auth.example.com/authorize",
+				AuthURL:      "https://auth.example.com/authorize",
 				TokenURL:     "https://auth.example.com/token",
-				Scopes:      []string{"read", "write"},
+				Scopes:       []string{"read", "write"},
 			},
 		},
 	}
 
-	kc := &mockKeychain{}
-	store := &mockStore{}
-	bus := &mockBus{}
+	kc := newMockKeychain()
 
-	manager := auth.NewManager(cfg, kc, store, bus)
+	manager := auth.NewManager(cfg, kc)
 
 	redirectURI := "pryx://callback/test"
 
@@ -62,6 +55,14 @@ func TestInitiateDeviceFlow(t *testing.T) {
 	if state.ClientID != "test_client" {
 		t.Errorf("Expected test_client, got: %s", state.ClientID)
 	}
+
+	saved, err := kc.Get("oauth_state_" + state.State)
+	if err != nil {
+		t.Fatalf("Expected no keychain error, got: %v", err)
+	}
+	if saved == "" {
+		t.Fatalf("Expected state to be saved in keychain")
+	}
 }
 
 func TestSetManualToken(t *testing.T) {
@@ -70,50 +71,43 @@ func TestSetManualToken(t *testing.T) {
 		OAuthProviders: map[string]*config.OAuthProvider{},
 	}
 
-	kc := &mockKeychain{}
-	store := &mockStore{}
-	bus := &mockBus{}
+	kc := newMockKeychain()
 
-	manager := auth.NewManager(cfg, kc, store, bus)
+	manager := auth.NewManager(cfg, kc)
 
 	err := manager.SetManualToken(ctx, "test_provider", "manual_token_value")
 
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
+
+	got, err := kc.Get("oauth_token_test_provider")
+	if err != nil {
+		t.Fatalf("Expected no keychain error, got: %v", err)
+	}
+	if got != "manual_token_value" {
+		t.Fatalf("Expected saved token %q, got %q", "manual_token_value", got)
+	}
 }
 
-// Mock types
 type mockKeychain struct {
 	Store map[string]string
 }
 
-type mockStore struct {
-	Store map[string]*auth.OAuthState
+func newMockKeychain() *mockKeychain {
+	return &mockKeychain{Store: map[string]string{}}
 }
 
-func (m *mockKeychain) Get(ctx context.Context, key string) (string, error) {
-	return m.Store[key], nil
+func (m *mockKeychain) Get(user string) (string, error) {
+	return m.Store[user], nil
 }
 
-func (m *mockKeychain) Set(ctx context.Context, key string, value string) error {
-	m.Store[key] = value
+func (m *mockKeychain) Set(user, password string) error {
+	m.Store[user] = password
 	return nil
 }
 
-func (m *mockKeychain) Delete(ctx context.Context, key string) error {
-	delete(m.Store, key)
+func (m *mockKeychain) Delete(user string) error {
+	delete(m.Store, user)
 	return nil
-}
-
-func (m *mockStore) GetOAuthState(ctx context.Context, state string) (*auth.OAuthState, error) {
-	return m.Store[state], nil
-}
-
-func (m *mockBus) NewEvent(eventType bus.EventType, id string, data map[string]interface{}) bus.Event {
-	return bus.Event{Type: eventType, ID: id, Data: data}
-}
-
-func (m *mockBus) Publish(event bus.Event) {
-	// No-op for tests
 }

@@ -1,7 +1,5 @@
-// @ts-nocheck
-import { Box, Text, Input } from "@opentui/core";
 import { createSignal, onMount, onCleanup, Show, For } from "solid-js";
-import { loadConfig, saveConfig, Config } from "../services/config";
+import { loadConfig, saveConfig } from "../services/config";
 
 export default function Settings() {
     const [config, setConfig] = createSignal<any>({});
@@ -20,7 +18,6 @@ export default function Settings() {
         const loaded = loadConfig();
         setConfig(loaded);
 
-        // Setup Key Listener
         if (typeof process !== "undefined" && process.stdin.isTTY) {
             process.stdin.on("data", handleInput);
         }
@@ -32,22 +29,15 @@ export default function Settings() {
         }
     });
 
-    // We use 'data' instead of 'keypress' to avoid readline dependency if possible, 
-    // but raw mode handling might be complex. 
-    // Actually, Input component likely puts stdin in raw mode.
-    // If I attach 'data' listener, I might steal from Input?
-    // Proper way: Input should be unmounted when not editing.
-
     const handleInput = (data: Buffer) => {
-        if (isEditing()) return; // Let Input handle it
+        if (isEditing()) return;
 
         const key = data.toString();
-        // ANSI codes for arrow keys
-        if (key === '\u001B\u005B\u0041') { // Up
+        if (key === '\u001B\u005B\u0041') {
             setSelectedIndex(prev => (prev - 1 + fields().length) % fields().length);
-        } else if (key === '\u001B\u005B\u0042') { // Down
+        } else if (key === '\u001B\u005B\u0042') {
             setSelectedIndex(prev => (prev + 1) % fields().length);
-        } else if (key === '\r' || key === '\n') { // Enter
+        } else if (key === '\r' || key === '\n') {
             setIsEditing(true);
         }
     };
@@ -62,39 +52,41 @@ export default function Settings() {
     };
 
     return (
-        <Box flexDirection="column" flexGrow={1}>
-            <Text bold color="cyan">Configuration</Text>
-            <Text color="gray">Config Path: ~/.pryx/config.yaml</Text>
-            <Box marginTop={1} flexDirection="column" borderStyle="round" padding={1}>
+        <box flexDirection="column" flexGrow={1}>
+            <text fg="cyan">Configuration</text>
+            <text fg="gray">Config Path: ~/.pryx/config.yaml</text>
+            <box marginTop={1} flexDirection="column" borderStyle="rounded" padding={1}>
                 <For each={fields()}>
                     {(field, index) => (
-                        <Box flexDirection="row" marginBottom={0}>
-                            <Text color={index() === selectedIndex() ? "cyan" : "gray"}>
+                        <box flexDirection="row" marginBottom={0}>
+                            <text fg={index() === selectedIndex() ? "cyan" : "gray"}>
                                 {index() === selectedIndex() ? "❯ " : "  "}
-                            </Text>
-                            <Box width={20}>
-                                <Text bold={index() === selectedIndex()}>
-                                    {field.label}:
-                                </Text>
-                            </Box>
+                            </text>
+                            <box width={20}>
+                                <text>{field.label}:</text>
+                            </box>
 
                             <Show when={isEditing() && index() === selectedIndex()} fallback={
-                                <Text color="white">{config()[field.key] || <Text color="gray" italic>empty</Text>}</Text>
+                                <box>
+                                    {config()[field.key] ? (
+                                        <text fg="white">{config()[field.key]}</text>
+                                    ) : (
+                                        <text fg="gray">empty</text>
+                                    )}
+                                </box>
                             }>
-                                <Input
-                                    value={config()[field.key] || ""}
-                                    placeholder={field.placeholder}
-                                    onSubmit={(val) => handleSave(field.key, val)}
-                                />
+                                <box>
+                                    <text fg="cyan">▌{config()[field.key] || ""}</text>
+                                </box>
                             </Show>
-                        </Box>
+                        </box>
                     )}
                 </For>
-            </Box>
-            <Box marginTop={1}>
-                <Text color="green">{status()}</Text>
-            </Box>
-            <Text color="gray">↑↓ Select │ Enter Edit/Save</Text>
-        </Box>
+            </box>
+            <box marginTop={1}>
+                <text fg="green">{status()}</text>
+            </box>
+            <text fg="gray">↑↓ Select │ Enter Edit/Save</text>
+        </box>
     );
 }

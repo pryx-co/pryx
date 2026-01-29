@@ -6,8 +6,8 @@
         "moduleResolution": "bundler",
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
-        "jsx": "react-jsx",
-        "jsxImportSource": "solid-js",
+        "jsx": "preserve",
+        "jsxImportSource": "@opentui/solid",
         "types": [
             "bun-types",
             "@opentui/solid"

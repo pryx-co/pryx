@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
@@ -9,10 +8,8 @@ NC='\033[0m'
 
 echo -e "${BLUE}Starting Pryx TUI + Runtime...${NC}"
 
-# Store PIDs
 PIDS=()
 
-# Cleanup function
 cleanup() {
     echo -e "\n${RED}Shutting down services...${NC}"
     for pid in "${PIDS[@]}"; do
@@ -47,75 +44,74 @@ trap on_exit EXIT
 trap on_sigint SIGINT
 trap on_sigterm SIGTERM
 
-# Check if runtime port is already in use
-RUNTIME_PORT=${PRYX_RUNTIME_PORT:-3000}
-if lsof -Pi :$RUNTIME_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "${YELLOW}[Runtime]${NC} Port $RUNTIME_PORT is already in use. Runtime may already be running."
-else
-    # Start Runtime (Go)
-    echo -e "${GREEN}[Runtime]${NC} Starting Go Core on :$RUNTIME_PORT..."
+PORT_FILE="$HOME/.pryx/runtime.port"
+if [ -f "$PORT_FILE" ]; then
+    RUNTIME_PID=$(lsof -t "$PORT_FILE" 2>/dev/null | head -1)
+    if [ -n "$RUNTIME_PID" ] && kill -0 "$RUNTIME_PID" 2>/dev/null; then
+        echo -e "${YELLOW}[Runtime]${NC} Runtime appears to already be running (PID: $RUNTIME_PID)"
+        echo -e "${YELLOW}[Runtime]${NC} Port file exists at $PORT_FILE"
+        RUNTIME_ALREADY_RUNNING=1
+    fi
+fi
+
+if [ -z "$RUNTIME_ALREADY_RUNNING" ]; then
+    rm -f "$PORT_FILE"
+    
+    echo -e "${GREEN}[Runtime]${NC} Starting Go Core with dynamic port allocation..."
     cd apps/runtime || exit 1
     
-    # Build first to catch compile errors
     if ! go build -o /tmp/pryx-core-dev ./cmd/pryx-core; then
         echo -e "${RED}[Runtime]${NC} Failed to build runtime!${NC}"
         exit 1
     fi
     
-    # Run the built binary
-    /tmp/pryx-core-dev &
+    mkdir -p "$HOME/.pryx/logs"
+    /tmp/pryx-core-dev > "$HOME/.pryx/logs/runtime.log" 2>&1 &
     RUNTIME_PID=$!
     PIDS+=($RUNTIME_PID)
     cd ../..
 
-    # Wait for Runtime to be ready
-    echo -e "${BLUE}Waiting for Runtime to start...${NC}"
+    echo -e "${BLUE}Waiting for Runtime to start and allocate port...${NC}"
     for i in {1..30}; do
         if ! kill -0 "$RUNTIME_PID" 2>/dev/null; then
             echo -e "${RED}Runtime failed to start!${NC}"
             exit 1
         fi
         
-        # Check if port is listening
-        if lsof -Pi :$RUNTIME_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
-            echo -e "${GREEN}[Runtime]${NC} Ready on port $RUNTIME_PORT"
-            break
+        if [ -f "$PORT_FILE" ]; then
+            RUNTIME_PORT=$(cat "$PORT_FILE" 2>/dev/null)
+            if [ -n "$RUNTIME_PORT" ]; then
+                echo -e "${GREEN}[Runtime]${NC} Ready on port $RUNTIME_PORT"
+                break
+            fi
         fi
         
         if [ $i -eq 30 ]; then
-            echo -e "${YELLOW}[Runtime]${NC} Timeout waiting for port. Continuing anyway...${NC}"
+            echo -e "${YELLOW}[Runtime]${NC} Timeout waiting for port file. Continuing anyway...${NC}"
         fi
         
         sleep 0.5
     done
 fi
 
-# Check if TUI binary exists and is up to date
-cd apps/tui || exit 1
-
-# Check if we need to rebuild
-if [ ! -f "./pryx-tui" ] || [ "./index.tsx" -nt "./pryx-tui" ] || [ "./src/components/App.tsx" -nt "./pryx-tui" ]; then
-    echo -e "${GREEN}[TUI]${NC} Building Terminal UI..."
-    
-    # Install dependencies if needed
-    if [ ! -d "node_modules" ]; then
-        echo -e "${BLUE}[TUI]${NC} Installing dependencies...${NC}"
-        bun install --silent
+if [ -f "$PORT_FILE" ]; then
+    RUNTIME_PORT=$(cat "$PORT_FILE" 2>/dev/null)
+    if [ -n "$RUNTIME_PORT" ]; then
+        export PRYX_API_URL="http://localhost:${RUNTIME_PORT}"
+        export PRYX_WS_URL="ws://localhost:${RUNTIME_PORT}/ws"
+        echo -e "${BLUE}Runtime configured:${NC}"
+        echo -e "  API: ${PRYX_API_URL}"
+        echo -e "  WebSocket: ${PRYX_WS_URL}"
     fi
-    
-    # Build with error output visible
-    if ! bun run build 2>&1; then
-        echo -e "${RED}[TUI]${NC} Build failed!${NC}"
-        cd ../..
-        cleanup
-        exit 1
-    fi
-    echo -e "${GREEN}[TUI]${NC} Build successful"
-else
-    echo -e "${GREEN}[TUI]${NC} Using existing build"
 fi
 
-# Start TUI
-echo -e "${GREEN}[TUI]${NC} Starting Terminal UI..."
-cd ../..
-./apps/tui/pryx-tui
+cd apps/tui || exit 1
+
+if [ ! -d "node_modules" ]; then
+    echo -e "${BLUE}[TUI]${NC} Installing dependencies...${NC}"
+    bun install --silent
+fi
+
+echo -e "${GREEN}[TUI]${NC} Starting Terminal UI (development mode)..."
+echo -e "${BLUE}[TUI]${NC} Note: Using 'bun run dev' for proper OpenTUI preload support${NC}"
+bun run dev

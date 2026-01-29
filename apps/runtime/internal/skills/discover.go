@@ -34,10 +34,8 @@ func DefaultOptions() Options {
 	}
 	bundledRoot := strings.TrimSpace(os.Getenv("PRYX_BUNDLED_SKILLS_DIR"))
 	if bundledRoot == "" {
-		devBundled := filepath.Join(workspaceRoot, "runtime", "internal", "skills", "bundled")
-		if info, err := os.Stat(devBundled); err == nil && info.IsDir() {
-			bundledRoot = devBundled
-		} else {
+		bundledRoot = findBundledSkillsDir(workspaceRoot)
+		if bundledRoot == "" {
 			bundledRoot = filepath.Join(execDir, "bundled-skills")
 		}
 	}
@@ -47,6 +45,27 @@ func DefaultOptions() Options {
 		BundledRoot:   bundledRoot,
 		MaxConcurrent: runtime.GOMAXPROCS(0),
 	}
+}
+
+func findBundledSkillsDir(workspaceRoot string) string {
+	dir := workspaceRoot
+	for i := 0; i < 6; i++ {
+		candidates := []string{
+			filepath.Join(dir, "apps", "runtime", "internal", "skills", "bundled"),
+			filepath.Join(dir, "runtime", "internal", "skills", "bundled"),
+		}
+		for _, candidate := range candidates {
+			if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+				return candidate
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
 }
 
 type MultiError struct {

@@ -1,10 +1,8 @@
-import { Box, Text, Input } from "@opentui/core";
 import { createSignal, For, createEffect, onCleanup } from "solid-js";
 import { Effect, Stream, Fiber } from "effect";
-import { useEffectService, TUIRuntime } from "../lib/hooks";
+import { useEffectService } from "../lib/hooks";
 import { WebSocketService } from "../services/ws";
 
-// Define locally
 type RuntimeEvent = any;
 
 interface Session {
@@ -41,7 +39,6 @@ export default function SessionExplorer() {
             Effect.runFork(Fiber.interrupt(fiber));
         });
 
-        // Request sessions on mount
         Effect.runFork(service.send({ event: "sessions.list", payload: {} }));
     });
 
@@ -83,52 +80,53 @@ export default function SessionExplorer() {
     };
 
     return (
-        <Box flexDirection="column" flexGrow={1}>
-            <Box marginBottom={1}>
-                <Text bold color="cyan">Session Explorer</Text>
-                <Text color="gray"> ({filteredSessions().length} sessions)</Text>
-            </Box>
+        <box flexDirection="column" flexGrow={1}>
+            <box marginBottom={1}>
+                <text fg="cyan">Session Explorer</text>
+                <text fg="gray"> ({filteredSessions().length} sessions)</text>
+            </box>
 
-            <Box borderStyle="single" marginBottom={1}>
-                <Text color="gray">🔍 </Text>
-                <Input
-                    placeholder="Search sessions..."
-                    value={searchQuery()}
-                    onChange={handleSearch}
-                    onSubmit={handleSelect}
-                />
-            </Box>
+            <box borderStyle="single" marginBottom={1} padding={1}>
+                <text fg="gray">🔍 </text>
+                <box flexGrow={1}>
+                    {searchQuery() ? (
+                        <text fg="white">{searchQuery()}</text>
+                    ) : (
+                        <text fg="gray">Search sessions...</text>
+                    )}
+                </box>
+            </box>
 
-            <Box flexDirection="column" flexGrow={1} borderStyle="rounded" padding={1}>
+            <box flexDirection="column" flexGrow={1} borderStyle="rounded" padding={1}>
                 {loading() ? (
-                    <Text color="gray">Loading sessions...</Text>
+                    <text fg="gray">Loading sessions...</text>
                 ) : filteredSessions().length === 0 ? (
-                    <Text color="gray">No sessions found</Text>
+                    <text fg="gray">No sessions found</text>
                 ) : (
                     <For each={filteredSessions()}>
                         {(session, index) => (
-                            <Box>
-                                <Text color={index() === selectedIndex() ? "cyan" : "white"}>
-                                    {index() === selectedIndex() ? "▶ " : "  "}
-                                </Text>
-                                <Text color={index() === selectedIndex() ? "cyan" : "white"} bold>
+                            <box flexDirection="row" gap={1}>
+                                <text fg={index() === selectedIndex() ? "cyan" : "white"}>
+                                    {index() === selectedIndex() ? "▶" : " "}
+                                </text>
+                                <text fg={index() === selectedIndex() ? "cyan" : "white"}>
                                     {session.title.slice(0, 40)}
-                                </Text>
-                                <Text color="gray"> │ </Text>
-                                <Text color="gray">{formatDate(session.updatedAt)}</Text>
-                                <Text color="gray"> │ </Text>
-                                <Text color="yellow">{formatCost(session.cost)}</Text>
-                                <Text color="gray"> │ </Text>
-                                <Text color="green">{formatTokens(session.tokens)} tok</Text>
-                            </Box>
+                                </text>
+                                <text fg="gray">|</text>
+                                <text fg="gray">{formatDate(session.updatedAt)}</text>
+                                <text fg="gray">|</text>
+                                <text fg="yellow">{formatCost(session.cost)}</text>
+                                <text fg="gray">|</text>
+                                <text fg="green">{formatTokens(session.tokens)} tok</text>
+                            </box>
                         )}
                     </For>
                 )}
-            </Box>
+            </box>
 
-            <Box marginTop={1}>
-                <Text color="gray">↑↓ Navigate │ Enter Resume │ e Export │ d Delete</Text>
-            </Box>
-        </Box>
+            <box marginTop={1}>
+                <text fg="gray">↑↓ Navigate │ Enter Resume</text>
+            </box>
+        </box>
     );
 }

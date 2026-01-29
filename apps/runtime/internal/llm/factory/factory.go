@@ -15,6 +15,7 @@ const (
 	ProviderAnthropic  ProviderType = "anthropic"
 	ProviderOpenRouter ProviderType = "openrouter"
 	ProviderOllama     ProviderType = "ollama"
+	ProviderGLM        ProviderType = "glm"
 )
 
 func NewProvider(pt ProviderType, apiKey string, baseURL string) (llm.Provider, error) {
@@ -34,6 +35,14 @@ func NewProvider(pt ProviderType, apiKey string, baseURL string) (llm.Provider, 
 	// Validate Key (Except Ollama)
 	if apiKey == "" && pt != ProviderOllama {
 		return nil, fmt.Errorf("api key required for provider %s", pt)
+	}
+
+	// GLM uses OpenAI-compatible API
+	if pt == ProviderGLM {
+		pt = ProviderOpenAI
+		if baseURL == "" {
+			baseURL = "https://open.bigmodel.cn/api/paas/v4"
+		}
 	}
 
 	switch pt {

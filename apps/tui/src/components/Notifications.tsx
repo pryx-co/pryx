@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { Box, Text } from "@opentui/core";
 import { For } from "solid-js";
 
 export interface Notification {
@@ -24,7 +23,7 @@ export default function Notifications(props: NotificationsProps) {
     };
 
     return (
-        <Box
+        <box
             flexDirection="column"
             position="absolute"
             top={1}
@@ -33,18 +32,18 @@ export default function Notifications(props: NotificationsProps) {
         >
             <For each={props.items}>
                 {(item) => (
-                    <Box
+                    <box
                         borderStyle="single"
                         borderColor={getColor(item.type)}
                         padding={1}
                         marginBottom={1}
                         flexDirection="column"
                     >
-                        <Text color={getColor(item.type)} bold>{item.type.toUpperCase()}</Text>
-                        <Text>{item.message}</Text>
-                    </Box>
+                        <text color={getColor(item.type)} bold>{item.type.toUpperCase()}</text>
+                        <text>{item.message}</text>
+                    </box>
                 )}
             </For>
-        </Box>
+        </box>
     );
 }

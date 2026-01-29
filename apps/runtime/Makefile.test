@@ -1,0 +1,137 @@
+# Pryx Runtime Test Makefile
+# Comprehensive testing for Pryx agent runtime
+
+# Pryx Runtime Test Makefile
+# Comprehensive testing for Pryx agent runtime
+
+.PHONY: test test:unit test:integration test:e2e test:coverage test:all build clean test:verbose test:short test:skills test:mcp test:audit test:cost test:memory test:report test:check-coverage test:benchmark test:parallel test:stats test:help
+
+# Build the pryx-core binary
+build:
+	go build -o /tmp/pryx-core ./cmd/pryx-core/
+
+# Run all tests
+test: test:unit test:integration test:e2e
+
+# Run unit tests only
+test:unit:
+	go test -v -race ./tests/cli/... ./tests/integration/... 2>&1 | tee test_output.txt
+
+# Run integration tests only
+test:integration:
+	go test -v -race ./tests/integration/... 2>&1 | tee -a test_output.txt
+
+# Run E2E CLI tests only
+test:e2e:
+	go test -v ./e2e/... 2>&1 | tee -a test_output.txt
+
+# Run all tests with coverage
+test:coverage: build
+	go test -v -race -coverprofile=coverage.out ./tests/... ./e2e/... ./integration/...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+
+# Run all tests without caching
+test:all: build
+	go clean -testcache
+	go test -v -race ./tests/... ./e2e/... ./integration/... 2>&1 | tee test_output.txt
+
+# Run tests with verbose output
+test:verbose: build
+	go test -v -race ./tests/... ./e2e/... ./integration/...
+
+# Run tests with short flag (skip slow tests)
+test:short: build
+	go test -short -v ./tests/... ./e2e/... ./integration/...
+
+# Run tests for specific module
+test:skills:
+	go test -v ./tests/cli/skills/...
+
+test:mcp:
+	go test -v ./tests/cli/mcp/...
+
+test:audit:
+	go test -v ./tests/cli/audit/...
+
+test:cost:
+	go test -v ./tests/cli/cost/...
+
+test:memory:
+	go test -v ./tests/cli/memory/...
+
+# Generate test report
+test:report: test:all
+	@echo "## Test Results" > TEST_REPORT.md
+	@echo "" >> TEST_REPORT.md
+	@echo "Generated: $$(date)" >> TEST_REPORT.md
+	@echo "" >> TEST_REPORT.md
+	@echo "### Summary" >> TEST_REPORT.md
+	@tail -20 test_output.txt >> TEST_REPORT.md 2>/dev/null || echo "No test output" >> TEST_REPORT.md
+	@echo "" >> TEST_REPORT.md
+	@echo "### Full Output" >> TEST_REPORT.md
+	@echo '```' >> TEST_REPORT.md
+	@cat test_output.txt >> TEST_REPORT.md 2>/dev/null
+	@echo '```' >> TEST_REPORT.md
+	@echo "Test report generated: TEST_REPORT.md"
+
+# Run tests and check coverage thresholds
+test:check-coverage: build
+	go test -coverprofile=coverage.out ./tests/... ./e2e/... ./integration/...
+	@COVERAGE=$$(go tool cover -func=coverage.out | grep total | awk '{print $$3}' | sed 's/%//'); \
+	echo "Total coverage: $$COVERAGE%"; \
+	if [ "$$COVERAGE" -lt "80" ]; then \
+		echo "WARNING: Coverage below 80% threshold"; \
+	fi
+
+# Benchmark tests
+test:benchmark:
+	go test -bench=. -benchmem ./tests/... ./e2e/... ./integration/...
+
+# Run tests in parallel
+test:parallel:
+	go test -parallel=4 -v ./tests/... ./e2e/... ./integration/...
+
+# Clean test artifacts
+clean:
+	rm -f coverage.out coverage.html test_output.txt TEST_REPORT.md
+	go clean -testcache
+
+# Show test statistics
+test:stats:
+	@echo "Test Statistics:"
+	@echo "==============="
+	@echo ""
+	@echo "Unit tests:"
+	@find ./tests/cli -name "*_test.go" | wc -l | xargs echo "  - CLI test files:"
+	@find ./tests/integration -name "*_test.go" | wc -l | xargs echo "  - Integration test files:"
+	@echo ""
+	@echo "E2E tests:"
+	@find ./e2e -name "*_test.go" | wc -l | xargs echo "  - E2E test files:"
+	@echo ""
+	@find ./integration -name "*_test.go" | wc -l | xargs echo "  - Existing integration test files:"
+
+# Help target
+help:
+	@echo "Pryx Runtime Test Commands:"
+	@echo ""
+	@echo "  make test              - Run all tests (unit, integration, e2e)"
+	@echo "  make test:unit         - Run unit tests only"
+	@echo "  make test:integration  - Run integration tests only"
+	@echo "  make test:e2e          - Run E2E CLI tests only"
+	@echo "  make test:coverage     - Run all tests with coverage report"
+	@echo "  make test:all          - Run all tests without cache"
+	@echo "  make test:verbose      - Run tests with verbose output"
+	@echo "  make test:short        - Run tests with short flag"
+	@echo "  make test:report       - Run all tests and generate report"
+	@echo "  make test:check-coverage - Run tests and check coverage threshold"
+	@echo "  make test:benchmark    - Run benchmark tests"
+	@echo "  make test:parallel     - Run tests in parallel"
+	@echo "  make test:skills       - Run skills CLI tests"
+	@echo "  make test:mcp          - Run MCP CLI tests"
+	@echo "  make test:audit        - Run audit CLI tests"
+	@echo "  make test:cost         - Run cost CLI tests"
+	@echo "  make test:memory       - Run memory CLI tests"
+	@echo "  make test:stats        - Show test statistics"
+	@echo "  make clean             - Clean test artifacts"
+	@echo "  make help              - Show this help message"

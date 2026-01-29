@@ -41,7 +41,7 @@
     "go": ">=1.22.0"
   },
   "devDependencies": {
-    "oxlint": "^0.0.0",
+    "oxlint": "latest",
     "@commitlint/cli": "^19.7.1",
     "husky": "^9.1.7"
   }

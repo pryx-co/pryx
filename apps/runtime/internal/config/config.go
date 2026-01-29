@@ -13,10 +13,11 @@ type Config struct {
 	CloudAPIUrl  string `yaml:"cloud_api_url"`
 
 	// AI Configuration
-	ModelProvider  string `yaml:"model_provider"` // openai, anthropic, ollama
-	ModelName      string `yaml:"model_name"`     // e.g. gpt-4, claude-3-opus, llama3
+	ModelProvider  string `yaml:"model_provider"` // openai, anthropic, ollama, glm
+	ModelName      string `yaml:"model_name"`     // e.g. gpt-4, claude-3-opus, llama3, glm-4-flash
 	OpenAIKey      string `yaml:"openai_key"`
 	AnthropicKey   string `yaml:"anthropic_key"`
+	GLMKey         string `yaml:"glm_key"`
 	OllamaEndpoint string `yaml:"ollama_endpoint"`
 
 	// Channels

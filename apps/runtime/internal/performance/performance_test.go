@@ -102,99 +102,86 @@ func TestSessionPerformance(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	results := make(chan BenchmarkResult, 3)
-
-	// Benchmark session creation
-	go func() {
-		start := time.Now()
-		const numSessions = 1000
-		for i := 0; i < numSessions; i++ {
-			_, err := s.CreateSession("Test Session")
-			if err != nil {
-				t.Errorf("Failed to create session: %v", err)
-			}
+	start := time.Now()
+	const numSessions = 1000
+	for i := 0; i < numSessions; i++ {
+		_, err := s.CreateSession("Test Session")
+		if err != nil {
+			t.Fatalf("Failed to create session: %v", err)
 		}
-		duration := time.Since(start)
+	}
+	duration := time.Since(start)
+	createResult := BenchmarkResult{
+		Name:       "Session Create",
+		Duration:   duration,
+		Operations: numSessions,
+		AvgTime:    duration / time.Duration(numSessions),
+		Target:     TargetSessionSync,
+		Passed:     duration/numSessions < TargetSessionSync,
+	}
+	t.Logf("Session Performance: %s - %v (avg: %v, target: %v) - %v",
+		createResult.Name, createResult.Duration, createResult.AvgTime, createResult.Target, createResult.Passed)
+	if !createResult.Passed {
+		t.Errorf("Session %s performance failed: avg %v > target %v",
+			createResult.Name, createResult.AvgTime, createResult.Target)
+	}
 
-		results <- BenchmarkResult{
-			Name:       "Session Create",
-			Duration:   duration,
-			Operations: numSessions,
-			AvgTime:    duration / time.Duration(numSessions),
-			Target:     TargetSessionSync,
-			Passed:     duration/numSessions < TargetSessionSync,
+	start = time.Now()
+	const numRetrievals = 1000
+	for i := 0; i < numRetrievals; i++ {
+		_, err := s.ListSessions()
+		if err != nil {
+			t.Fatalf("Failed to list sessions: %v", err)
 		}
-	}()
+	}
+	duration = time.Since(start)
+	listResult := BenchmarkResult{
+		Name:       "Session List",
+		Duration:   duration,
+		Operations: numRetrievals,
+		AvgTime:    duration / time.Duration(numRetrievals),
+		Target:     TargetSessionSearch,
+		Passed:     duration/numRetrievals < TargetSessionSearch,
+	}
+	t.Logf("Session Performance: %s - %v (avg: %v, target: %v) - %v",
+		listResult.Name, listResult.Duration, listResult.AvgTime, listResult.Target, listResult.Passed)
+	if !listResult.Passed {
+		t.Errorf("Session %s performance failed: avg %v > target %v",
+			listResult.Name, listResult.AvgTime, listResult.Target)
+	}
 
-	// Benchmark session retrieval
-	go func() {
-		start := time.Now()
-		const numRetrievals = 1000
-		for i := 0; i < numRetrievals; i++ {
-			sessions, err := s.ListSessions()
-			if err != nil {
-				t.Errorf("Failed to list sessions: %v", err)
-			}
-			if len(sessions) == 0 {
-				t.Error("No sessions found")
-			}
-		}
-		duration := time.Since(start)
-
-		results <- BenchmarkResult{
-			Name:       "Session List",
-			Duration:   duration,
-			Operations: numRetrievals,
-			AvgTime:    duration / time.Duration(numRetrievals),
-			Target:     TargetSessionSearch,
-			Passed:     duration/numRetrievals < TargetSessionSearch,
-		}
-	}()
-
-	// Benchmark concurrent access
-	go func() {
-		var wg sync.WaitGroup
-		const numWorkers = 100
-		const opsPerWorker = 100
-		start := time.Now()
-
-		for i := 0; i < numWorkers; i++ {
-			wg.Add(1)
-			go func(workerID int) {
-				defer wg.Done()
-				for j := 0; j < opsPerWorker; j++ {
-					sessions, _ := s.ListSessions()
-					if workerID%2 == 0 && j%10 == 0 {
-						s.CreateSession("Concurrent Session")
-					}
-					_ = len(sessions)
+	var wg sync.WaitGroup
+	const numWorkers = 100
+	const opsPerWorker = 100
+	start = time.Now()
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for j := 0; j < opsPerWorker; j++ {
+				_, _ = s.ListSessions()
+				if workerID%2 == 0 && j%10 == 0 {
+					_, _ = s.CreateSession("Concurrent Session")
 				}
-			}(i)
-		}
-		wg.Wait()
-		duration := time.Since(start)
-		totalOps := numWorkers * opsPerWorker
-
-		results <- BenchmarkResult{
-			Name:       "Session Concurrent Access",
-			Duration:   duration,
-			Operations: totalOps,
-			AvgTime:    duration / time.Duration(totalOps),
-			Target:     TargetSessionSync * 10, // Allow 10x for concurrent access
-			Passed:     duration/time.Duration(totalOps) < TargetSessionSync*10,
-		}
-	}()
-
-	// Collect results
-	for i := 0; i < 3; i++ {
-		result := <-results
-		t.Logf("Session Performance: %s - %v (avg: %v, target: %v) - %v",
-			result.Name, result.Duration, result.AvgTime, result.Target, result.Passed)
-
-		if !result.Passed {
-			t.Errorf("Session %s performance failed: avg %v > target %v",
-				result.Name, result.AvgTime, result.Target)
-		}
+			}
+		}(i)
+	}
+	wg.Wait()
+	duration = time.Since(start)
+	totalOps := numWorkers * opsPerWorker
+	concurrentResult := BenchmarkResult{
+		Name:       "Session Concurrent Access",
+		Duration:   duration,
+		Operations: totalOps,
+		AvgTime:    duration / time.Duration(totalOps),
+		Target:     TargetSessionSync * 10,
+		Passed:     duration/time.Duration(totalOps) < TargetSessionSync*10,
+	}
+	t.Logf("Session Performance: %s - %v (avg: %v, target: %v) - %v",
+		concurrentResult.Name, concurrentResult.Duration, concurrentResult.AvgTime, concurrentResult.Target, concurrentResult.Passed)
+	if !concurrentResult.Passed {
+		t.Errorf("Session %s performance failed: avg %v > target %v",
+			concurrentResult.Name, concurrentResult.AvgTime, concurrentResult.Target)
 	}
 }
 

@@ -1,64 +1,54 @@
-import { Box, Text, Input } from "@opentui/core";
 import { createSignal, For, createEffect, onCleanup } from "solid-js";
 import { Effect, Stream, Fiber } from "effect";
-import { useEffectService, TUIRuntime } from "../lib/hooks";
+
+import { useEffectService } from "../lib/hooks";
 import { WebSocketService } from "../services/ws";
 import Message, { MessageProps } from "./Message";
 
-// Define event types locally or import from ws service types if available
 type RuntimeEvent = any;
 
 export default function Chat() {
     const ws = useEffectService(WebSocketService);
     const [messages, setMessages] = createSignal<MessageProps[]>([]);
-    const [input, setInput] = createSignal("");
-    // Status is managed by App.tsx, but Chat can display if needed. 
-    // For now we assume connected if we are receiving messages.
+    const [inputValue, setInputValue] = createSignal("");
     const [sessionId] = createSignal(crypto.randomUUID());
     const [pendingApproval, setPendingApproval] = createSignal<{ id: string, description: string } | null>(null);
+    const [isStreaming, setIsStreaming] = createSignal(false);
+    const [streamingContent, setStreamingContent] = createSignal("");
 
     createEffect(() => {
         const service = ws();
         if (!service) return;
 
-        console.log("Chat: Subscribing to messages");
-        const fiber = Effect.runFork(
+        const connectFiber = Effect.runFork(service.connect);
+        
+        const messageFiber = Effect.runFork(
             service.messages.pipe(
                 Stream.runForEach((evt) => Effect.sync(() => handleEvent(evt as RuntimeEvent)))
             )
-        ); // Removed improper TUIRuntime arg here too if Effect.runFork doesn't take it curried
+        );
 
         onCleanup(() => {
-            Effect.runFork(Fiber.interrupt(fiber));
+            Effect.runFork(Fiber.interrupt(connectFiber));
+            Effect.runFork(Fiber.interrupt(messageFiber));
+            Effect.runFork(service.disconnect);
         });
     });
 
     const handleEvent = (evt: RuntimeEvent) => {
         switch (evt.event) {
             case "message.delta":
-                setMessages((prev) => {
-                    const last = prev[prev.length - 1];
-                    if (last && last.type === "assistant" && last.pending) {
-                        return [...prev.slice(0, -1), {
-                            ...last,
-                            content: last.content + (evt.payload?.content ?? "")
-                        }];
-                    }
-                    return [...prev, {
-                        type: "assistant",
-                        content: evt.payload?.content ?? "",
-                        pending: true
-                    }];
-                });
+                setIsStreaming(true);
+                setStreamingContent(prev => prev + (evt.payload?.content ?? ""));
                 break;
             case "message.done":
-                setMessages((prev) => {
-                    const last = prev[prev.length - 1];
-                    if (last && last.pending) {
-                        return [...prev.slice(0, -1), { ...last, pending: false }];
-                    }
-                    return prev;
-                });
+                setIsStreaming(false);
+                setMessages(prev => [...prev, {
+                    type: "assistant",
+                    content: streamingContent(),
+                    pending: false
+                }]);
+                setStreamingContent("");
                 break;
             case "tool.start":
                 setMessages((prev) => [...prev, {
@@ -92,7 +82,8 @@ export default function Chat() {
         }
     };
 
-    const handleSubmit = (value: string) => {
+    const handleSubmit = () => {
+        const value = inputValue();
         if (!value.trim()) return;
         const service = ws();
         if (!service) return;
@@ -108,7 +99,7 @@ export default function Chat() {
                 }));
                 setMessages((prev) => [...prev, { type: "system", content: "✅ Approved" }]);
                 setPendingApproval(null);
-                setInput("");
+                setInputValue("");
                 return;
             } else if (value.toLowerCase() === "n" || value.toLowerCase() === "no") {
                 Effect.runFork(service.send({
@@ -119,7 +110,7 @@ export default function Chat() {
                 }));
                 setMessages((prev) => [...prev, { type: "system", content: "❌ Denied" }]);
                 setPendingApproval(null);
-                setInput("");
+                setInputValue("");
                 return;
             }
         }
@@ -130,31 +121,59 @@ export default function Chat() {
             sessionId: sessionId(),
             content: value
         }));
-        setInput("");
+        setInputValue("");
+        setIsStreaming(true);
     };
 
+
+
+    const displayMessages = () => [...messages()];
+
     return (
-        <Box flexDirection="column" flexGrow={1}>
-            <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor="cyan" padding={1}>
-                <For each={messages()}>
+        <box flexDirection="column" flexGrow={1}>
+            <box 
+                flexDirection="column" 
+                flexGrow={1} 
+                borderStyle="single" 
+                borderColor="cyan" 
+                padding={1}
+                gap={1}
+            >
+                <For each={displayMessages()}>
                     {(msg) => <Message {...msg} />}
                 </For>
-            </Box>
+                
+                {isStreaming() && streamingContent() && (
+                    <Message 
+                        type="assistant" 
+                        content={streamingContent()} 
+                        pending={true}
+                    />
+                )}
+            </box>
+
             {pendingApproval() && (
-                <Box borderStyle="double" borderColor="yellow" padding={1} marginTop={1}>
-                    <Text color="yellow">⚠️ {pendingApproval()!.description}</Text>
-                    <Text color="gray"> (y/n): </Text>
-                </Box>
+                <box 
+                    borderStyle="double" 
+                    borderColor="yellow" 
+                    padding={1} 
+                    marginTop={1}
+                    flexDirection="row"
+                >
+                    <text fg="yellow">⚠️ {pendingApproval()!.description}</text>
+                    <box flexGrow={1} />
+                    <text fg="gray">(y/n)</text>
+                </box>
             )}
-            <Box borderStyle="single" borderColor="gray" marginTop={0} paddingLeft={1}>
-                <Text color="cyan">❯ </Text>
-                <Input
-                    placeholder="Type a message..."
-                    value={input()}
-                    onChange={setInput}
+
+            <box marginTop={1}>
+                <input
+                    placeholder="Type a message... (Enter to send)"
+                    value={inputValue()}
+                    onChange={(v: string) => setInputValue(v)}
                     onSubmit={handleSubmit}
                 />
-            </Box>
-        </Box>
+            </box>
+        </box>
     );
 }

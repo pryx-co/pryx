@@ -1,6 +1,4 @@
-import { Box, Text } from "@opentui/core";
-
-export type MessageType = "user" | "assistant" | "tool" | "approval" | "system";
+export type MessageType = "user" | "assistant" | "tool" | "approval" | "system" | "thinking";
 
 export interface MessageProps {
     type: MessageType;
@@ -8,6 +6,7 @@ export interface MessageProps {
     toolName?: string;
     toolStatus?: "running" | "done" | "error";
     pending?: boolean;
+    isLast?: boolean;
 }
 
 const typeColors: Record<MessageType, string> = {
@@ -15,7 +14,8 @@ const typeColors: Record<MessageType, string> = {
     assistant: "white",
     tool: "yellow",
     approval: "magenta",
-    system: "gray"
+    system: "gray",
+    thinking: "gray"
 };
 
 const typePrefixes: Record<MessageType, string> = {
@@ -23,7 +23,8 @@ const typePrefixes: Record<MessageType, string> = {
     assistant: "Pryx",
     tool: "⚙️",
     approval: "⚠️ Approval",
-    system: "ℹ️"
+    system: "ℹ️",
+    thinking: "💭"
 };
 
 export default function Message(props: MessageProps) {
@@ -36,18 +37,26 @@ export default function Message(props: MessageProps) {
                 : props.toolStatus === "error" ? "❌"
                     : "⚙️";
         return (
-            <Box>
-                <Text color="yellow">{statusIcon} {props.toolName}: </Text>
-                <Text color="gray">{props.content}</Text>
-            </Box>
+            <box>
+                <text fg="yellow">{statusIcon} {props.toolName}: </text>
+                <text fg="gray">{props.content}</text>
+            </box>
+        );
+    }
+
+    if (props.type === "thinking") {
+        return (
+            <box borderStyle="single" borderColor="gray" padding={1}>
+                <text fg="gray">_Thinking:_ {props.content}</text>
+            </box>
         );
     }
 
     return (
-        <Box>
-            <Text color={color} bold>{prefix}: </Text>
-            <Text color={color}>{props.content}</Text>
-            {props.pending && <Text color="gray"> ▌</Text>}
-        </Box>
+        <box>
+            <text fg={color}>{prefix}: </text>
+            <text fg={color}>{props.content}</text>
+            {props.pending && <text fg="gray"> ▌</text>}
+        </box>
     );
 }

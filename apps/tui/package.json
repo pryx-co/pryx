@@ -5,7 +5,8 @@
     "type": "module",
     "scripts": {
         "build": "bun -e 'import solidPlugin from \"@opentui/solid/bun-plugin\"; const platform = process.platform === \"win32\" ? \"windows\" : process.platform; const target = `bun-${platform}-${process.arch}`; const result = await Bun.build({ entrypoints: [\"./index.tsx\"], target: \"bun\", outdir: \".\", plugins: [solidPlugin], compile: { target, outfile: \"pryx-tui\" } }); if (!result.success) process.exit(1);'",
-        "build:ci": "bun -e 'import solidPlugin from \"@opentui/solid/bun-plugin\"; const result = await Bun.build({ entrypoints: [\"./index.tsx\"], target: \"bun\", outdir: \"dist\", plugins: [solidPlugin] }); if (!result.success) process.exit(1);'"
+        "build:ci": "bun -e 'import solidPlugin from \"@opentui/solid/bun-plugin\"; const result = await Bun.build({ entrypoints: [\"./index.tsx\"], target: \"bun\", outdir: \"dist\", plugins: [solidPlugin] }); if (!result.success) process.exit(1);'",
+        "dev": "bun index.tsx"
     },
     "dependencies": {
         "@opentui/core": "latest",

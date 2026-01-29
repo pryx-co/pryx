@@ -38,6 +38,9 @@ func New(cfg *config.Config, eventBus *bus.Bus) (*Agent, error) {
 	case "ollama":
 		providerType = factory.ProviderOllama
 		baseURL = cfg.OllamaEndpoint
+	case "glm":
+		providerType = factory.ProviderGLM
+		apiKey = cfg.GLMKey
 	default:
 		return nil, fmt.Errorf("unsupported model provider: %s", cfg.ModelProvider)
 	}

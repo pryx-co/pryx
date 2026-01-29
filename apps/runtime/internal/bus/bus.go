@@ -12,11 +12,10 @@ type Handler func(Event)
 
 // Subscription represents a subscription to the bus
 type Subscription struct {
-	id      string
-	ch      chan Event
-	topics  []EventType
-	handler Handler
-	closer  func()
+	id     string
+	ch     chan Event
+	topics []EventType
+	closer func()
 }
 
 // Bus is the event bus
