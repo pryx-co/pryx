@@ -33,7 +33,7 @@ func New() *Bus {
 }
 
 // Subscribe subscribes to events. If topics is empty, it subscribes to all events.
-// Returns a channel that receives events.
+// Returns a channel that receives events. The bus owns the channel; use the closer to unsubscribe.
 func (b *Bus) Subscribe(topics ...EventType) (<-chan Event, func()) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

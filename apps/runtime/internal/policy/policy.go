@@ -20,7 +20,7 @@ type ArgMatcher struct {
 type Rule struct {
 	ID          string       `json:"id"`
 	Description string       `json:"description"`
-	Tool        string       `json:"tool"`           // exact match or regex
+	Tool        string       `json:"tool"`           // exact match, prefix wildcard (foo*), "*" or regex
 	Scope       ScopeType    `json:"scope"`          // scope requirement
 	Args        []ArgMatcher `json:"args,omitempty"` // argument matchers
 	Decision    Decision     `json:"decision"`

@@ -6,6 +6,8 @@ import (
 	"io"
 	"regexp"
 	"strings"
+
+	"pryx-core/internal/models"
 )
 
 //go:embed default_models.json
@@ -88,13 +90,19 @@ type CatalogConfig struct {
 
 type Catalog struct {
 	exact    map[string]ModelCapabilities
-	patterns map[string]ModelCapabilities
+	patterns []patternEntry
+}
+
+type patternEntry struct {
+	raw  string
+	re   *regexp.Regexp
+	caps ModelCapabilities
 }
 
 func NewCatalog() *Catalog {
 	return &Catalog{
 		exact:    make(map[string]ModelCapabilities),
-		patterns: make(map[string]ModelCapabilities),
+		patterns: []patternEntry{},
 	}
 }
 
@@ -118,7 +126,9 @@ func (c *Catalog) LoadFromBytes(data []byte) error {
 	}
 
 	for pattern, caps := range config.Patterns {
-		c.RegisterPattern(pattern, caps)
+		if err := c.RegisterPattern(pattern, caps); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -136,8 +146,17 @@ func (c *Catalog) RegisterExact(id string, caps ModelCapabilities) {
 	c.exact[id] = caps
 }
 
-func (c *Catalog) RegisterPattern(pattern string, caps ModelCapabilities) {
-	c.patterns[pattern] = caps
+func (c *Catalog) RegisterPattern(pattern string, caps ModelCapabilities) error {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return err
+	}
+	c.patterns = append(c.patterns, patternEntry{
+		raw:  pattern,
+		re:   re,
+		caps: caps,
+	})
+	return nil
 }
 
 func (c *Catalog) AllModelIDs() []string {
@@ -155,9 +174,7 @@ func (c *Catalog) Merge(other *Catalog) {
 	for id, caps := range other.exact {
 		c.exact[id] = caps
 	}
-	for pattern, caps := range other.patterns {
-		c.patterns[pattern] = caps
-	}
+	c.patterns = append(c.patterns, other.patterns...)
 }
 
 func (c *Catalog) Get(modelID string) (ModelCapabilities, bool) {
@@ -167,9 +184,9 @@ func (c *Catalog) Get(modelID string) (ModelCapabilities, bool) {
 	}
 
 	// 2. Pattern Match
-	for pattern, caps := range c.patterns {
-		if matched, _ := regexp.MatchString(pattern, modelID); matched {
-			return caps, true
+	for _, entry := range c.patterns {
+		if entry.re.MatchString(modelID) {
+			return entry.caps, true
 		}
 	}
 
@@ -179,4 +196,27 @@ func (c *Catalog) Get(modelID string) (ModelCapabilities, bool) {
 	}
 
 	return ModelCapabilities{}, false
+}
+
+func FromModelsDevCatalog(catalog *models.Catalog) *Catalog {
+	c := NewCatalog()
+	if catalog == nil {
+		return c
+	}
+
+	for modelID, modelInfo := range catalog.Models {
+		caps := ModelCapabilities{
+			ContextWindow:       modelInfo.Limit.Context,
+			MaxOutputTokens:     modelInfo.Limit.Output,
+			SupportsVision:      modelInfo.SupportsVision(),
+			SupportsTools:       modelInfo.SupportsTools(),
+			SupportsThinking:    modelInfo.Reasoning,
+			InputPrice1M:        modelInfo.Cost.Input,
+			OutputPrice1M:       modelInfo.Cost.Output,
+			RequestFixedCostUSD: 0,
+		}
+		c.RegisterExact(modelID, caps)
+	}
+
+	return c
 }

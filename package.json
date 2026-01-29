@@ -14,7 +14,19 @@
     "install": "make install",
     "version:bump": "make version-bump-patch",
     "version:tag": "make version-tag",
-    "info": "make info"
+    "info": "make info",
+    "start:tui": "make start-tui",
+    "start:runtime": "make start-runtime",
+    "start:host": "make start-host",
+    "start:all": "make start-all",
+    "logs": "make logs",
+    "logs:tui": "make logs-tui",
+    "logs:runtime": "make logs-runtime",
+    "logs:host": "make logs-host",
+    "tail:tui": "cd apps/tui && bun run dev",
+    "tail:runtime": "cd apps/runtime && go run ./cmd/pryx-core",
+    "tail:host": "cd apps/host && cargo tauri dev",
+    "tail:all": "concurrently 'npm run tail:tui' 'npm run tail:runtime' 'npm run tail:host'"
   },
   "repository": {
     "type": "git",

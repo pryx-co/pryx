@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"pryx-core/internal/config"
-	"pryx-core/internal/db"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mcp"
 	"pryx-core/internal/policy"
+	"pryx-core/internal/store"
 )
 
 type Status string
@@ -117,11 +117,11 @@ func checkDatabase(cfg *config.Config) (Check, *sql.DB) {
 	if path == "" {
 		return Check{Name: "sqlite", Status: StatusFail, Detail: "missing database path", Suggestion: "set PRYX_DB_PATH"}, nil
 	}
-	dbConn, err := db.Init(path)
+	s, err := store.New(path)
 	if err != nil {
 		return Check{Name: "sqlite", Status: StatusFail, Detail: err.Error(), Suggestion: "check file permissions or PRYX_DB_PATH"}, nil
 	}
-	return Check{Name: "sqlite", Status: StatusOK, Detail: filepath.Clean(path)}, dbConn
+	return Check{Name: "sqlite", Status: StatusOK, Detail: filepath.Clean(path)}, s.DB
 }
 
 func checkMCP(ctx context.Context, kc *keychain.Keychain) Check {

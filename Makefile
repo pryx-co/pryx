@@ -76,6 +76,15 @@ help: ## Show this help message
 	@echo "  $(GREEN)dev$(NC)               # Run local development stack"
 	@echo "  $(GREEN)dev-tui$(NC)          # Run TUI + Runtime together"
 	@echo "  $(GREEN)dev-tail$(NC)         # Tail runtime logs while TUI is running"
+	@echo "  $(GREEN)start-tui$(NC)        # Start TUI (opens interactive CLI)"
+	@echo "  $(GREEN)start-runtime$(NC)    # Start Runtime (foreground)"
+	@echo "  $(GREEN)start-host$(NC)       # Start Host (opens Tauri window)"
+	@echo "  $(GREEN)start-all$(NC)        # Start all services (background)"
+	@echo "  $(GREEN)start-all-logs$(NC)   # Start all + show combined logs"
+	@echo "  $(GREEN)logs$(NC)             # View all service logs"
+	@echo "  $(GREEN)logs-tui$(NC)         # View TUI logs only"
+	@echo "  $(GREEN)logs-runtime$(NC)     # View Runtime logs only"
+	@echo "  $(GREEN)logs-host$(NC)        # View Host logs only"
 	@echo "  $(GREEN)install$(NC)           # Install development tools"
 	@echo "  $(GREEN)check$(NC)             # Run comprehensive checks (lint + test)"
 	@echo "  $(GREEN)info$(NC)              # Show project information"
@@ -107,6 +116,60 @@ dev-tail: ## Tail runtime logs while TUI is running
 	else \
 		echo "$(YELLOW)No runtime log found. Run 'make dev-tui' first.$(NC)"; \
 	fi
+
+start-tui: ## Start TUI service (opens interactive CLI)
+	@echo "$(BLUE)Starting TUI...$(NC)"
+	@cd $(TUI_DIR) && bun run dev
+
+start-runtime: ## Start Runtime service (runs in foreground)
+	@echo "$(BLUE)Starting Runtime...$(NC)"
+	@cd $(RUNTIME_DIR) && go run ./cmd/pryx-core
+
+start-host: ## Start Host service (opens Tauri window)
+	@echo "$(BLUE)Starting Host...$(NC)"
+	@cd $(HOST_DIR) && cargo tauri dev
+
+start-all: ## Start TUI, Runtime, and Host (in background, logs to files)
+	@echo "$(BLUE)Starting all services in background...$(NC)"
+	@echo "$(YELLOW)Logs: ~/.pryx/logs/$(NC)"
+	@mkdir -p $(HOME)/.pryx/logs
+	@cd $(TUI_DIR) && nohup bun run dev > $(HOME)/.pryx/logs/tui.log 2>&1 &
+	@cd $(RUNTIME_DIR) && nohup go run ./cmd/pryx-core > $(HOME)/.pryx/logs/runtime.log 2>&1 &
+	@cd $(HOST_DIR) && nohup cargo tauri dev > $(HOME)/.pryx/logs/host.log 2>&1 &
+	@echo "$(GREEN)Services started in background$(NC)"
+	@echo "$(BLUE)Use 'make logs' to view combined output$(NC)"
+
+logs: ## View logs from all services
+	@echo "$(BLUE)Tailing logs...$(NC)"
+	@echo "$(YELLOW)Press Ctrl+C to stop (services keep running)$(NC)"
+	@tail -f $(HOME)/.pryx/logs/*.log 2>/dev/null || echo "$(YELLOW)No logs yet. Run services first.$(NC)"
+
+logs-tui: ## View TUI logs only
+	@tail -f $(HOME)/.pryx/logs/tui.log 2>/dev/null || echo "$(YELLOW)No TUI logs yet$(NC)"
+
+logs-runtime: ## View Runtime logs only
+	@tail -f $(HOME)/.pryx/logs/runtime.log 2>/dev/null || echo "$(YELLOW)No Runtime logs yet$(NC)"
+
+logs-host: ## View Host logs only
+	@tail -f $(HOME)/.pryx/logs/host.log 2>/dev/null || echo "$(YELLOW)No Host logs yet$(NC)"
+
+start-all-logs: ## Start all services and show combined logs
+	@echo "$(BLUE)Starting all services with combined output...$(NC)"
+	@echo "$(YELLOW)Press Ctrl+C to stop all services$(NC)"
+	@mkdir -p $(HOME)/.pryx/logs
+	@cd $(TUI_DIR) && bun run dev > $(HOME)/.pryx/logs/tui.log 2>&1 & \
+	TUI_PID=$$!; \
+	cd $(RUNTIME_DIR) && go run ./cmd/pryx-core > $(HOME)/.pryx/logs/runtime.log 2>&1 & \
+	RUNTIME_PID=$$!; \
+	cd $(HOST_DIR) && cargo tauri dev > $(HOME)/.pryx/logs/host.log 2>&1 & \
+	HOST_PID=$$!; \
+	sleep 2; \
+	echo "$(GREEN)Services started. PIDs: TUI=$$TUI_PID, Runtime=$$RUNTIME_PID, Host=$$HOST_PID$(NC)"; \
+	echo "$(BLUE)Tailing combined logs...$(NC)"; \
+	tail -f $(HOME)/.pryx/logs/tui.log $(HOME)/.pryx/logs/runtime.log $(HOME)/.pryx/logs/host.log & \
+	TAIL_PID=$$!; \
+	trap "kill $$TUI_PID $$RUNTIME_PID $$HOST_PID $$TAIL_PID 2>/dev/null; exit" INT TERM; \
+	wait
 
 tui: ## Build and run TUI client (requires Runtime to be running separately!)
 	@echo "$(BLUE)Building and Starting TUI...$(NC)"

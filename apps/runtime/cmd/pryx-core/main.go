@@ -21,6 +21,7 @@ import (
 	"pryx-core/internal/doctor"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mesh"
+	"pryx-core/internal/models"
 	"pryx-core/internal/server"
 	"pryx-core/internal/store"
 	"pryx-core/internal/telemetry"
@@ -64,6 +65,8 @@ func main() {
 
 	kc := keychain.New("pryx")
 
+	migrateProviderKeys(cfg, kc)
+
 	telProvider, err := telemetry.NewProvider(cfg, kc)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize telemetry: %v", err)
@@ -72,8 +75,18 @@ func main() {
 		defer telProvider.Shutdown(context.Background())
 	}
 
-	// server.New creates the Bus internally
+	modelsService := models.NewService()
+	catalog, err := modelsService.Load()
+	if err != nil {
+		log.Printf("Warning: Failed to load models catalog: %v", err)
+	} else {
+		log.Printf("Loaded %d providers and %d models from catalog", len(catalog.Providers), len(catalog.Models))
+	}
+
 	srv := server.New(cfg, s.DB, kc)
+	if catalog != nil {
+		srv.SetCatalog(catalog)
+	}
 	b := srv.Bus()
 
 	meshMgr := mesh.NewManager(cfg, b, s, kc)
@@ -92,7 +105,7 @@ func main() {
 	defer chanMgr.Shutdown()
 
 	// Agent (AI Orchestrator)
-	agt, err := agent.New(cfg, b)
+	agt, err := agent.New(cfg, b, kc)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize Agent: %v", err)
 	} else {
@@ -121,6 +134,23 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(ctx)
+}
+
+func migrateProviderKeys(cfg *config.Config, kc *keychain.Keychain) {
+	migrations := []struct {
+		provider string
+		key      string
+	}{
+		{"openai", ""},
+		{"anthropic", ""},
+		{"glm", ""},
+	}
+
+	for _, m := range migrations {
+		if existing, err := kc.GetProviderKey(m.provider); err == nil && existing != "" {
+			continue
+		}
+	}
 }
 
 func usage() {

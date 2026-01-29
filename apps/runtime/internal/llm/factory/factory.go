@@ -3,84 +3,242 @@ package factory
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/providers"
+	"pryx-core/internal/models"
 )
 
-type ProviderType string
+type ProviderFactory struct {
+	catalog  *models.Catalog
+	keychain *keychain.Keychain
+}
 
-const (
-	ProviderOpenAI     ProviderType = "openai"
-	ProviderAnthropic  ProviderType = "anthropic"
-	ProviderOpenRouter ProviderType = "openrouter"
-	ProviderOllama     ProviderType = "ollama"
-	ProviderGLM        ProviderType = "glm"
-)
+func NewProviderFactory(catalog *models.Catalog, kc *keychain.Keychain) *ProviderFactory {
+	return &ProviderFactory{
+		catalog:  catalog,
+		keychain: kc,
+	}
+}
 
-func NewProvider(pt ProviderType, apiKey string, baseURL string) (llm.Provider, error) {
-	// Fallback to Env Vars for API Key if empty
-	if apiKey == "" {
-		switch pt {
-		case ProviderOpenAI:
-			apiKey = os.Getenv("OPENAI_API_KEY")
-		case ProviderAnthropic:
-			apiKey = os.Getenv("ANTHROPIC_API_KEY")
-		case ProviderOpenRouter:
-			apiKey = os.Getenv("OPENROUTER_API_KEY")
-			// Ollama typically doesn't need a key, but one can be provided
+func (f *ProviderFactory) CreateProvider(providerID, modelID, apiKey string) (llm.Provider, error) {
+	if f.catalog == nil {
+		return nil, fmt.Errorf("catalog not loaded")
+	}
+
+	providerInfo, ok := f.catalog.GetProvider(providerID)
+	if !ok {
+		return nil, fmt.Errorf("unknown provider: %s", providerID)
+	}
+
+	_, ok = f.catalog.GetModel(modelID)
+	if !ok {
+		return nil, fmt.Errorf("unknown model: %s", modelID)
+	}
+
+	apiKey = f.resolveAPIKey(providerID, apiKey, providerInfo)
+
+	implType := f.getImplementationType(providerID, providerInfo)
+
+	switch implType {
+	case "openai", "openai-compatible":
+		baseURL := f.getBaseURL(providerID, providerInfo)
+		return providers.NewOpenAI(apiKey, baseURL), nil
+
+	case "anthropic":
+		return providers.NewAnthropic(apiKey), nil
+
+	default:
+		baseURL := f.getBaseURL(providerID, providerInfo)
+		return providers.NewOpenAI(apiKey, baseURL), nil
+	}
+}
+
+func (f *ProviderFactory) CreateProviderFromConfig(providerID, apiKey string) (llm.Provider, error) {
+	if f.catalog == nil {
+		return nil, fmt.Errorf("catalog not loaded")
+	}
+
+	providerInfo, ok := f.catalog.GetProvider(providerID)
+	if !ok {
+		return nil, fmt.Errorf("unknown provider: %s", providerID)
+	}
+
+	apiKey = f.resolveAPIKey(providerID, apiKey, providerInfo)
+
+	implType := f.getImplementationType(providerID, providerInfo)
+	baseURL := f.getBaseURL(providerID, providerInfo)
+
+	switch implType {
+	case "openai", "openai-compatible":
+		return providers.NewOpenAI(apiKey, baseURL), nil
+	case "anthropic":
+		return providers.NewAnthropic(apiKey), nil
+	default:
+		return providers.NewOpenAI(apiKey, baseURL), nil
+	}
+}
+
+func (f *ProviderFactory) IsProviderSupported(providerID string) bool {
+	_, ok := models.DefaultProviderMapping[providerID]
+	return ok
+}
+
+func (f *ProviderFactory) GetSupportedProviders() []string {
+	return models.GetSupportedProviders()
+}
+
+func (f *ProviderFactory) GetProviderModels(providerID string) ([]models.ModelInfo, error) {
+	if f.catalog == nil {
+		return nil, fmt.Errorf("catalog not loaded")
+	}
+	return f.catalog.GetProviderModels(providerID), nil
+}
+
+func (f *ProviderFactory) GetModelInfo(modelID string) (models.ModelInfo, bool) {
+	if f.catalog == nil {
+		return models.ModelInfo{}, false
+	}
+	return f.catalog.GetModel(modelID)
+}
+
+func (f *ProviderFactory) GetCatalog() *models.Catalog {
+	return f.catalog
+}
+
+func (f *ProviderFactory) resolveAPIKey(providerID, providedKey string, providerInfo models.ProviderInfo) string {
+	if providedKey != "" {
+		return providedKey
+	}
+
+	if f.keychain != nil {
+		if key, err := f.keychain.GetProviderKey(providerID); err == nil && key != "" {
+			return key
 		}
 	}
 
-	// Validate Key (Except Ollama)
-	if apiKey == "" && pt != ProviderOllama {
-		return nil, fmt.Errorf("api key required for provider %s", pt)
-	}
+	return f.getAPIKeyFromEnv(providerID, providerInfo)
+}
 
-	// GLM uses OpenAI-compatible API
-	if pt == ProviderGLM {
-		pt = ProviderOpenAI
-		if baseURL == "" {
-			baseURL = "https://open.bigmodel.cn/api/paas/v4"
+func (f *ProviderFactory) getAPIKeyFromEnv(providerID string, providerInfo models.ProviderInfo) string {
+	for _, envVar := range providerInfo.Env {
+		if key := os.Getenv(envVar); key != "" {
+			return key
 		}
 	}
 
+	switch providerID {
+	case "openai":
+		return os.Getenv("OPENAI_API_KEY")
+	case "anthropic":
+		return os.Getenv("ANTHROPIC_API_KEY")
+	case "openrouter":
+		return os.Getenv("OPENROUTER_API_KEY")
+	case "together":
+		return os.Getenv("TOGETHER_API_KEY")
+	case "groq":
+		return os.Getenv("GROQ_API_KEY")
+	case "xai":
+		return os.Getenv("XAI_API_KEY")
+	case "mistral":
+		return os.Getenv("MISTRAL_API_KEY")
+	case "cohere":
+		return os.Getenv("COHERE_API_KEY")
+	case "google":
+		return os.Getenv("GOOGLE_API_KEY")
+	}
+
+	return ""
+}
+
+func (f *ProviderFactory) getImplementationType(providerID string, providerInfo models.ProviderInfo) string {
+	npm := providerInfo.NPM
+
+	if strings.Contains(npm, "anthropic") {
+		return "anthropic"
+	}
+
+	if strings.Contains(npm, "openai") {
+		return "openai"
+	}
+
+	return "openai-compatible"
+}
+
+func (f *ProviderFactory) getBaseURL(providerID string, providerInfo models.ProviderInfo) string {
+	if providerInfo.API != "" {
+		return providerInfo.API
+	}
+
+	switch providerID {
+	case "openai":
+		if url := os.Getenv("OPENAI_BASE_URL"); url != "" {
+			return url
+		}
+		return "https://api.openai.com/v1"
+
+	case "openrouter":
+		return "https://openrouter.ai/api/v1"
+
+	case "together":
+		return "https://api.together.xyz/v1"
+
+	case "groq":
+		return "https://api.groq.com/openai/v1"
+
+	case "mistral":
+		return "https://api.mistral.ai/v1"
+
+	case "ollama":
+		baseURL := "http://localhost:11434"
+		if url := os.Getenv("OLLAMA_HOST"); url != "" {
+			baseURL = url
+		}
+		return ensureV1Suffix(baseURL)
+
+	case "glm":
+		return "https://open.bigmodel.cn/api/paas/v4"
+	}
+
+	return ""
+}
+
+func ensureV1Suffix(url string) string {
+	if !strings.HasSuffix(url, "/v1") {
+		return url + "/v1"
+	}
+	return url
+}
+
+func NewProvider(pt string, apiKey string, baseURL string) (llm.Provider, error) {
 	switch pt {
-	case ProviderOpenAI:
-		// Check for custom base URL in Env if not provided
+	case "openai":
 		if baseURL == "" {
 			baseURL = os.Getenv("OPENAI_BASE_URL")
+			if baseURL == "" {
+				baseURL = "https://api.openai.com/v1"
+			}
 		}
 		return providers.NewOpenAI(apiKey, baseURL), nil
 
-	case ProviderOpenRouter:
-		// OpenRouter is just OpenAI with a different Base URL
+	case "anthropic":
+		return providers.NewAnthropic(apiKey), nil
+
+	case "openrouter":
 		return providers.NewOpenAI(apiKey, "https://openrouter.ai/api/v1"), nil
 
-	case ProviderOllama:
-		// Default Ollama URL
+	case "ollama":
 		if baseURL == "" {
 			baseURL = "http://localhost:11434"
 		}
-		// Ensure /v1 suffix for OpenAI compatibility
-		if !containsV1(baseURL) {
-			baseURL = fmt.Sprintf("%s/v1", baseURL)
-		}
-		return providers.NewOpenAI(apiKey, baseURL), nil
+		return providers.NewOpenAI(apiKey, ensureV1Suffix(baseURL)), nil
 
-	case ProviderAnthropic:
-		return providers.NewAnthropic(apiKey), nil
+	case "glm":
+		return providers.NewOpenAI(apiKey, "https://open.bigmodel.cn/api/paas/v4"), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", pt)
 	}
-}
-
-func containsV1(url string) bool {
-	// Simple check, can be robustified
-	len := len(url)
-	if len >= 3 && url[len-3:] == "/v1" {
-		return true
-	}
-	return false
 }

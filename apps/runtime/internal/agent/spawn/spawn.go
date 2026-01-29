@@ -9,6 +9,7 @@ import (
 
 	"pryx-core/internal/bus"
 	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
 )
@@ -57,18 +58,20 @@ type Result struct {
 type Spawner struct {
 	cfg       *config.Config
 	bus       *bus.Bus
+	keychain  *keychain.Keychain
 	mu        sync.RWMutex
 	agents    map[string]*SubAgent
 	maxAgents int
 }
 
 // NewSpawner creates a new agent spawner
-func NewSpawner(cfg *config.Config, b *bus.Bus) *Spawner {
+func NewSpawner(cfg *config.Config, b *bus.Bus, kc *keychain.Keychain) *Spawner {
 	return &Spawner{
 		cfg:       cfg,
 		bus:       b,
+		keychain:  kc,
 		agents:    make(map[string]*SubAgent),
-		maxAgents: 10, // Configurable limit
+		maxAgents: 10,
 	}
 }
 
@@ -269,26 +272,23 @@ func (a *SubAgent) publishResult(result Result) {
 }
 
 func (s *Spawner) createProvider() (llm.Provider, error) {
-	// Use same config as main agent
-	var providerType factory.ProviderType
 	var apiKey string
 	var baseURL string
 
 	switch s.cfg.ModelProvider {
-	case "openai":
-		providerType = factory.ProviderOpenAI
-		apiKey = s.cfg.OpenAIKey
-	case "anthropic":
-		providerType = factory.ProviderAnthropic
-		apiKey = s.cfg.AnthropicKey
+	case "openai", "anthropic", "openrouter", "together", "groq", "xai", "mistral", "cohere", "google", "glm":
+		if s.keychain != nil {
+			if key, err := s.keychain.GetProviderKey(s.cfg.ModelProvider); err == nil {
+				apiKey = key
+			}
+		}
 	case "ollama":
-		providerType = factory.ProviderOllama
 		baseURL = s.cfg.OllamaEndpoint
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", s.cfg.ModelProvider)
 	}
 
-	return factory.NewProvider(providerType, apiKey, baseURL)
+	return factory.NewProvider(s.cfg.ModelProvider, apiKey, baseURL)
 }
 
 func generateAgentID() string {

@@ -1,5 +1,5 @@
 import { createSignal, createEffect, onMount, onCleanup, Switch, Match, Show } from "solid-js";
-import { useRenderer } from "@opentui/solid";
+import { useRenderer, useKeyboard } from "@opentui/solid";
 import { useEffectService } from "../lib/hooks";
 import { WebSocketService } from "../services/ws";
 import { loadConfig } from "../services/config";
@@ -168,67 +168,45 @@ export default function App() {
 
     const views: View[] = ["chat", "sessions", "channels", "skills", "settings"];
 
-    const handleKey = (data: Buffer) => {
-        const key = data.toString();
-        
-        if (showHelp()) {
-            if (key === '\u001b' || key === 'q') {
-                setShowHelp(false);
-            }
+    useKeyboard((evt) => {
+        if (showHelp() || showCommands()) {
             return;
         }
 
-        if (showCommands()) {
-            return;
-        }
-
-        switch (key) {
-            case '/':
+        switch (evt.name) {
+            case "/":
+                evt.preventDefault();
                 setShowCommands(true);
                 break;
-            case '?':
+            case "?":
+                evt.preventDefault();
                 setShowHelp(true);
                 break;
-            case '\t':
+            case "tab":
+                evt.preventDefault();
                 setView(prev => {
                     const idx = views.indexOf(prev);
                     return views[(idx + 1) % views.length];
                 });
                 break;
-            case '\u001b[Z':
-                setView(prev => {
-                    const idx = views.indexOf(prev);
-                    return views[(idx - 1 + views.length) % views.length];
-                });
-                break;
-            case '\u0003':
-                process.exit(0);
-                break;
-            case '\u000c':
-                break;
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5': {
-                const idx = parseInt(key) - 1;
+            case "1":
+            case "2":
+            case "3":
+            case "4":
+            case "5": {
+                evt.preventDefault();
+                const idx = parseInt(evt.name) - 1;
                 if (idx < views.length) {
                     setView(views[idx]);
                 }
                 break;
             }
-        }
-    };
-
-    onMount(() => {
-        if (typeof process !== "undefined" && process.stdin.isTTY) {
-            process.stdin.on("data", handleKey);
-        }
-    });
-
-    onCleanup(() => {
-        if (typeof process !== "undefined" && process.stdin) {
-            process.stdin.off("data", handleKey);
+            case "c":
+                if (evt.ctrl) {
+                    evt.preventDefault();
+                    process.exit(0);
+                }
+                break;
         }
     });
 

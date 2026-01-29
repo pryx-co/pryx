@@ -9,10 +9,11 @@
 /apps/tui/dist/
 /apps/tui/node_modules/
 
-# Dependencies lockfiles (some may want to be committed)
-# Cargo.lock - Uncomment if you want to commit Rust lockfile
-# go.sum - Uncomment if you want to commit Go lockfile
-# package-lock.json - Uncomment if you want to commit npm lockfiles
+# Dependency lockfiles are committed by default.
+# Uncomment to ignore them (not recommended):
+# Cargo.lock
+# go.sum
+# package-lock.json
 
 # Testing
 /coverage/

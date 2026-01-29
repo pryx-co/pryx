@@ -89,16 +89,13 @@ func TestAgent_New(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{
-				ModelProvider:   tt.provider,
-				ModelName:       "test-model",
-				OpenAIKey:       "test-key",
-				AnthropicKey:    "test-key",
-				GLMKey:          "test-key",
-				OllamaEndpoint:  "http://localhost:11434",
+				ModelProvider:  tt.provider,
+				ModelName:      "test-model",
+				OllamaEndpoint: "http://localhost:11434",
 			}
 			eventBus := bus.New()
 
-			agent, err := New(cfg, eventBus)
+			agent, err := New(cfg, eventBus, nil)
 
 			if tt.wantError {
 				if err == nil {
@@ -129,10 +126,9 @@ func TestAgent_Run_ContextCancellation(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
 		ModelName:     "test-model",
-		OpenAIKey:     "test-key",
 	}
 	eventBus := bus.New()
-	agent, err := New(cfg, eventBus)
+	agent, err := New(cfg, eventBus, nil)
 	if err != nil {
 		t.Fatalf("Failed to create agent: %v", err)
 	}
@@ -195,14 +191,15 @@ func TestAgent_handleChatRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eventBus := bus.New()
-			
+
 			// Create agent with mock provider
 			agent := &Agent{
 				cfg: &config.Config{
 					ModelProvider: "openai",
 					ModelName:     "test-model",
 				},
-				bus: eventBus,
+				bus:           eventBus,
+				promptBuilder: nil,
 				provider: &MockProvider{
 					StreamFunc: func(ctx context.Context, req llm.ChatRequest) (<-chan llm.StreamChunk, error) {
 						if tt.providerError != nil {
@@ -285,7 +282,7 @@ func TestAgent_handleChannelMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eventBus := bus.New()
-			
+
 			agent := &Agent{
 				cfg: &config.Config{
 					ModelProvider: "openai",

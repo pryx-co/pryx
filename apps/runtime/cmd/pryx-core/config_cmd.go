@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 )
 
 func runConfig(args []string) int {
@@ -16,12 +17,13 @@ func runConfig(args []string) int {
 
 	command := args[0]
 	path := config.DefaultPath()
-	cfg := config.Load() // Loads from file + defaults (env overrides ignored for edit, but we should load file directly to avoid env noise)
+	cfg := config.Load()
 
-	// Reload purely from file for editing to ensure we don't save Env vars as static config
 	if fileCfg, err := config.LoadFromFile(path); err == nil {
 		cfg = fileCfg
 	}
+
+	kc := keychain.New("pryx")
 
 	switch command {
 	case "list":
@@ -47,6 +49,16 @@ func runConfig(args []string) int {
 		}
 		key := strings.ReplaceAll(args[1], ".", "_")
 		value := args[2]
+
+		if isProviderKeyField(key) {
+			provider := extractProviderFromKeyField(key)
+			if err := kc.SetProviderKey(provider, value); err != nil {
+				fmt.Printf("Error storing key in keychain: %v\n", err)
+				return 1
+			}
+			fmt.Printf("Stored API key for provider '%s' in keychain\n", provider)
+			return 0
+		}
 
 		if err := setConfigValue(cfg, key, value); err != nil {
 			fmt.Printf("Error setting value: %v\n", err)
@@ -126,4 +138,25 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 		}
 	}
 	return fmt.Errorf("unknown config key: %s", key)
+}
+
+func isProviderKeyField(key string) bool {
+	key = strings.ToLower(key)
+	return strings.HasSuffix(key, "_key") ||
+		key == "openai_key" ||
+		key == "anthropic_key" ||
+		key == "glm_key" ||
+		key == "openrouter_key" ||
+		key == "together_key" ||
+		key == "groq_key" ||
+		key == "xai_key" ||
+		key == "mistral_key" ||
+		key == "cohere_key" ||
+		key == "google_key"
+}
+
+func extractProviderFromKeyField(key string) string {
+	key = strings.ToLower(key)
+	key = strings.TrimSuffix(key, "_key")
+	return key
 }

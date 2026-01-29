@@ -40,11 +40,10 @@ func (m *MockProvider) Stream(ctx context.Context, req llm.ChatRequest) (<-chan 
 func TestNewSpawner(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
 	}
 	eventBus := bus.New()
 
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	if spawner == nil {
 		t.Fatal("NewSpawner() returned nil")
@@ -102,15 +101,15 @@ func TestSpawner_Spawn(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{
 				ModelProvider: "openai",
-				OpenAIKey:     "test-key",
+				
 			}
-			
+
 			if tt.providerError {
 				cfg.ModelProvider = "unsupported"
 			}
 
 			eventBus := bus.New()
-			spawner := NewSpawner(cfg, eventBus)
+			spawner := NewSpawner(cfg, eventBus, nil)
 			spawner.maxAgents = tt.maxAgents
 
 			// Pre-populate agents if needed
@@ -155,7 +154,7 @@ func TestSpawner_Spawn(t *testing.T) {
 					if agent.ID == "" {
 						t.Error("Spawn() agent.ID is empty")
 					}
-					
+
 					// Cancel the agent to clean up
 					agent.cancel()
 				}
@@ -167,10 +166,10 @@ func TestSpawner_Spawn(t *testing.T) {
 func TestSpawner_Get(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
+		
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	// Test getting non-existent agent
 	agent, ok := spawner.Get("non-existent")
@@ -200,10 +199,10 @@ func TestSpawner_Get(t *testing.T) {
 func TestSpawner_List(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
+		
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	// Test empty list
 	list := spawner.List()
@@ -235,10 +234,10 @@ func TestSpawner_List(t *testing.T) {
 func TestSpawner_Cancel(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
+		
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	// Test cancel non-existent agent
 	err := spawner.Cancel("non-existent")
@@ -276,10 +275,10 @@ func TestSpawner_Cancel(t *testing.T) {
 func TestSpawner_Cleanup(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
+		
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	now := time.Now()
 
@@ -337,10 +336,10 @@ func TestSpawner_Cleanup(t *testing.T) {
 func TestSpawner_Fork(t *testing.T) {
 	cfg := &config.Config{
 		ModelProvider: "openai",
-		OpenAIKey:     "test-key",
+		
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus)
+	spawner := NewSpawner(cfg, eventBus, nil)
 
 	ctx := context.Background()
 	sourceSessionID := "source-session-123"
@@ -389,7 +388,7 @@ func TestSubAgent_run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eventBus := bus.New()
-			
+
 			// Subscribe to trace events
 			events, cancel := eventBus.Subscribe(bus.EventTraceEvent)
 			defer cancel()

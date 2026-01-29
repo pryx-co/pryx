@@ -1,4 +1,5 @@
 import { createSignal, For } from "solid-js";
+import { useKeyboard } from "@opentui/solid";
 import { KEYBINDINGS } from "../lib/keybindings";
 
 interface KeyboardShortcutsProps {
@@ -7,6 +8,16 @@ interface KeyboardShortcutsProps {
 
 export default function KeyboardShortcuts(props: KeyboardShortcutsProps) {
     const [selectedCategory, setSelectedCategory] = createSignal<string | null>(null);
+
+    useKeyboard((evt) => {
+        switch (evt.name) {
+            case "escape":
+            case "q":
+                evt.preventDefault?.();
+                props.onClose();
+                return;
+        }
+    });
 
     const categories = [
         { id: "application", label: "Application", color: "cyan" },

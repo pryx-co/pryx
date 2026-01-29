@@ -1,0 +1,67 @@
+import { MCPServerConfigSchema, MCPValidationError, } from './types.js';
+export function validateMCPServerConfig(config) {
+    const result = MCPServerConfigSchema.safeParse(config);
+    if (result.success) {
+        const errors = [];
+        const validated = result.data;
+        switch (validated.transport.type) {
+            case 'stdio': {
+                if (!validated.transport.command) {
+                    errors.push('stdio transport requires command');
+                }
+                break;
+            }
+            case 'sse':
+            case 'websocket': {
+                if (!validated.transport.url) {
+                    errors.push(`${validated.transport.type} transport requires url`);
+                }
+                if (validated.transport.type === 'websocket' &&
+                    !validated.transport.url.match(/^wss?:\/\//)) {
+                    errors.push('websocket URL must start with ws:// or wss://');
+                }
+                break;
+            }
+        }
+        if (validated.settings.fallbackServers.includes(validated.id)) {
+            errors.push('Server cannot be its own fallback');
+        }
+        return {
+            valid: errors.length === 0,
+            errors,
+        };
+    }
+    return {
+        valid: false,
+        errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+    };
+}
+export function assertValidMCPServerConfig(config) {
+    const result = validateMCPServerConfig(config);
+    if (!result.valid) {
+        throw new MCPValidationError(result.errors);
+    }
+    return config;
+}
+export function isValidServerId(id) {
+    return /^[a-z0-9_-]+$/.test(id) && id.length >= 1 && id.length <= 64;
+}
+export function isValidTransportType(type) {
+    return ['stdio', 'sse', 'websocket'].includes(type);
+}
+export function isValidUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+export function isValidWebSocketUrl(url) {
+    return isValidUrl(url) && /^wss?:\/\//.test(url);
+}
+export function calculateBackoff(attempt, baseMs = 1000) {
+    return Math.min(baseMs * Math.pow(2, attempt), 30000);
+}
+//# sourceMappingURL=validation.js.map

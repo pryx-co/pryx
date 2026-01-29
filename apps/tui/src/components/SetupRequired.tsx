@@ -1,9 +1,22 @@
-import { createSignal } from "solid-js";
+import { createSignal, createEffect, onMount } from "solid-js";
 import { saveConfig } from "../services/config";
+
+interface Provider {
+    id: string;
+    name: string;
+    requires_api_key: boolean;
+}
+
+interface Model {
+    id: string;
+    name: string;
+}
 
 interface SetupRequiredProps {
     onSetupComplete: () => void;
 }
+
+const API_BASE = "http://localhost:3000";
 
 export default function SetupRequired(props: SetupRequiredProps) {
     const [step, setStep] = createSignal(1);
@@ -11,24 +24,64 @@ export default function SetupRequired(props: SetupRequiredProps) {
     const [apiKey, setApiKey] = createSignal("");
     const [modelName, setModelName] = createSignal("");
     const [error, setError] = createSignal("");
+    const [providers, setProviders] = createSignal<Provider[]>([]);
+    const [models, setModels] = createSignal<Model[]>([]);
+    const [loading, setLoading] = createSignal(false);
+    const [fetchError, setFetchError] = createSignal("");
 
-    const providers = [
-        { id: "glm", name: "GLM (Zhipu AI)", models: ["glm-4.5", "glm-4.5-air", "glm-4.6", "glm-4.7"] },
-        { id: "openai", name: "OpenAI", models: ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"] },
-        { id: "anthropic", name: "Anthropic", models: ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"] },
-        { id: "ollama", name: "Ollama (Local)", models: ["llama3", "llama2", "mistral", "codellama"] },
-    ];
+    onMount(async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/providers`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch providers: ${response.status}`);
+            }
+            const data = await response.json();
+            setProviders(data.providers || []);
+        } catch (e) {
+            setFetchError(e instanceof Error ? e.message : "Failed to connect to runtime");
+            setProviders([
+                { id: "openai", name: "OpenAI", requires_api_key: true },
+                { id: "anthropic", name: "Anthropic", requires_api_key: true },
+                { id: "google", name: "Google AI", requires_api_key: true },
+                { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    });
 
-    const handleProviderSelect = (providerId: string) => {
+    const fetchModels = async (providerId: string) => {
+        try {
+            const response = await fetch(`${API_BASE}/api/v1/providers/${providerId}/models`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch models: ${response.status}`);
+            }
+            const data = await response.json();
+            setModels(data.models || []);
+        } catch (e) {
+            setModels([]);
+        }
+    };
+
+    const handleProviderSelect = async (providerId: string) => {
         setProvider(providerId);
-        const defaultModel = providers.find(p => p.id === providerId)?.models[0] || "";
+        const selectedProvider = providers().find(p => p.id === providerId);
+        
+        await fetchModels(providerId);
+        
+        const availableModels = models();
+        const defaultModel = availableModels.length > 0 ? availableModels[0].id : "";
         setModelName(defaultModel);
+        
         setStep(2);
         setError("");
     };
 
     const handleSubmit = () => {
-        if (!apiKey().trim()) {
+        const selectedProvider = providers().find(p => p.id === provider());
+        
+        if (selectedProvider?.requires_api_key && !apiKey().trim()) {
             setError("API key is required");
             return;
         }
@@ -38,14 +91,19 @@ export default function SetupRequired(props: SetupRequiredProps) {
             model_name: modelName(),
         };
 
-        if (provider() === "openai") {
-            config.openai_key = apiKey();
-        } else if (provider() === "anthropic") {
-            config.anthropic_key = apiKey();
-        } else if (provider() === "glm") {
-            config.glm_key = apiKey();
-        } else if (provider() === "ollama") {
-            config.ollama_endpoint = apiKey();
+        const keyMapping: Record<string, string> = {
+            openai: "openai_key",
+            anthropic: "anthropic_key",
+            google: "google_key",
+        };
+
+        const configKey = keyMapping[provider()];
+        if (configKey && apiKey().trim()) {
+            config[configKey] = apiKey();
+        }
+
+        if (provider() === "ollama") {
+            config.ollama_endpoint = apiKey().trim() || "http://localhost:11434";
         }
 
         try {
@@ -59,6 +117,8 @@ export default function SetupRequired(props: SetupRequiredProps) {
         }
     };
 
+    const selectedProvider = () => providers().find(p => p.id === provider());
+
     return (
         <box flexDirection="column" flexGrow={1} padding={2}>
             <box marginBottom={2} flexDirection="column">
@@ -66,6 +126,12 @@ export default function SetupRequired(props: SetupRequiredProps) {
                 <text fg="white">Setup Required</text>
                 <text fg="gray">To start chatting, you need to configure an AI provider.</text>
             </box>
+
+            {fetchError() && (
+                <box marginBottom={1}>
+                    <text fg="yellow">⚠ {fetchError()}</text>
+                </box>
+            )}
 
             <box flexDirection="column">
                 <box flexDirection="row" marginBottom={1}>
@@ -75,17 +141,23 @@ export default function SetupRequired(props: SetupRequiredProps) {
 
                 {step() === 1 && (
                     <box flexDirection="column" marginLeft={2}>
-                        {providers.map(p => (
-                            <box
-                                borderStyle="single"
-                                borderColor="gray"
-                                padding={1}
-                                flexDirection="column"
-                            >
-                                <text fg="white">{p.name}</text>
-                                <text fg="gray">Models: {p.models.join(", ")}</text>
-                            </box>
-                        ))}
+                        {loading() ? (
+                            <text fg="gray">Loading providers...</text>
+                        ) : (
+                            providers().map(p => (
+                                <box
+                                    borderStyle="single"
+                                    borderColor={provider() === p.id ? "cyan" : "gray"}
+                                    padding={1}
+                                    flexDirection="column"
+                                >
+                                    <text fg="white">{p.name}</text>
+                                    <text fg="gray">
+                                        {p.requires_api_key ? "Requires API key" : "No API key required"}
+                                    </text>
+                                </box>
+                            ))
+                        )}
                     </box>
                 )}
 
@@ -97,22 +169,39 @@ export default function SetupRequired(props: SetupRequiredProps) {
                 {step() === 2 && (
                     <box flexDirection="column" marginLeft={2}>
                         <box>
-                            <text fg="gray">Selected: {providers.find(p => p.id === provider())?.name}</text>
+                            <text fg="gray">Selected: {selectedProvider()?.name}</text>
                         </box>
 
                         <box marginTop={1}>
-                            <text fg="gray">Model: {modelName()}</text>
+                            <text fg="gray">Model:</text>
+                            <box flexDirection="column">
+                                {models().length > 0 ? (
+                                    models().map(m => (
+                                        <box
+                                            borderStyle="single"
+                                            borderColor={modelName() === m.id ? "cyan" : "gray"}
+                                            padding={1}
+                                        >
+                                            <text fg={modelName() === m.id ? "cyan" : "white"}>{m.name}</text>
+                                        </box>
+                                    ))
+                                ) : (
+                                    <text fg="gray">No models available</text>
+                                )}
+                            </box>
                         </box>
 
                         <box marginTop={1}>
-                            <text fg="gray">{provider() === "ollama" ? "Endpoint:" : "API Key:"}</text>
+                            <text fg="gray">
+                                {selectedProvider()?.requires_api_key ? "API Key:" : "Endpoint (optional):"}
+                            </text>
                             <box
                                 borderStyle="single"
                                 borderColor={error() ? "red" : "gray"}
                                 padding={1}
                                 flexDirection="row"
                             >
-                                <text fg="white">{apiKey() || "Enter value..."}</text>
+                                <text fg="white">{apiKey() || (selectedProvider()?.requires_api_key ? "Enter API key..." : "http://localhost:11434")}</text>
                                 <box flexGrow={1} />
                                 <text fg="cyan">▌</text>
                             </box>

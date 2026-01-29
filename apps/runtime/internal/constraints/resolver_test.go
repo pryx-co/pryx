@@ -5,12 +5,20 @@ import (
 )
 
 func TestResolver_Resolve_ContextWindow(t *testing.T) {
-	catalog := DefaultCatalog()
+	// Determinist catalog for testing
+	catalog := NewCatalog()
+	catalog.RegisterExact("mimo", ModelCapabilities{
+		ContextWindow: 128000,
+		FallbackChain: []string{"mimo-fallback"},
+	})
+	catalog.RegisterExact("mimo-fallback", ModelCapabilities{
+		ContextWindow: 256000,
+	})
 	r := NewResolver(catalog)
 
 	// Case 1: Within limits
 	req := Request{
-		Model:        "xiaomi/mimo-v2-flash",
+		Model:        "mimo",
 		PromptTokens: 1000,
 		OutputTokens: 1000,
 	}
@@ -20,21 +28,20 @@ func TestResolver_Resolve_ContextWindow(t *testing.T) {
 	}
 
 	// Case 2: Exceeds limit
+	// Case 2: Exceeds limit
 	reqExceed := Request{
-		Model:        "xiaomi/mimo-v2-flash",
+		Model:        "mimo",
 		PromptTokens: 100000,
-		OutputTokens: 50000, // Total 150k > 128k (limit of mimo)
+		OutputTokens: 50000, // Total 150k > 128k
 	}
 	resExceed := r.Resolve(reqExceed)
 
-	// Expect Deny (since fallback defined returns same context size in this mock)
-	// Actually gpt-4o-mini maps to gpt-4o which is also 128k.
-	// The fallback logic currently doesn't check if fallback fits either!
-	// Ideally resolver should check fallback fit recursively or iteratively.
-	// For MVP scope, valid check is it attempted fallback or denied.
-
-	if resExceed.Action != ActionFallback && resExceed.Action != ActionDeny {
-		t.Errorf("Expected Fallback or Deny, got %s", resExceed.Action)
+	// Expect Fallback
+	if resExceed.Action != ActionFallback {
+		t.Errorf("Expected Fallback, got %s", resExceed.Action)
+	}
+	if resExceed.TargetModel != "mimo-fallback" {
+		t.Errorf("Expected fallback model mimo-fallback, got %s", resExceed.TargetModel)
 	}
 }
 

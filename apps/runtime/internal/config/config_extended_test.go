@@ -89,7 +89,7 @@ telegram_token: "test-token"
 	assert.Equal(t, "https://test.api.com", cfg.CloudAPIUrl)
 	assert.Equal(t, "openai", cfg.ModelProvider)
 	assert.Equal(t, "gpt-4", cfg.ModelName)
-	assert.Equal(t, "test-key", cfg.OpenAIKey)
+	assert.Equal(t, "test-key", "")
 	assert.True(t, cfg.TelegramEnabled)
 	assert.Equal(t, "test-token", cfg.TelegramToken)
 }
@@ -122,8 +122,8 @@ func TestConfig_Save(t *testing.T) {
 		CloudAPIUrl:     "https://save.test.com",
 		ModelProvider:   "anthropic",
 		ModelName:       "claude-3",
-		OpenAIKey:       "key123",
-		AnthropicKey:    "anthro123",
+		
+		
 		TelegramEnabled: true,
 		TelegramToken:   "token123",
 	}

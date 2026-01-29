@@ -16,6 +16,7 @@ import (
 	"pryx-core/internal/config"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mcp"
+	"pryx-core/internal/models"
 	"pryx-core/internal/policy"
 	"pryx-core/internal/skills"
 
@@ -32,6 +33,7 @@ type Server struct {
 	bus      *bus.Bus
 	mcp      *mcp.Manager
 	skills   *skills.Registry
+	catalog  *models.Catalog
 
 	httpMu     sync.Mutex
 	httpServer *http.Server
@@ -104,6 +106,9 @@ func (s *Server) routes() {
 	s.router.Get("/skills", s.handleSkillsList)
 	s.router.Get("/skills/{id}", s.handleSkillsInfo)
 	s.router.Get("/skills/{id}/body", s.handleSkillsBody)
+	s.router.Get("/api/v1/providers", s.handleProvidersList)
+	s.router.Get("/api/v1/providers/{id}/models", s.handleProviderModels)
+	s.router.Get("/api/v1/models", s.handleModelsList)
 }
 
 func (s *Server) Bus() *bus.Bus {
@@ -435,5 +440,117 @@ func corsMiddleware(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) SetCatalog(catalog *models.Catalog) {
+	s.catalog = catalog
+}
+
+func (s *Server) handleProvidersList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.catalog != nil {
+		var providers []map[string]interface{}
+		for id, info := range s.catalog.Providers {
+			requiresKey := len(info.Env) > 0
+			providers = append(providers, map[string]interface{}{
+				"id":               id,
+				"name":             info.Name,
+				"requires_api_key": requiresKey,
+			})
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"providers": providers})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"providers": []map[string]interface{}{
+			{"id": "openai", "name": "OpenAI", "requires_api_key": true},
+			{"id": "anthropic", "name": "Anthropic", "requires_api_key": true},
+			{"id": "google", "name": "Google AI", "requires_api_key": true},
+			{"id": "ollama", "name": "Ollama (Local)", "requires_api_key": false},
+		},
+	})
+}
+
+func (s *Server) handleProviderModels(w http.ResponseWriter, r *http.Request) {
+	providerID := strings.TrimSpace(chi.URLParam(r, "id"))
+	if providerID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "missing provider id"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.catalog != nil {
+		models := s.catalog.GetProviderModels(providerID)
+		var result []map[string]interface{}
+		for _, m := range models {
+			result = append(result, map[string]interface{}{
+				"id":   m.ID,
+				"name": m.Name,
+			})
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"models": result})
+		return
+	}
+
+	staticModels := map[string][]map[string]interface{}{
+		"openai": {
+			{"id": "gpt-4", "name": "GPT-4"},
+			{"id": "gpt-4-turbo", "name": "GPT-4 Turbo"},
+			{"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo"},
+		},
+		"anthropic": {
+			{"id": "claude-3-opus", "name": "Claude 3 Opus"},
+			{"id": "claude-3-sonnet", "name": "Claude 3 Sonnet"},
+			{"id": "claude-3-haiku", "name": "Claude 3 Haiku"},
+		},
+		"google": {
+			{"id": "gemini-pro", "name": "Gemini Pro"},
+			{"id": "gemini-ultra", "name": "Gemini Ultra"},
+		},
+		"ollama": {
+			{"id": "llama3", "name": "Llama 3"},
+			{"id": "llama2", "name": "Llama 2"},
+			{"id": "mistral", "name": "Mistral"},
+		},
+	}
+
+	if providerModels, ok := staticModels[providerID]; ok {
+		json.NewEncoder(w).Encode(map[string]interface{}{"models": providerModels})
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "provider not found"})
+	}
+}
+
+func (s *Server) handleModelsList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.catalog != nil {
+		var result []map[string]interface{}
+		for _, m := range s.catalog.Models {
+			result = append(result, map[string]interface{}{
+				"id":       m.ID,
+				"name":     m.Name,
+				"provider": m.Provider,
+			})
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"models": result})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"models": []map[string]interface{}{
+			{"id": "gpt-4", "name": "GPT-4", "provider": "openai"},
+			{"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "provider": "openai"},
+			{"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "provider": "openai"},
+			{"id": "claude-3-opus", "name": "Claude 3 Opus", "provider": "anthropic"},
+			{"id": "claude-3-sonnet", "name": "Claude 3 Sonnet", "provider": "anthropic"},
+			{"id": "claude-3-haiku", "name": "Claude 3 Haiku", "provider": "anthropic"},
+		},
 	})
 }

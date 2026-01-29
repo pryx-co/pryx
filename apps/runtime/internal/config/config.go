@@ -15,14 +15,25 @@ type Config struct {
 	// AI Configuration
 	ModelProvider  string `yaml:"model_provider"` // openai, anthropic, ollama, glm
 	ModelName      string `yaml:"model_name"`     // e.g. gpt-4, claude-3-opus, llama3, glm-4-flash
-	OpenAIKey      string `yaml:"openai_key"`
-	AnthropicKey   string `yaml:"anthropic_key"`
-	GLMKey         string `yaml:"glm_key"`
 	OllamaEndpoint string `yaml:"ollama_endpoint"`
 
 	// Channels
 	TelegramToken   string `yaml:"telegram_token"`
 	TelegramEnabled bool   `yaml:"telegram_enabled"`
+}
+
+// ProviderKeyNames maps provider IDs to their keychain key names
+var ProviderKeyNames = map[string]string{
+	"openai":     "provider:openai",
+	"anthropic":  "provider:anthropic",
+	"openrouter": "provider:openrouter",
+	"together":   "provider:together",
+	"groq":       "provider:groq",
+	"xai":        "provider:xai",
+	"mistral":    "provider:mistral",
+	"cohere":     "provider:cohere",
+	"google":     "provider:google",
+	"glm":        "provider:glm",
 }
 
 func DefaultPath() string {

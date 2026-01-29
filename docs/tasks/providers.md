@@ -9,6 +9,9 @@ Pryx supports a variety of LLM providers. You can configure them using environme
 - Keys are not displayed in dashboards; UIs only show whether a key is present/configured.
 - Cloud dashboards must not receive or persist provider keys unless an explicit end-to-end encrypted vault sync feature is enabled.
 
+**Security note:** Never commit API keys to version control. Prefer environment variables or a local `.env`
+file excluded from VCS. Use HTTPS for non-local endpoints.
+
 ## Supported Providers
 
 ### OpenAI

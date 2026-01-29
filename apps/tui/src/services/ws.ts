@@ -89,6 +89,7 @@ const make = Effect.gen(function* (_) {
 
             ws.onerror = (err) => {
                 const error = new ConnectionError(err.message, err);
+                console.error("WebSocket error:", err);
                 Effect.runSync(PubSub.publish(statusHub, { _tag: "Error", error }));
             };
 

@@ -6,6 +6,7 @@ import "time"
 type EventType string
 
 const (
+	EventEnvelope               EventType = "event"
 	EventSessionMessage         EventType = "session.message"
 	EventSessionTyping          EventType = "session.typing"
 	EventToolRequest            EventType = "tool.request"
@@ -35,8 +36,8 @@ type Event struct {
 // NewEvent creates a new event with the current timestamp
 func NewEvent(eventType EventType, sessionID string, payload interface{}) Event {
 	return Event{
-		Type:      "event",   // envelope type
-		Event:     eventType, // specific event type
+		Type:      EventEnvelope, // envelope type
+		Event:     eventType,     // specific event type
 		SessionID: sessionID,
 		Payload:   payload,
 		Timestamp: time.Now().UTC(),

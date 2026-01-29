@@ -2900,9 +2900,15 @@ Pryx needs a robust system for handling constraints across providers, devices, a
 
 **Challenge**: 600+ models across 50+ providers (OpenRouter, Together, OpenAI, Anthropic, etc.) with varying constraints.
 
-**Solution**: Dynamic constraint catalog + runtime enforcement.
+**Solution**: Dynamic constraint catalog sourced from [models.dev](https://models.dev) + runtime enforcement.
 
-**Constraint Catalog Schema**:
+> **External Dependency**: Pryx integrates with [models.dev](https://github.com/anomalyco/models.dev) — an open-source database of AI model specifications.
+> - **API Endpoint**: `https://models.dev/api.json`
+> - **Refresh Strategy**: Fetch on startup, cache for 24 hours
+> - **Fallback**: Use cached version if API unavailable
+> - **Auto-Update**: New providers/models appear automatically without Pryx updates
+
+**Constraint Catalog Schema** (mapped from models.dev API):
 ```typescript
 interface ModelConstraints {
   // Core identity

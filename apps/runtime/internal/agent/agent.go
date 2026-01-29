@@ -5,55 +5,58 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"pryx-core/internal/bus"
 	"pryx-core/internal/channels"
 	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
+	"pryx-core/internal/prompt"
 )
 
 type Agent struct {
-	cfg      *config.Config
-	bus      *bus.Bus
-	provider llm.Provider
+	cfg           *config.Config
+	bus           *bus.Bus
+	provider      llm.Provider
+	promptBuilder *prompt.Builder
+	version       string
 }
 
-func New(cfg *config.Config, eventBus *bus.Bus) (*Agent, error) {
-	// Initialize LLM Provider based on Config
-	var providerType factory.ProviderType
+func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain) (*Agent, error) {
 	var apiKey string
 	var baseURL string
 
 	switch strings.ToLower(cfg.ModelProvider) {
-	case "openai":
-		providerType = factory.ProviderOpenAI
-		apiKey = cfg.OpenAIKey
-	case "anthropic":
-		providerType = factory.ProviderAnthropic
-		apiKey = cfg.AnthropicKey
-	case "openrouter":
-		providerType = factory.ProviderOpenRouter
-		apiKey = cfg.OpenAIKey // OpenRouter uses OpenAI key config
+	case "openai", "anthropic", "openrouter", "together", "groq", "xai", "mistral", "cohere", "google", "glm":
+		if kc != nil {
+			if key, err := kc.GetProviderKey(cfg.ModelProvider); err == nil {
+				apiKey = key
+			}
+		}
 	case "ollama":
-		providerType = factory.ProviderOllama
 		baseURL = cfg.OllamaEndpoint
-	case "glm":
-		providerType = factory.ProviderGLM
-		apiKey = cfg.GLMKey
 	default:
 		return nil, fmt.Errorf("unsupported model provider: %s", cfg.ModelProvider)
 	}
 
-	provider, err := factory.NewProvider(providerType, apiKey, baseURL)
+	provider, err := factory.NewProvider(cfg.ModelProvider, apiKey, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create LLM provider: %w", err)
 	}
 
+	promptBuilder := prompt.NewBuilder(prompt.DefaultPryxDir(), prompt.ModeFull)
+	if err := promptBuilder.EnsureTemplates(); err != nil {
+		log.Printf("Warning: Failed to ensure prompt templates: %v", err)
+	}
+
 	return &Agent{
-		cfg:      cfg,
-		bus:      eventBus,
-		provider: provider,
+		cfg:           cfg,
+		bus:           eventBus,
+		provider:      provider,
+		promptBuilder: promptBuilder,
+		version:       "dev",
 	}, nil
 }
 
@@ -87,7 +90,6 @@ func (a *Agent) handleEvent(ctx context.Context, evt bus.Event) {
 }
 
 func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
-	// Parse TUI chat request
 	payload, ok := evt.Payload.(map[string]interface{})
 	if !ok {
 		log.Println("Agent: Invalid chat request payload")
@@ -103,11 +105,16 @@ func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
 
 	log.Printf("Agent: Processing TUI message: %s (session: %s)", content, sessionID)
 
-	// Build request
+	systemPrompt, err := a.buildSystemPrompt(sessionID)
+	if err != nil {
+		log.Printf("Agent: Failed to build system prompt: %v", err)
+		systemPrompt = "You are Pryx, a helpful AI assistant."
+	}
+
 	req := llm.ChatRequest{
 		Model: a.cfg.ModelName,
 		Messages: []llm.Message{
-			{Role: llm.RoleSystem, Content: "You are a helpful AI assistant."},
+			{Role: llm.RoleSystem, Content: systemPrompt},
 			{Role: llm.RoleUser, Content: content},
 		},
 		Stream: true,
@@ -143,7 +150,6 @@ func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
 }
 
 func (a *Agent) handleChannelMessage(ctx context.Context, evt bus.Event) {
-	// Parse channel message
 	msg, ok := evt.Payload.(channels.Message)
 	if !ok {
 		log.Println("Agent: Invalid channel message payload")
@@ -152,17 +158,21 @@ func (a *Agent) handleChannelMessage(ctx context.Context, evt bus.Event) {
 
 	log.Printf("Agent: Processing channel message from %s (chat: %s): %s", msg.Source, msg.ChannelID, msg.Content)
 
-	// Build request
+	systemPrompt, err := a.buildSystemPrompt("")
+	if err != nil {
+		log.Printf("Agent: Failed to build system prompt: %v", err)
+		systemPrompt = "You are Pryx, a helpful AI assistant."
+	}
+
 	req := llm.ChatRequest{
 		Model: a.cfg.ModelName,
 		Messages: []llm.Message{
-			{Role: llm.RoleSystem, Content: "You are a helpful AI assistant."},
+			{Role: llm.RoleSystem, Content: systemPrompt},
 			{Role: llm.RoleUser, Content: msg.Content},
 		},
-		Stream: false, // Use non-streaming for channels for simplicity
+		Stream: false,
 	}
 
-	// Get response
 	resp, err := a.provider.Complete(ctx, req)
 	if err != nil {
 		log.Printf("Agent: LLM error: %v", err)
@@ -171,10 +181,38 @@ func (a *Agent) handleChannelMessage(ctx context.Context, evt bus.Event) {
 
 	log.Printf("Agent: Sending channel response (%d chars)", len(resp.Content))
 
-	// Publish outbound message
 	a.bus.Publish(bus.NewEvent(bus.EventChannelOutboundMessage, "", map[string]interface{}{
-		"source":     msg.Source,    // Route back to same channel instance
-		"channel_id": msg.ChannelID, // Reply to same chat
+		"source":     msg.Source,
+		"channel_id": msg.ChannelID,
 		"content":    resp.Content,
 	}))
+}
+
+func (a *Agent) buildSystemPrompt(sessionID string) (string, error) {
+	if a.promptBuilder == nil {
+		return "You are Pryx, a helpful AI assistant.", nil
+	}
+
+	metadata := prompt.Metadata{
+		CurrentTime:     time.Now(),
+		Version:         a.version,
+		SessionID:       sessionID,
+		AvailableTools:  a.getAvailableTools(),
+		AvailableSkills: a.getAvailableSkills(),
+	}
+
+	return a.promptBuilder.Build(metadata)
+}
+
+func (a *Agent) getAvailableTools() []string {
+	return []string{
+		"filesystem",
+		"shell",
+		"browser",
+		"clipboard",
+	}
+}
+
+func (a *Agent) getAvailableSkills() []string {
+	return []string{}
 }
