@@ -3,11 +3,11 @@
 # Debug version of tui-runner that logs everything to a file
 
 # Colors
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-YELLOW='\033[0;33m'
-NC='\033[0m'
+GREEN=$(tput setaf 2 2>/dev/null || printf '\033[0;32m')
+BLUE=$(tput setaf 4 2>/dev/null || printf '\033[0;34m')
+RED=$(tput setaf 1 2>/dev/null || printf '\033[0;31m')
+YELLOW=$(tput setaf 3 2>/dev/null || printf '\033[0;33m')
+NC=$(tput sgr0 2>/dev/null || printf '\033[0m')
 
 # Log file
 LOG_FILE="/tmp/pryx-tui-debug.log"

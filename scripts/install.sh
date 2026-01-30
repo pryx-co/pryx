@@ -8,10 +8,10 @@
 set -eEuo pipefail
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+RED=$(tput setaf 1 2>/dev/null || printf '\033[0;31m')
+GREEN=$(tput setaf 2 2>/dev/null || printf '\033[0;32m')
+YELLOW=$(tput setaf 3 2>/dev/null || printf '\033[0;33m')
+NC=$(tput sgr0 2>/dev/null || printf '\033[0m')
 
 # Configuration
 VERSION="0.1.0-dev"

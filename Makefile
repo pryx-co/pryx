@@ -29,11 +29,11 @@ COMMIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUN_REQUIRED_VERSION := 1.3.7
 
 # Color codes for output
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
+RED := $(shell tput setaf 1 2>/dev/null || printf '\033[0;31m')
+GREEN := $(shell tput setaf 2 2>/dev/null || printf '\033[0;32m')
+YELLOW := $(shell tput setaf 3 2>/dev/null || printf '\033[0;33m')
+BLUE := $(shell tput setaf 4 2>/dev/null || printf '\033[0;34m')
+NC := $(shell tput sgr0 2>/dev/null || printf '\033[0m') # No Color
 
 help: ## Show this help message
 	@echo "$(BLUE)Pryx Build System$(NC)"
@@ -372,7 +372,7 @@ clean-host: ## Clean Rust build artifacts
 clean-runtime: ## Clean Go build artifacts
 	@echo "$(BLUE)Cleaning runtime (Go)$(NC)"
 	@if [ -d "$(RUNTIME_DIR)" ]; then \
-		cd $(RUNTIME_DIR) && go clean -cache -modcache -i && rm -f bin/* && echo "  $(GREEN)✓$(NC) Cleaned"; \
+		cd $(RUNTIME_DIR) && go clean -cache && rm -f bin/* && echo "  $(GREEN)✓$(NC) Cleaned"; \
 	else \
 		echo "$(YELLOW)Warning: runtime directory not found, skipping$(NC)"; \
 	fi
@@ -380,7 +380,7 @@ clean-runtime: ## Clean Go build artifacts
 clean-tui: ## Clean TypeScript TUI build artifacts
 	@echo "$(BLUE)Cleaning TUI (TypeScript)$(NC)"
 	@if [ -d "$(TUI_DIR)" ]; then \
-		cd $(TUI_DIR) && rm -rf dist node_modules && rm -f pryx-tui && echo "  $(GREEN)✓$(NC) Cleaned"; \
+		cd $(TUI_DIR) && rm -rf dist node_modules && find . -maxdepth 1 -name ".*.bun-build" -delete && rm -f pryx-tui && echo "  $(GREEN)✓$(NC) Cleaned"; \
 	else \
 		echo "$(YELLOW)Warning: tui directory not found, skipping$(NC)"; \
 	fi

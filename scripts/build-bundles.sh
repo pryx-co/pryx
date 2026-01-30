@@ -17,11 +17,11 @@ HOST_DIR="$ROOT_DIR/apps/host"
 RUNTIME_DIR="$ROOT_DIR/apps/runtime"
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+RED=$(tput setaf 1 2>/dev/null || printf '\033[0;31m')
+GREEN=$(tput setaf 2 2>/dev/null || printf '\033[0;32m')
+YELLOW=$(tput setaf 3 2>/dev/null || printf '\033[0;33m')
+BLUE=$(tput setaf 4 2>/dev/null || printf '\033[0;34m')
+NC=$(tput sgr0 2>/dev/null || printf '\033[0m')
 
 log() {
     echo -e "${GREEN}[BUILD]${NC} $1"
