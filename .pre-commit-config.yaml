@@ -29,7 +29,7 @@ repos:
 
   # Rust-specific hooks
   - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0.0
+    rev: v1.0
     hooks:
       # Rust format check
       - id: cargo-fmt
