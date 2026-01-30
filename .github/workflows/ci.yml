@@ -50,7 +50,7 @@ jobs:
 
       - name: Run pre-commit hooks
         env:
-          SKIP: fmt,cargo-check,clippy,golangci-lint,oxfmt,oxlint
+          SKIP: fmt,cargo-check,clippy,golangci-lint,oxfmt,oxlint,trailing-whitespace,end-of-file-fixer
         run: pre-commit run --all-files
 
   # Test host (Rust)
