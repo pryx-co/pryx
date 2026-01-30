@@ -99,4 +99,14 @@ ci:
   autoupdate_branch: develop
   autoupdate_commit_msg: 'chore: update pre-commit hooks'
   autoupdate_schedule: monthly
-  skip: [poetry-update, poetry-lock-update]
+  # Skip hooks that require specific tooling or directory contexts
+  # These are handled by dedicated CI jobs (test-host, test-runtime, test-tui, lint)
+  skip:
+    - poetry-update
+    - poetry-lock-update
+    - fmt
+    - cargo-check
+    - clippy
+    - golangci-lint
+    - oxfmt
+    - oxlint
