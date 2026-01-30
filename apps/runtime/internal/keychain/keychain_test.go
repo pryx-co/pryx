@@ -1,8 +1,20 @@
 package keychain
 
 import (
+	"os"
 	"testing"
 )
+
+func skipIfNoKeyring(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		k := New("test-ci-check")
+		err := k.Set("test-user", "test-password")
+		if err != nil {
+			t.Skip("Keyring service not available in CI environment")
+		}
+		k.Delete("test-user")
+	}
+}
 
 func TestNew(t *testing.T) {
 	service := "test-service"
@@ -18,6 +30,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestSetGetDelete(t *testing.T) {
+	skipIfNoKeyring(t)
+
 	// Use a unique service name for testing to avoid conflicts
 	service := "pryx-test-" + t.Name()
 	k := New(service)
@@ -78,6 +92,8 @@ func TestDeleteNonExistent(t *testing.T) {
 }
 
 func TestMultipleUsers(t *testing.T) {
+	skipIfNoKeyring(t)
+
 	service := "pryx-test-multi-" + t.Name()
 	k := New(service)
 

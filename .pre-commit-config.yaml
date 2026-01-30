@@ -43,7 +43,7 @@ repos:
 
   # Go-specific hooks
   - repo: https://github.com/golangci/golangci-lint
-    rev: v0.60.1
+    rev: v1.56.0
     hooks:
       # Go format check
       - id: golangci-lint
