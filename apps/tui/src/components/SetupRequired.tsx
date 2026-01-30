@@ -1,16 +1,8 @@
 import { createSignal, createEffect, onMount } from "solid-js";
+import { Effect } from "effect";
+import { useEffectService, AppRuntime } from "../lib/hooks";
+import { ProviderService, Provider as ProviderType, Model as ModelType } from "../services/provider-service";
 import { saveConfig } from "../services/config";
-
-interface Provider {
-  id: string;
-  name: string;
-  requires_api_key: boolean;
-}
-
-interface Model {
-  id: string;
-  name: string;
-}
 
 interface SetupRequiredProps {
   onSetupComplete: () => void;
@@ -19,63 +11,56 @@ interface SetupRequiredProps {
 const API_BASE = "http://localhost:3000";
 
 export default function SetupRequired(props: SetupRequiredProps) {
+  const providerService = useEffectService(ProviderService);
   const [step, setStep] = createSignal(1);
   const [provider, setProvider] = createSignal("");
   const [apiKey, setApiKey] = createSignal("");
   const [modelName, setModelName] = createSignal("");
   const [error, setError] = createSignal("");
-  const [providers, setProviders] = createSignal<Provider[]>([]);
-  const [models, setModels] = createSignal<Model[]>([]);
+  const [providers, setProviders] = createSignal<ProviderType[]>([]);
+  const [models, setModels] = createSignal<ModelType[]>([]);
   const [loading, setLoading] = createSignal(false);
   const [fetchError, setFetchError] = createSignal("");
 
-  onMount(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/providers`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch providers: ${response.status}`);
-      }
-      const data = await response.json();
-      setProviders(data.providers || []);
-    } catch (e) {
-      setFetchError(e instanceof Error ? e.message : "Failed to connect to runtime");
-      setProviders([
-        { id: "openai", name: "OpenAI", requires_api_key: true },
-        { id: "anthropic", name: "Anthropic", requires_api_key: true },
-        { id: "google", name: "Google AI", requires_api_key: true },
-        { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+  onMount(() => {
+    const service = providerService();
+    if (!service) return;
+
+    AppRuntime.runFork(
+      service.fetchProviders.pipe(
+        Effect.tap(providers => Effect.sync(() => setProviders(providers))),
+        Effect.catchAll(err => Effect.sync(() => {
+          setFetchError(err.message || "Failed to connect to runtime");
+          setProviders([
+            { id: "openai", name: "OpenAI", requires_api_key: true },
+            { id: "anthropic", name: "Anthropic", requires_api_key: true },
+            { id: "google", name: "Google AI", requires_api_key: true },
+            { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
+          ]);
+        }))
+      )
+    );
   });
 
-  const fetchModels = async (providerId: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/providers/${providerId}/models`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.status}`);
-      }
-      const data = await response.json();
-      setModels(data.models || []);
-    } catch (e) {
-      setModels([]);
-    }
-  };
+  const handleProviderSelect = (providerId: string) => {
+    const service = providerService();
+    if (!service) return;
 
-  const handleProviderSelect = async (providerId: string) => {
     setProvider(providerId);
     const selectedProvider = providers().find(p => p.id === providerId);
 
-    await fetchModels(providerId);
-
-    const availableModels = models();
-    const defaultModel = availableModels.length > 0 ? availableModels[0].id : "";
-    setModelName(defaultModel);
-
-    setStep(2);
-    setError("");
+    AppRuntime.runFork(
+      service.fetchModels(providerId).pipe(
+        Effect.tap(availableModels => {
+          const defaultModel = availableModels.length > 0 ? availableModels[0].id : "";
+          setModels(availableModels);
+          setModelName(defaultModel);
+          setStep(2);
+          setError("");
+        }),
+        Effect.catchAll(() => Effect.sync(() => setModels([])))
+      )
+    );
   };
 
   const handleSubmit = () => {

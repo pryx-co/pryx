@@ -145,7 +145,7 @@ func (a *AuditLogger) Log(action AuditAction, target, actor string, success bool
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// Add to buffer
+	a.lastHash = entry.Hash
 	a.buffer = append(a.buffer, entry)
 	a.bufferSize++
 
@@ -376,8 +376,6 @@ func (a *AuditLogger) flushBuffer() error {
 		if _, err := a.currentFile.Write(append(line, '\n')); err != nil {
 			return fmt.Errorf("failed to write entry: %w", err)
 		}
-
-		a.lastHash = entry.Hash
 	}
 
 	if err := a.currentFile.Sync(); err != nil {

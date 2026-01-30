@@ -1,4 +1,4 @@
-import { Effect, Context, Layer } from "effect";
+import { Effect, Context, Layer, ManagedRuntime } from "effect";
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
@@ -95,40 +95,43 @@ const makeConfigService = Effect.gen(function* () {
 
 export const ConfigServiceLive = Layer.effect(ConfigService, makeConfigService);
 
+const ConfigRuntime = ManagedRuntime.make(ConfigServiceLive);
+
 export const loadConfig = (): AppConfig => {
-  try {
-    if (!fs.existsSync(CONFIG_PATH)) return {};
-    const content = fs.readFileSync(CONFIG_PATH, "utf-8");
-    return (yaml.load(content) as AppConfig) || {};
-  } catch (e) {
-    console.error("[Config] Failed to load config:", e);
-    return {};
-  }
+  return ConfigRuntime.runSync(
+    Effect.gen(function* () {
+      const configService = yield* ConfigService;
+      return yield* configService.load;
+    })
+  );
 };
 
 export const saveConfig = (cfg: AppConfig): void => {
-  try {
-    const dir = path.dirname(CONFIG_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(CONFIG_PATH, yaml.dump(cfg), "utf-8");
-    console.log("[Config] Saved successfully");
-  } catch (e) {
-    console.error("[Config] Failed to save config:", e);
-    throw e;
-  }
+  ConfigRuntime.runSync(
+    Effect.gen(function* () {
+      const configService = yield* ConfigService;
+      yield* configService.save(cfg);
+    })
+  );
 };
 
 export const updateConfig = (updates: Partial<AppConfig>): AppConfig => {
-  const current = loadConfig();
-  const updated = { ...current, ...updates };
-  saveConfig(updated);
-  return updated;
+  return ConfigRuntime.runSync(
+    Effect.gen(function* () {
+      const configService = yield* ConfigService;
+      return yield* configService.update(updates);
+    })
+  );
 };
 
 export const getConfigValue = <K extends keyof AppConfig>(
   key: K,
   defaultValue?: AppConfig[K]
 ): AppConfig[K] | undefined => {
-  const config = loadConfig();
-  return config[key] ?? defaultValue;
+  return ConfigRuntime.runSync(
+    Effect.gen(function* () {
+      const configService = yield* ConfigService;
+      return yield* configService.getValue(key, defaultValue);
+    })
+  );
 };

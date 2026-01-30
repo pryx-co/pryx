@@ -1,7 +1,10 @@
 import { createSignal, onCleanup, onMount } from "solid-js";
 import type { Accessor } from "solid-js";
-import { Effect, Fiber, Runtime, Stream, Context, ManagedRuntime } from "effect";
+import { Effect, Fiber, Runtime, Stream, Context, ManagedRuntime, Layer } from "effect";
 import { WebSocketServiceLive } from "../services/ws";
+import { HealthCheckServiceLive } from "../services/health-check";
+import { ProviderServiceLive } from "../services/provider-service";
+import { SkillsServiceLive } from "../services/skills-api";
 import { appendFileSync } from "fs";
 
 function log(msg: string) {
@@ -12,7 +15,9 @@ function log(msg: string) {
 log("MODULE LOADED");
 
 // Create a managed runtime that includes our Live services
-export const AppRuntime = ManagedRuntime.make(WebSocketServiceLive);
+export const AppRuntime = ManagedRuntime.make(
+  Layer.mergeAll(WebSocketServiceLive, HealthCheckServiceLive, ProviderServiceLive, SkillsServiceLive)
+);
 
 /**
  * Run an Effect and expose result as SolidJS signal

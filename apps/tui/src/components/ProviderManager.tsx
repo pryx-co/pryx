@@ -1,18 +1,10 @@
 import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
-import { palette } from "../theme";
+import { useEffectService, AppRuntime } from "../lib/hooks";
+import { ProviderService, Provider as ProviderType, Model as ModelType } from "../services/provider-service";
 import { loadConfig, saveConfig, AppConfig } from "../services/config";
-
-interface Provider {
-  id: string;
-  name: string;
-  requires_api_key: boolean;
-}
-
-interface Model {
-  id: string;
-  name: string;
-}
+import { palette } from "../theme";
+import { Effect } from "effect";
 
 interface ConfiguredProvider {
   id: string;
@@ -31,60 +23,48 @@ interface ProviderManagerProps {
 }
 
 export default function ProviderManager(props: ProviderManagerProps) {
+  const providerService = useEffectService(ProviderService);
   const [viewMode, setViewMode] = createSignal<ViewMode>("list");
-  const [providers, setProviders] = createSignal<Provider[]>([]);
+  const [providers, setProviders] = createSignal<ProviderType[]>([]);
   const [configuredProviders, setConfiguredProviders] = createSignal<ConfiguredProvider[]>([]);
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal("");
   const [success, setSuccess] = createSignal("");
-  const [selectedProvider, setSelectedProvider] = createSignal<Provider | null>(null);
+  const [selectedProvider, setSelectedProvider] = createSignal<ProviderType | null>(null);
   const [apiKey, setApiKey] = createSignal("");
-  const [models, setModels] = createSignal<Model[]>([]);
+  const [models, setModels] = createSignal<ModelType[]>([]);
   const [selectedModel, setSelectedModel] = createSignal("");
   const [testResult, setTestResult] = createSignal<{ success: boolean; message: string } | null>(null);
   const [config, setConfig] = createSignal<AppConfig>({});
 
-  onMount(async () => {
+  onMount(() => {
     setConfig(loadConfig());
-    await fetchProviders();
-    await loadConfiguredProviders();
+    const service = providerService();
+    if (!service) return;
+
+    AppRuntime.runFork(
+      service.fetchProviders.pipe(
+        Effect.tap(providers => Effect.sync(() => {
+          setProviders(providers);
+          loadConfiguredProviders();
+        })),
+        Effect.catchAll(() => Effect.sync(() => {
+          setProviders([
+            { id: "openai", name: "OpenAI", requires_api_key: true },
+            { id: "anthropic", name: "Anthropic", requires_api_key: true },
+            { id: "google", name: "Google AI", requires_api_key: true },
+            { id: "openrouter", name: "OpenRouter", requires_api_key: true },
+            { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
+            { id: "groq", name: "Groq", requires_api_key: true },
+            { id: "xai", name: "xAI", requires_api_key: true },
+            { id: "mistral", name: "Mistral AI", requires_api_key: true },
+            { id: "cohere", name: "Cohere", requires_api_key: true },
+          ]);
+        }))
+      )
+    );
   });
-
-  const fetchProviders = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/providers`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setProviders(data.providers || []);
-    } catch (e) {
-      setProviders([
-        { id: "openai", name: "OpenAI", requires_api_key: true },
-        { id: "anthropic", name: "Anthropic", requires_api_key: true },
-        { id: "google", name: "Google AI", requires_api_key: true },
-        { id: "openrouter", name: "OpenRouter", requires_api_key: true },
-        { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
-        { id: "groq", name: "Groq", requires_api_key: true },
-        { id: "xai", name: "xAI", requires_api_key: true },
-        { id: "mistral", name: "Mistral AI", requires_api_key: true },
-        { id: "cohere", name: "Cohere", requires_api_key: true },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchModels = async (providerId: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/providers/${providerId}/models`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setModels(data.models || []);
-    } catch (e) {
-      setModels([]);
-    }
-  };
 
   const loadConfiguredProviders = () => {
     const cfg = loadConfig();
@@ -245,12 +225,22 @@ export default function ProviderManager(props: ProviderManagerProps) {
     setError("");
   };
 
-  const handleProviderSelect = async (provider: Provider) => {
+  const handleProviderSelect = async (provider: ProviderType) => {
+    const service = providerService();
+    if (!service) return;
+
     setSelectedProvider(provider);
-    await fetchModels(provider.id);
-    if (models().length > 0) {
-      setSelectedModel(models()[0].id);
-    }
+    AppRuntime.runFork(
+      service.fetchModels(provider.id).pipe(
+        Effect.tap(availableModels => {
+          setModels(availableModels);
+          if (availableModels.length > 0) {
+            setSelectedModel(availableModels[0].id);
+          }
+        }),
+        Effect.catchAll(() => Effect.sync(() => setModels([])))
+      )
+    );
   };
 
   useKeyboard(evt => {

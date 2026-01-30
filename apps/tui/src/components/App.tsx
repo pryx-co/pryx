@@ -1,7 +1,8 @@
 import { createSignal, createEffect, onMount, onCleanup, Switch, Match, Show } from "solid-js";
 import { useRenderer, useKeyboard } from "@opentui/solid";
-import { useEffectService } from "../lib/hooks";
+import { useEffectService, AppRuntime } from "../lib/hooks";
 import { WebSocketService } from "../services/ws";
+import { HealthCheckService } from "../services/health-check";
 import { loadConfig } from "../services/config";
 import AppHeader from "./AppHeader";
 import Chat from "./Chat";
@@ -21,6 +22,7 @@ export default function App() {
   renderer.disableStdoutInterception();
 
   const ws = useEffectService(WebSocketService);
+  const healthCheck = useEffectService(HealthCheckService);
   const [view, setView] = createSignal<View>("chat");
   const [showCommands, setShowCommands] = createSignal(false);
   const [showHelp, setShowHelp] = createSignal(false);
@@ -46,19 +48,18 @@ export default function App() {
   };
 
   createEffect(() => {
-    const service = ws();
+    const service = healthCheck();
     if (!service) {
       setConnectionStatus("Runtime Error");
       return;
     }
 
-    const checkStatus = async () => {
-      try {
-        const apiUrl = process.env.PRYX_API_URL || "http://localhost:3000";
-        const res = await fetch(`${apiUrl}/health`, { method: "GET" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.providers?.length > 0) {
+    const pollInterval = 5000;
+
+    AppRuntime.runFork(
+      service.pollHealth(pollInterval, (result) => {
+        if (result.status === "ok") {
+          if (result.providers && result.providers.length > 0) {
             setHasProvider(true);
             setConnectionStatus("Ready");
           } else {
@@ -66,16 +67,10 @@ export default function App() {
             setConnectionStatus("No Provider");
           }
         } else {
-          setConnectionStatus("Runtime Error");
+          setConnectionStatus("Disconnected");
         }
-      } catch {
-        setConnectionStatus("Disconnected");
-      }
-    };
-
-    checkStatus();
-    const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
+      })
+    );
   });
 
   const allCommands: Command[] = [

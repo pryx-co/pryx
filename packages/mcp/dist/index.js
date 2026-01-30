@@ -2,4 +2,5 @@ export { TransportType, ServerSource, ToolDefinitionSchema, ResourceDefinitionSc
 export { validateMCPServerConfig, assertValidMCPServerConfig, isValidServerId, isValidTransportType, isValidUrl, isValidWebSocketUrl, calculateBackoff, } from './validation.js';
 export { MCPRegistry, createRegistry, } from './registry.js';
 export { MCPStorage, createStorage, } from './storage.js';
+export { MCPServerDiscovery, createServerDiscovery, } from './discovery.js';
 //# sourceMappingURL=index.js.map

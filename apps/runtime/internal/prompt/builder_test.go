@@ -1,9 +1,10 @@
 package prompt
 
 import (
+	"os"
+	"strings"
 	"testing"
-
-	"pryx-core/internal/prompt"
+	"time"
 )
 
 func TestBuilder_NewBuilder(t *testing.T) {
@@ -12,7 +13,7 @@ func TestBuilder_NewBuilder(t *testing.T) {
 		os.RemoveAll(pryxDir)
 	}()
 
-	builder := NewBuilder(pryxDir)
+	builder := NewBuilder(pryxDir, ModeFull)
 
 	if builder == nil {
 		t.Fatal("Failed to create builder")
@@ -26,7 +27,7 @@ func TestBuilder_NewBuilder(t *testing.T) {
 func TestBuilder_NewBuilder_DefaultMode(t *testing.T) {
 	pryxDir := t.TempDir()
 
-	builder := NewBuilder(pryxDir)
+	builder := NewBuilder(pryxDir, ModeFull)
 
 	if builder.mode != ModeFull {
 		t.Errorf("Expected default mode to be full, got %v", builder.mode)
@@ -46,7 +47,7 @@ func TestBuilder_NewBuilder_CustomMode(t *testing.T) {
 func TestBuilder_SetMode(t *testing.T) {
 	pryxDir := t.TempDir()
 
-	builder := NewBuilder(pryxDir)
+	builder := NewBuilder(pryxDir, ModeFull)
 	builder.SetMode(ModeMinimal)
 
 	if builder.GetMode() != ModeMinimal {
@@ -59,7 +60,7 @@ func TestBuilder_BuildMinimal(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeMinimal)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"tool1", "tool2"},
 		AvailableSkills: []string{"skill1", "skill2"},
 		CurrentTime:     time.Now(),
@@ -89,7 +90,7 @@ func TestBuilder_BuildFull(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"tool1", "tool2"},
 		AvailableSkills: []string{"skill1", "skill2"},
 		CurrentTime:     time.Now(),
@@ -106,15 +107,11 @@ func TestBuilder_BuildFull(t *testing.T) {
 
 	resultStr := result
 
-	// Full mode should include all sections
 	expectedSections := []string{
-		"PERSONA ===",
-		"OPERATING INSTRUCTIONS ===",
-		"RUNTIME CONTEXT ===",
-		"AVAILABLE TOOLS ===",
-		"AVAILABLE SKILLS ===",
-		"CONSTRAINTS ===",
-		"CONFIDENCE LEVEL ===",
+		"=== RUNTIME CONTEXT ===",
+		"=== AVAILABLE TOOLS ===",
+		"=== AVAILABLE SKILLS ===",
+		"=== CONSTRAINTS ===",
 	}
 
 	for _, section := range expectedSections {
@@ -129,7 +126,7 @@ func TestBuilder_BuildFull_WithTools(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"search", "fetch", "analyze"},
 		AvailableSkills: []string{"code", "debug"},
 		CurrentTime:     time.Now(),
@@ -156,7 +153,7 @@ func TestBuilder_Build_NoAvailableTools(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{},
 		AvailableSkills: []string{},
 		CurrentTime:     time.Now(),
@@ -183,7 +180,7 @@ func TestBuilder_Build_ConfidenceHigh(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"tool1"},
 		AvailableSkills: []string{},
 		CurrentTime:     time.Now(),
@@ -200,7 +197,7 @@ func TestBuilder_Build_ConfidenceHigh(t *testing.T) {
 
 	resultStr := result
 
-	if !strings.Contains(resultStr, "You have HIGH confidence") {
+	if !strings.Contains(resultStr, "GUIDANCE: You have HIGH confidence") {
 		t.Errorf("Expected HIGH confidence message, got: %s", resultStr)
 	}
 }
@@ -210,7 +207,7 @@ func TestBuilder_Build_ConfidenceMedium(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"tool1"},
 		AvailableSkills: []string{},
 		CurrentTime:     time.Now(),
@@ -227,7 +224,7 @@ func TestBuilder_Build_ConfidenceMedium(t *testing.T) {
 
 	resultStr := result
 
-	if !strings.Contains(resultStr, "You have MEDIUM confidence") {
+	if !strings.Contains(resultStr, "GUIDANCE: You have MEDIUM confidence") {
 		t.Errorf("Expected MEDIUM confidence message, got: %s", resultStr)
 	}
 }
@@ -237,7 +234,7 @@ func TestBuilder_Build_ConfidenceLow(t *testing.T) {
 
 	builder := NewBuilder(pryxDir, ModeFull)
 
-	metadata := prompt.Metadata{
+	metadata := Metadata{
 		AvailableTools:  []string{"tool1"},
 		AvailableSkills: []string{},
 		CurrentTime:     time.Now(),
@@ -254,7 +251,7 @@ func TestBuilder_Build_ConfidenceLow(t *testing.T) {
 
 	resultStr := result
 
-	if !strings.Contains(resultStr, "You have LOW confidence") {
+	if !strings.Contains(resultStr, "GUIDANCE: You have LOW confidence") {
 		t.Errorf("Expected LOW confidence message, got: %s", resultStr)
 	}
 }

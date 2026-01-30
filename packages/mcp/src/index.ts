@@ -59,3 +59,12 @@ export {
   MCPStorage,
   createStorage,
 } from './storage.js';
+
+export {
+  MCPServerDiscovery,
+  createServerDiscovery,
+  type CuratedServer,
+  type CuratedCategory,
+  type CuratedServersDatabase,
+  type SearchFilters,
+} from './discovery.js';

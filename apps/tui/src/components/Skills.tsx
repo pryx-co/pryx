@@ -1,41 +1,30 @@
 // @ts-nocheck
 import { createSignal, onMount, For, Show } from "solid-js";
-
-interface Skill {
-  id: string;
-  name: string;
-  description: string;
-  enabled?: boolean;
-  installed?: boolean;
-}
+import { Effect } from "effect";
+import { useEffectService, AppRuntime } from "../lib/hooks";
+import { SkillsService } from "../services/skills-api";
 
 export default function Skills() {
-  const [skills, setSkills] = createSignal<Skill[]>([]);
+  const skillsService = useEffectService(SkillsService);
+  const [skills, setSkills] = createSignal<any[]>([]);
   const [selectedIndex] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal("");
   const [detailView] = createSignal(false);
 
-  const fetchSkills = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const apiUrl = process.env.PRYX_API_URL || "http://localhost:3000";
-      const res = await fetch(`${apiUrl}/skills`);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      setSkills(data.skills || []);
-    } catch (_) {
-      setError("Failed to load skills");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   onMount(() => {
-    fetchSkills().catch(() => {});
+    const service = skillsService();
+    if (!service) return;
+
+    AppRuntime.runFork(
+      service.fetchSkills.pipe(
+        Effect.tap(skills => Effect.sync(() => setSkills(skills))),
+        Effect.catchAll(err => Effect.sync(() => {
+          setError(err.message || "Failed to load skills");
+          setLoading(false);
+        }))
+      )
+    );
   });
 
   const selectedSkill = () => {

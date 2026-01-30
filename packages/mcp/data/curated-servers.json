@@ -1,0 +1,433 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-01-30",
+  "categories": [
+    {
+      "id": "filesystem",
+      "name": "File System",
+      "description": "Access and manage files and directories"
+    },
+    {
+      "id": "web",
+      "name": "Web & Search",
+      "description": "Web browsing, search, and API access"
+    },
+    {
+      "id": "database",
+      "name": "Database",
+      "description": "Database connections and queries"
+    },
+    {
+      "id": "ai",
+      "name": "AI & ML",
+      "description": "AI model access and machine learning tools"
+    },
+    {
+      "id": "communication",
+      "name": "Communication",
+      "description": "Email, chat, and messaging"
+    },
+    {
+      "id": "development",
+      "name": "Development",
+      "description": "Development tools and utilities"
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "description": "System monitoring and logging"
+    }
+  ],
+  "servers": [
+    {
+      "id": "filesystem",
+      "name": "File System",
+      "description": "Access and manage local files and directories with secure path restrictions",
+      "category": "filesystem",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "read_file",
+            "description": "Read contents of a file"
+          },
+          {
+            "name": "write_file",
+            "description": "Write contents to a file"
+          },
+          {
+            "name": "list_directory",
+            "description": "List contents of a directory"
+          }
+        ]
+      },
+      "settings": {
+        "requiresArgs": true,
+        "argDescription": "Allowed directories (space-separated paths)"
+      }
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "description": "Interact with GitHub repositories, issues, pull requests, and more",
+      "category": "development",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "search_repositories",
+            "description": "Search for repositories on GitHub"
+          },
+          {
+            "name": "create_issue",
+            "description": "Create a new issue"
+          },
+          {
+            "name": "create_pull_request",
+            "description": "Create a pull request"
+          }
+        ]
+      },
+      "settings": {
+        "requiresEnv": true,
+        "envDescription": "GITHUB_TOKEN - GitHub personal access token"
+      }
+    },
+    {
+      "id": "brave-search",
+      "name": "Brave Search",
+      "description": "Search the web using Brave Search API",
+      "category": "web",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-brave-search"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "brave_web_search",
+            "description": "Search the web"
+          },
+          {
+            "name": "brave_local_search",
+            "description": "Search for local businesses"
+          }
+        ]
+      },
+      "settings": {
+        "requiresEnv": true,
+        "envDescription": "BRAVE_API_KEY - Brave Search API key"
+      }
+    },
+    {
+      "id": "fetch",
+      "name": "Fetch",
+      "description": "Fetch and process web content with HTML to markdown conversion",
+      "category": "web",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["mcp-server-fetch"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "fetch",
+            "description": "Fetch content from a URL"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sqlite",
+      "name": "SQLite",
+      "description": "Query and analyze SQLite databases with built-in analysis features",
+      "category": "database",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["mcp-server-sqlite"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "query",
+            "description": "Execute a SQL query"
+          },
+          {
+            "name": "analyze",
+            "description": "Analyze database schema and statistics"
+          }
+        ]
+      },
+      "settings": {
+        "requiresArgs": true,
+        "argDescription": "Path to SQLite database file"
+      }
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "description": "Read-only access to PostgreSQL databases with schema inspection",
+      "category": "database",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "query",
+            "description": "Execute read-only SQL queries"
+          }
+        ]
+      },
+      "settings": {
+        "requiresArgs": true,
+        "argDescription": "PostgreSQL connection URL"
+      }
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "Git repository operations including read and commit capabilities",
+      "category": "development",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["mcp-server-git"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "git_status",
+            "description": "Check git status"
+          },
+          {
+            "name": "git_log",
+            "description": "View git log"
+          },
+          {
+            "name": "git_diff",
+            "description": "Show git diff"
+          }
+        ]
+      },
+      "settings": {
+        "requiresArgs": true,
+        "argDescription": "Path to git repository"
+      }
+    },
+    {
+      "id": "memory",
+      "name": "Knowledge Graph Memory",
+      "description": "Persistent memory using a knowledge graph structure",
+      "category": "ai",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "create_entities",
+            "description": "Create entities in the knowledge graph"
+          },
+          {
+            "name": "create_relations",
+            "description": "Create relations between entities"
+          },
+          {
+            "name": "read_graph",
+            "description": "Read the knowledge graph"
+          }
+        ]
+      }
+    },
+    {
+      "id": "puppeteer",
+      "name": "Puppeteer",
+      "description": "Web automation and scraping using Puppeteer",
+      "category": "web",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "puppeteer_navigate",
+            "description": "Navigate to a URL"
+          },
+          {
+            "name": "puppeteer_screenshot",
+            "description": "Take a screenshot"
+          },
+          {
+            "name": "puppeteer_click",
+            "description": "Click an element"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "description": "Access and analyze Sentry error tracking data",
+      "category": "monitoring",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sentry"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "get_issue",
+            "description": "Get Sentry issue details"
+          },
+          {
+            "name": "search_issues",
+            "description": "Search Sentry issues"
+          }
+        ]
+      },
+      "settings": {
+        "requiresEnv": true,
+        "envDescription": "SENTRY_TOKEN - Sentry auth token"
+      }
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "description": "Post messages and interact with Slack workspaces",
+      "category": "communication",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-slack"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "slack_post_message",
+            "description": "Post a message to a Slack channel"
+          }
+        ]
+      },
+      "settings": {
+        "requiresEnv": true,
+        "envDescription": "SLACK_TOKEN - Slack bot token"
+      }
+    },
+    {
+      "id": "google-maps",
+      "name": "Google Maps",
+      "description": "Location services, directions, and place details via Google Maps",
+      "category": "web",
+      "author": "Community",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-google-maps"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "maps_geocode",
+            "description": "Geocode an address"
+          },
+          {
+            "name": "maps_directions",
+            "description": "Get directions between locations"
+          }
+        ]
+      },
+      "settings": {
+        "requiresEnv": true,
+        "envDescription": "GOOGLE_MAPS_API_KEY - Google Maps API key"
+      }
+    },
+    {
+      "id": "sequential-thinking",
+      "name": "Sequential Thinking",
+      "description": "Dynamic and reflective problem-solving through structured thinking",
+      "category": "ai",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "sequentialthinking",
+            "description": "Use structured thinking to solve problems"
+          }
+        ]
+      }
+    },
+    {
+      "id": "time",
+      "name": "Time",
+      "description": "Time and timezone conversion utilities",
+      "category": "development",
+      "author": "Anthropic",
+      "repository": "https://github.com/modelcontextprotocol/servers",
+      "transport": {
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["mcp-server-time"]
+      },
+      "capabilities": {
+        "tools": [
+          {
+            "name": "get_current_time",
+            "description": "Get current time in a timezone"
+          },
+          {
+            "name": "convert_time",
+            "description": "Convert time between timezones"
+          }
+        ]
+      }
+    }
+  ]
+}
