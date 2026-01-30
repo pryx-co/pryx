@@ -1,12 +1,22 @@
 package skills
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
 )
 
+const pryxCorePath = "/tmp/pryx-core"
+
+func skipIfBinaryMissing(t *testing.T) {
+	if _, err := os.Stat(pryxCorePath); err != nil {
+		t.Skipf("%s not found; build runtime binary before running CLI tests", pryxCorePath)
+	}
+}
+
 func TestListCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "list")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -19,6 +29,7 @@ func TestListCommand(t *testing.T) {
 }
 
 func TestListCommandWithEligible(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "list", "--eligible")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -32,6 +43,7 @@ func TestListCommandWithEligible(t *testing.T) {
 }
 
 func TestListCommandWithJSON(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "list", "--json")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -47,6 +59,7 @@ func TestListCommandWithJSON(t *testing.T) {
 }
 
 func TestInfoCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "info", "test")
 	output, err := cmd.CombinedOutput()
 
@@ -65,6 +78,7 @@ func TestInfoCommand(t *testing.T) {
 }
 
 func TestInfoCommandWithValidSkill(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "info", "git-master")
 	output, err := cmd.CombinedOutput()
 
@@ -79,6 +93,7 @@ func TestInfoCommandWithValidSkill(t *testing.T) {
 }
 
 func TestCheckCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "check")
 	output, err := cmd.CombinedOutput()
 
@@ -100,6 +115,7 @@ func TestCheckCommand(t *testing.T) {
 }
 
 func TestEnableCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "enable", "test-skill")
 	output, err := cmd.CombinedOutput()
 
@@ -118,6 +134,7 @@ func TestEnableCommand(t *testing.T) {
 }
 
 func TestDisableCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "disable", "test-skill")
 	output, err := cmd.CombinedOutput()
 
@@ -136,6 +153,7 @@ func TestDisableCommand(t *testing.T) {
 }
 
 func TestInstallCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "install", "test-skill")
 	output, err := cmd.CombinedOutput()
 
@@ -154,6 +172,7 @@ func TestInstallCommand(t *testing.T) {
 }
 
 func TestUninstallCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "uninstall", "test-skill")
 	output, err := cmd.CombinedOutput()
 
@@ -172,6 +191,7 @@ func TestUninstallCommand(t *testing.T) {
 }
 
 func TestUnknownCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "unknown-cmd")
 	output, err := cmd.CombinedOutput()
 
@@ -185,6 +205,7 @@ func TestUnknownCommand(t *testing.T) {
 }
 
 func TestHelpCommand(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills")
 	output, err := cmd.CombinedOutput()
 
@@ -205,6 +226,7 @@ func TestHelpCommand(t *testing.T) {
 }
 
 func TestListCommandWithBothFlags(t *testing.T) {
+	skipIfBinaryMissing(t)
 	cmd := exec.Command("/tmp/pryx-core", "skills", "list", "--eligible", "--json")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
