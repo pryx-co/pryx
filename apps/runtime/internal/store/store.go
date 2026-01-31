@@ -28,10 +28,17 @@ func New(dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool for better performance
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * 60 * 1000 * 1000000) // 5 minutes
+	// Configure connection pool
+	// For in-memory databases, use single connection to ensure all operations use the same database
+	// For file-based databases, use connection pooling for better performance
+	if dbPath == ":memory:" {
+		db.SetMaxOpenConns(1)
+		db.SetMaxIdleConns(1)
+	} else {
+		db.SetMaxOpenConns(25)
+		db.SetMaxIdleConns(25)
+		db.SetConnMaxLifetime(5 * 60 * 1000 * 1000000) // 5 minutes
+	}
 
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)

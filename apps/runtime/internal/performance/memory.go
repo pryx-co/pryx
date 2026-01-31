@@ -179,7 +179,11 @@ func (mp *MemoryProfiler) GetCurrentSnapshot() MemorySnapshot {
 
 // TakeSnapshot records a memory snapshot
 func (mp *MemoryProfiler) TakeSnapshot() MemorySnapshot {
-	if !mp.enabled {
+	mp.mu.RLock()
+	enabled := mp.enabled
+	mp.mu.RUnlock()
+
+	if !enabled {
 		return MemorySnapshot{}
 	}
 
@@ -227,16 +231,25 @@ func (mp *MemoryProfiler) checkLimits(snapshot MemorySnapshot) {
 
 // StartMonitoring begins periodic memory monitoring
 func (mp *MemoryProfiler) StartMonitoring() {
-	if !mp.enabled {
+	mp.mu.RLock()
+	enabled := mp.enabled
+	snapshotEvery := mp.snapshotEvery
+	mp.mu.RUnlock()
+
+	if !enabled {
 		return
 	}
 
 	go func() {
-		ticker := time.NewTicker(mp.snapshotEvery)
+		ticker := time.NewTicker(snapshotEvery)
 		defer ticker.Stop()
 
 		for range ticker.C {
-			if !mp.enabled {
+			mp.mu.RLock()
+			shouldContinue := mp.enabled
+			mp.mu.RUnlock()
+
+			if !shouldContinue {
 				return
 			}
 			mp.TakeSnapshot()
