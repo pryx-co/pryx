@@ -14,6 +14,7 @@ import SearchableCommandPalette, { Command } from "./SearchableCommandPalette";
 import KeyboardShortcuts from "./KeyboardShortcuts";
 import SetupRequired from "./SetupRequired";
 import ProviderManager from "./ProviderManager";
+import { palette } from "../theme";
 
 type View = "chat" | "sessions" | "settings" | "channels" | "skills";
 
@@ -258,7 +259,41 @@ export default function App() {
       <box flexDirection="column" backgroundColor="#0a0a0a" flexGrow={1}>
         <AppHeader />
 
-        <box flexDirection="row" padding={1} gap={1}>
+        <box flexDirection="row" padding={1} gap={2}>
+          {/* View switcher with mouse support */}
+          <box flexDirection="row" gap={1}>
+            <text 
+              fg={view() === "chat" ? palette.accent : palette.dim}
+              bg={view() === "chat" ? palette.bgSelected : undefined}
+            >
+              1.Chat
+            </text>
+            <text 
+              fg={view() === "sessions" ? palette.accent : palette.dim}
+              bg={view() === "sessions" ? palette.bgSelected : undefined}
+            >
+              2.Sessions
+            </text>
+            <text 
+              fg={view() === "channels" ? palette.accent : palette.dim}
+              bg={view() === "channels" ? palette.bgSelected : undefined}
+            >
+              3.Channels
+            </text>
+            <text 
+              fg={view() === "skills" ? palette.accent : palette.dim}
+              bg={view() === "skills" ? palette.bgSelected : undefined}
+            >
+              4.Skills
+            </text>
+            <text 
+              fg={view() === "settings" ? palette.accent : palette.dim}
+              bg={view() === "settings" ? palette.bgSelected : undefined}
+            >
+              5.Settings
+            </text>
+          </box>
+          <box flexGrow={1} />
           <text fg="gray">/</text>
           <text fg="gray">commands</text>
           <box flexGrow={1} />
