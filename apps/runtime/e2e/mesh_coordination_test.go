@@ -20,7 +20,6 @@ func TestMeshCoordination(t *testing.T) {
 
 	waitForServer(t, port, 5*time.Second)
 
-	baseURL := "http://localhost:" + port
 	wsURL := "ws://localhost:" + port
 
 	t.Run("websocket_connects", func(t *testing.T) {
