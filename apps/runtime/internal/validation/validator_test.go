@@ -415,3 +415,48 @@ func TestTruncateString(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRequired(t *testing.T) {
+	v := NewValidator()
+
+	tests := []struct {
+		name    string
+		field   string
+		value   string
+		wantErr bool
+	}{
+		{
+			name:    "valid non-empty string",
+			field:   "name",
+			value:   "test value",
+			wantErr: false,
+		},
+		{
+			name:    "empty string",
+			field:   "name",
+			value:   "",
+			wantErr: true,
+		},
+		{
+			name:    "whitespace only",
+			field:   "name",
+			value:   "   ",
+			wantErr: true,
+		},
+		{
+			name:    "string with whitespace",
+			field:   "name",
+			value:   "  test  ",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := v.ValidateRequired(tt.field, tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateRequired() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

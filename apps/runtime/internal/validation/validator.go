@@ -71,6 +71,13 @@ func (v *Validator) ValidateString(field, value string, opts ...StringOption) er
 	return nil
 }
 
+func (v *Validator) ValidateRequired(field, value string) error {
+	if strings.TrimSpace(value) == "" {
+		return ValidationError{Field: field, Message: "is required"}
+	}
+	return nil
+}
+
 func (v *Validator) ValidateID(field, value string) error {
 	if strings.TrimSpace(value) == "" {
 		return ValidationError{Field: field, Message: "cannot be empty"}
