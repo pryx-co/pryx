@@ -47,7 +47,7 @@ func (s *CostService) GetBudgetStatus(userID string) BudgetStatus {
 		}
 	}
 
-	today := time.Now()
+	today := time.Now().UTC()
 	dailyCosts, _ := s.tracker.GetDailyCosts(today)
 	monthlyCosts, _ := s.tracker.GetMonthlyCosts(today.Year(), today.Month())
 
@@ -105,7 +105,7 @@ func (s *CostService) GetOptimizationSuggestions() []CostOptimization {
 	var suggestions []CostOptimization
 
 	// Get current month costs to analyze
-	today := time.Now()
+	today := time.Now().UTC()
 	monthlyCosts, _ := s.tracker.GetMonthlyCosts(today.Year(), today.Month())
 
 	// Suggest switching to cheaper models if using expensive ones

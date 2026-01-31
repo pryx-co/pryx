@@ -110,21 +110,8 @@ func TestCostService_GetBudgetStatus_OverBudget(t *testing.T) {
 	if len(costs) != 1 {
 		t.Fatalf("Expected 1 cost to be recorded, got %d", len(costs))
 	}
-	t.Logf("Recorded cost: %+v", costs[0])
-	t.Logf("Recorded cost timestamp: %v (local: %v)", costs[0].Timestamp, costs[0].Timestamp.Local())
-
-	// Debug: Check what today's time range is
-	today := time.Now()
-	startOfDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	endOfDay := startOfDay.Add(24 * time.Hour)
-	t.Logf("Query time range: %v to %v", startOfDay, endOfDay)
 
 	status := service.GetBudgetStatus("user1")
-
-	// Debug output to understand what's happening
-	t.Logf("Daily budget: %.2f, Daily spent: %.2f", 1.0, status.DailySpent)
-	t.Logf("Monthly budget: %.2f, Monthly spent: %.2f", 10.0, status.MonthlySpent)
-	t.Logf("IsOverBudget: %v", status.IsOverBudget)
 
 	// Should be over budget
 	if !status.IsOverBudget {
@@ -170,7 +157,6 @@ func TestCostService_GetOptimizationSuggestions(t *testing.T) {
 
 	service := NewCostService(tracker, calculator, pricingMgr, store)
 
-	// Add high cost events to trigger suggestions
 	for i := 0; i < 60; i++ {
 		costInfo := audit.CostInfo{
 			InputTokens:  10000,
@@ -181,15 +167,24 @@ func TestCostService_GetOptimizationSuggestions(t *testing.T) {
 			TotalCost:    1.0,
 			Model:        "gpt-4",
 		}
-	err := tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
-	if err != nil {
-		t.Fatalf("Failed to record cost: %v", err)
+		err := tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
+		if err != nil {
+			t.Fatalf("Failed to record cost: %v", err)
+		}
 	}
 
-	status := service.GetBudgetStatus("user1")
+	sessionCosts, err := tracker.GetSessionCosts("test-session")
+	if err != nil {
+		t.Fatalf("Failed to get session costs: %v", err)
+	}
+	if len(sessionCosts) != 60 {
+		t.Fatalf("Expected 60 costs, got %d", len(sessionCosts))
+	}
 
-	if !status.IsOverBudget {
-		t.Error("Expected to be over budget with high costs")
+	suggestions := service.GetOptimizationSuggestions()
+
+	if len(suggestions) == 0 {
+		t.Error("Expected optimization suggestions for high costs")
 	}
 }
 
