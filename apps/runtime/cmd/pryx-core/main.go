@@ -17,6 +17,7 @@ import (
 	"pryx-core/internal/agent/spawn"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/channels"
+	channelsSlack "pryx-core/internal/channels/slack"
 	"pryx-core/internal/channels/telegram"
 	"pryx-core/internal/config"
 	"pryx-core/internal/constraints"
@@ -46,12 +47,14 @@ func main() {
 			os.Exit(runDoctor())
 		case "cost":
 			os.Exit(runCost(os.Args[2:]))
-			// 		case "login":
-			// 			os.Exit(runLogin())
 		case "config":
 			os.Exit(runConfig(os.Args[2:]))
 		case "provider":
 			os.Exit(runProvider(os.Args[2:]))
+		case "channel":
+			os.Exit(runChannel(os.Args[2:]))
+		case "session":
+			os.Exit(runSession(os.Args[2:]))
 		case "help", "-h", "--help":
 			usage()
 			return
@@ -204,8 +207,8 @@ func main() {
 		}
 		if cfg.SlackEnabled && cfg.SlackAppToken != "" && cfg.SlackBotToken != "" {
 			log.Println("Starting Slack App...")
-			slack := slack.NewSlackChannel("slack-main", cfg.SlackAppToken, cfg.SlackBotToken, b)
-			if err := chanMgr.Register(slack); err != nil {
+			slackCh := channelsSlack.NewSlackChannel("slack-main", cfg.SlackAppToken, cfg.SlackBotToken, b)
+			if err := chanMgr.Register(slackCh); err != nil {
 				log.Printf("Failed to register Slack: %v", err)
 			}
 		}
@@ -294,6 +297,8 @@ func usage() {
 	log.Println("  pryx-core")
 	log.Println("  pryx-core skills <command>")
 	log.Println("  pryx-core mcp <filesystem|shell|browser|clipboard>")
+	log.Println("  pryx-core channel <command>")
+	log.Println("  pryx-core session <command>")
 	log.Println("  pryx-core doctor")
 	log.Println("  pryx-core cost <command>")
 	log.Println("  pryx-core login")
@@ -310,7 +315,28 @@ func usage() {
 	log.Println("    install <name>                       Install a skill")
 	log.Println("")
 	log.Println("  mcp")
-	log.Println("    <name> <subcommand>                 Run MCP server")
+	log.Println("    list                                List MCP servers")
+	log.Println("    add <name>                          Add MCP server")
+	log.Println("    remove <name>                       Remove MCP server")
+	log.Println("    test <name>                         Test MCP server")
+	log.Println("    auth <name>                         Manage authentication")
+	log.Println("")
+	log.Println("  channel")
+	log.Println("    list [--json]                        List all channels")
+	log.Println("    add <type> <name>                  Add a new channel")
+	log.Println("    remove <name>                        Remove a channel")
+	log.Println("    enable <name>                       Enable a channel")
+	log.Println("    disable <name>                      Disable a channel")
+	log.Println("    test <name>                         Test channel connection")
+	log.Println("    status [name]                       Show channel status")
+	log.Println("    sync <name>                         Sync channel configuration")
+	log.Println("")
+	log.Println("  session")
+	log.Println("    list [--json]                       List all sessions")
+	log.Println("    get <id> [--verbose]               Get session details")
+	log.Println("    delete <id> [--force]               Delete a session")
+	log.Println("    export <id> [--format]             Export session to file")
+	log.Println("    fork <id> [--title]                Fork (copy) a session")
 	log.Println("")
 	log.Println("  cost")
 	log.Println("    summary                              Show total cost summary")
@@ -336,8 +362,6 @@ func usage() {
 	log.Println("")
 	log.Println("  doctor                               Run diagnostics")
 	log.Println("  login                                Log in to Pryx Cloud")
-	log.Println("  config                               Manage configuration")
-	log.Println("  provider                             Manage LLM providers")
 	log.Println("  help, -h, --help                    Show this help message")
 }
 

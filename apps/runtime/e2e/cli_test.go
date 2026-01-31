@@ -277,7 +277,7 @@ func TestMCPCLI_TestError(t *testing.T) {
 	}
 }
 
-	// Test 3: Get GLM models
+func TestRuntimeAPI_GetGLMModels(t *testing.T) {
 	t.Run("get_glm_models", func(t *testing.T) {
 		resp, err := http.Get(baseURL + "/api/v1/providers/glm/models")
 		if err != nil {
@@ -310,8 +310,10 @@ func TestMCPCLI_TestError(t *testing.T) {
 			t.Logf("No GLM models available yet")
 		}
 	})
+}
 
-	// Test 4: Check GLM API key configuration
+// Test 4: Check GLM API key configuration
+func TestRuntimeAPI_CheckGLMAPIKey(t *testing.T) {
 	t.Run("check_glm_api_key", func(t *testing.T) {
 		cmd := exec.Command(bin, "provider", "set-key", "glm")
 		cmd.Env = append(os.Environ(),
@@ -320,7 +322,7 @@ func TestMCPCLI_TestError(t *testing.T) {
 			"PRYX_TELEMETRY_DISABLED=true",
 		)
 		out, err := cmd.CombinedOutput()
-		
+
 		t.Logf("Provider set-key output: %s", string(out))
 
 		if strings.Contains(string(out), "API key not configured for GLM") || strings.Contains(string(out), "Key set successfully") {
@@ -329,3 +331,4 @@ func TestMCPCLI_TestError(t *testing.T) {
 			t.Logf("Unexpected output: %s", string(out))
 		}
 	})
+}

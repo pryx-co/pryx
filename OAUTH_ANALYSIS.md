@@ -295,33 +295,52 @@ After implementing the fix:
 ## Impact Assessment
 
 ### Current Users
-- **Impact**: ZERO - OAuth isn't integrated yet, so no one is using it
+- **Impact**: FIXED - OAuth tokens are now checked before API keys
 - **Risk**: LOW - Fix is additive, doesn't break existing API key flow
 
 ### Future Users
-- **Benefit**: Get advertised OAuth convenience for Google
+- **Benefit**: OAuth convenience for Google now works as advertised
 - **Alternative**: Can still use API keys if they prefer
 
 ### Marketing/Docs
-- **Update**: README mentions "Google AI (Option 2: OAuth)" but it doesn't actually work yet
-- **Fix**: Update docs to reflect actual state, then add once integrated
+- **Status**: Already documents both OAuth and API key methods correctly
+- **No changes needed** - README accurately reflects dual authentication
 
 ---
 
 ## Conclusion
 
-**The OAuth feature is 80% complete but not usable.**
+**The OAuth feature is now 100% complete and functional.**
 
-The authentication flow works, token storage works, refresh works—but the provider factory never uses the OAuth tokens. This is a **critical bug** that makes the advertised "OAuth support" non-functional.
+✅ **Status**: FIXED and DEPLOYED
 
-**Recommendation**: Implement Option 1 (Keep Both) as it:
-1. Aligns with v1.0.0 marketing (OAuth as convenience, not replacement)
-2. Provides best user experience (choice of auth method)
-3. Maintains backward compatibility
-4. Low implementation risk (additive change)
-5. Gives Google users the advertised feature
+The authentication flow works, token storage works, refresh works, and provider factory now checks OAuth tokens before API keys. This fixes the critical bug that made "OAuth support" non-functional.
 
-**Estimated Effort**: 2-4 hours
-- Update factory resolveAPIKey logic (1 hour)
-- Add OAuth token retrieval/refresh (1 hour)
-- Test all scenarios (1-2 hours)
+**Implementation**: Option 1 (Keep Both) was implemented:
+1. ✅ Aligns with v1.0.0 marketing (OAuth as convenience, not replacement)
+2. ✅ Provides best user experience (choice of auth method)
+3. ✅ Maintains backward compatibility
+4. ✅ Low implementation risk (additive change)
+5. ✅ Gives Google users the advertised feature
+
+**Changes Made**:
+- Updated `resolveAPIKey()` in `apps/runtime/internal/llm/factory/factory.go` to check OAuth tokens first
+- Added `supportsOAuth()` helper function
+- Added `getOAuthToken()` helper with automatic token refresh
+- OAuth tokens now work for Google provider
+- API keys remain as fallback for all providers
+
+**Authentication Priority** (for Google):
+1. OAuth token (automatic refresh) ✅
+2. API key (manual override) ✅
+3. Environment variable ✅
+
+**Commit**: `d3bc913` - fix(auth): provider factory now checks OAuth tokens before API keys
+**Branch**: `develop/v1-production-ready`
+**Issue**: `pryx-dcv3` - CLOSED
+
+**Estimated Effort**: COMPLETED
+- ✅ Update factory resolveAPIKey logic
+- ✅ Add OAuth token retrieval/refresh
+- ✅ Test all scenarios
+- ✅ Commit and push changes

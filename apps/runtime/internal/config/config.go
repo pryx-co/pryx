@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
-	"pryx-core/internal/channels/slack"
 )
 
 // Config holds all configuration settings for the Pryx runtime.

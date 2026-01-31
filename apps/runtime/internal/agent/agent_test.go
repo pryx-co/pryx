@@ -9,7 +9,9 @@ import (
 	"pryx-core/internal/bus"
 	"pryx-core/internal/channels"
 	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
+	"pryx-core/internal/models"
 )
 
 // MockProvider implements llm.Provider for testing
@@ -94,8 +96,10 @@ func TestAgent_New(t *testing.T) {
 				OllamaEndpoint: "http://localhost:11434",
 			}
 			eventBus := bus.New()
+			kc := keychain.New("test")
+			catalog := &models.Catalog{}
 
-			agent, err := New(cfg, eventBus, nil)
+			agent, err := New(cfg, eventBus, kc, catalog)
 
 			if tt.wantError {
 				if err == nil {
@@ -128,7 +132,9 @@ func TestAgent_Run_ContextCancellation(t *testing.T) {
 		ModelName:     "test-model",
 	}
 	eventBus := bus.New()
-	agent, err := New(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	catalog := &models.Catalog{}
+	agent, err := New(cfg, eventBus, kc, catalog)
 	if err != nil {
 		t.Fatalf("Failed to create agent: %v", err)
 	}
