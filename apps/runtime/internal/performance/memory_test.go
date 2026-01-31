@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -349,12 +350,15 @@ func TestFormatBytes(t *testing.T) {
 func TestSetCallbacks(t *testing.T) {
 	mp := NewMemoryProfiler()
 
-	criticalCalled := false
+	var criticalCalled bool
+	var criticalCalledMu sync.Mutex
 
 	onWarning := func(usage MemorySnapshot, limit MemoryLimit) {}
 
 	onCritical := func(usage MemorySnapshot, limit MemoryLimit) {
+		criticalCalledMu.Lock()
 		criticalCalled = true
+		criticalCalledMu.Unlock()
 	}
 
 	mp.SetCallbacks(onWarning, onCritical)
@@ -374,16 +378,22 @@ func TestSetCallbacks(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Critical should be called when both thresholds are exceeded
+	criticalCalledMu.Lock()
 	if !criticalCalled {
 		t.Error("Critical callback should have been called")
 	}
+	criticalCalledMu.Unlock()
 
 	// Test warning-only scenario with fresh profiler
 	mp2 := NewMemoryProfiler()
-	warningOnlyCalled := false
+
+	var warningOnlyCalled bool
+	var warningOnlyCalledMu sync.Mutex
 
 	onWarningOnly := func(usage MemorySnapshot, limit MemoryLimit) {
+		warningOnlyCalledMu.Lock()
 		warningOnlyCalled = true
+		warningOnlyCalledMu.Unlock()
 	}
 
 	mp2.SetCallbacks(onWarningOnly, nil)
@@ -399,9 +409,11 @@ func TestSetCallbacks(t *testing.T) {
 	mp2.TakeSnapshot()
 	time.Sleep(100 * time.Millisecond)
 
+	warningOnlyCalledMu.Lock()
 	if !warningOnlyCalled {
 		t.Error("Warning callback should have been called for warning-only scenario")
 	}
+	warningOnlyCalledMu.Unlock()
 }
 
 func TestStartMonitoring(t *testing.T) {

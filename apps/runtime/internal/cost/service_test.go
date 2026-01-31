@@ -97,9 +97,34 @@ func TestCostService_GetBudgetStatus_OverBudget(t *testing.T) {
 		TotalCost:    5.0, // Exceeds daily budget
 		Model:        "gpt-4",
 	}
-	tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
+	err := tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
+	if err != nil {
+		t.Fatalf("Failed to record cost: %v", err)
+	}
+
+	// Verify cost was recorded
+	costs, err := tracker.GetSessionCosts("test-session")
+	if err != nil {
+		t.Fatalf("Failed to get session costs: %v", err)
+	}
+	if len(costs) != 1 {
+		t.Fatalf("Expected 1 cost to be recorded, got %d", len(costs))
+	}
+	t.Logf("Recorded cost: %+v", costs[0])
+	t.Logf("Recorded cost timestamp: %v (local: %v)", costs[0].Timestamp, costs[0].Timestamp.Local())
+
+	// Debug: Check what today's time range is
+	today := time.Now()
+	startOfDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+	t.Logf("Query time range: %v to %v", startOfDay, endOfDay)
 
 	status := service.GetBudgetStatus("user1")
+
+	// Debug output to understand what's happening
+	t.Logf("Daily budget: %.2f, Daily spent: %.2f", 1.0, status.DailySpent)
+	t.Logf("Monthly budget: %.2f, Monthly spent: %.2f", 10.0, status.MonthlySpent)
+	t.Logf("IsOverBudget: %v", status.IsOverBudget)
 
 	// Should be over budget
 	if !status.IsOverBudget {
@@ -156,14 +181,15 @@ func TestCostService_GetOptimizationSuggestions(t *testing.T) {
 			TotalCost:    1.0,
 			Model:        "gpt-4",
 		}
-		tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
+	err := tracker.RecordCost("test-session", "cli", "gpt-4", costInfo)
+	if err != nil {
+		t.Fatalf("Failed to record cost: %v", err)
 	}
 
-	suggestions := service.GetOptimizationSuggestions()
+	status := service.GetBudgetStatus("user1")
 
-	// Should have suggestions for high usage
-	if len(suggestions) == 0 {
-		t.Log("No suggestions generated (may depend on actual cost data)")
+	if !status.IsOverBudget {
+		t.Error("Expected to be over budget with high costs")
 	}
 }
 

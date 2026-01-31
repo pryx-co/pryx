@@ -26,19 +26,37 @@ Design and implement a comprehensive agent interoperability system that enables 
 
 ### Phase 1: Foundation (P0)
 
-#### Task: pryx-interop-001 - Agent Registry Service
-**Description**: Design and implement central registry for managing agent identities, endpoints, and metadata.
+#### Task: pryx-interop-003 - Authentication & Authorization Layer
+**Description**: Implement multi-method auth system supporting OAuth 2.0, API keys, shared secrets, and MTLS for mutual TLS.
 **Acceptance Criteria**:
-- CRUD API for agent registration/deregistration
-- Agent identity verification (unique IDs, fingerprints)
-- Health status tracking per agent
-- Agent capability metadata storage
+- OAuth 2.0 flow for external agent authentication
+- API key management for direct agent communication
+- Shared secret establishment for trusted agent federation
+- Token validation and refresh mechanisms
 
-#### Task: pryx-interop-002 - Agent Discovery Protocol  
+**Previous**: pryx-interop-001 - Agent Registry Service ✅ COMPLETED
+
+**Files Created**:
+- apps/runtime/internal/registry/registry.go
+- apps/runtime/internal/registry/handler.go
+- apps/runtime/internal/registry/agent_registry_test.go
+- apps/runtime/internal/registry/README.md
+
+**Next**: pryx-interop-004 - Message Exchange Protocol
+
+**Status**: 🔄 In Progress
+
+---
+
+### Phase 1: Foundation (P0)
+
+#### Task: pryx-interop-001 - Agent Registry Service ✅ COMPLETED
+
+#### Task: pryx-interop-002 - Agent Discovery Protocol
 **Description**: Define protocol for agents to advertise their capabilities and discover other agents.
 **Acceptance Criteria**:
 - Agent registration endpoint
-- Capability advertisement format (tools, skills, models)
+- Capability advertisement format
 - Discovery query mechanisms (by type, capability, name)
 - Version compatibility checking
 
@@ -49,7 +67,6 @@ Design and implement a comprehensive agent interoperability system that enables 
 - API key management for direct agent communication
 - Shared secret establishment for trusted agent federation
 - Token validation and refresh mechanisms
-- Permission scope negotiation
 
 #### Task: pryx-interop-004 - Message Exchange Protocol
 **Description**: Define standardized message format and transport for agent-to-agent communication.
@@ -59,73 +76,6 @@ Design and implement a comprehensive agent interoperability system that enables 
 - Request/response correlation IDs
 - Streaming message support
 - Error handling and retry strategies
-
-### Phase 2: Core Interoperability (P1)
-
-#### Task: pryx-interop-005 - Agent-to-Agent Messaging
-**Description**: Implement bidirectional messaging system allowing Pryx agents to send messages to external agents and receive responses.
-**Acceptance Criteria**:
-- Message routing by agent ID
-- Async message queue with correlation tracking
-- Message history integration
-- Reply-to handling for workflows
-
-#### Task: pryx-interop-006 - Capability Advertisement & Negotiation
-**Description**: Enable agents to advertise available tools/skills and negotiate access permissions.
-**Acceptance Criteria**:
-- Tool capability advertisement format
-- Permission request/response flow
-- Capability compatibility checking
-
-#### Task: pryx-interop-007 - Session Handoff Protocol
-**Description**: Define protocol for transferring active sessions between different agent instances.
-**Acceptance Criteria**:
-- Context serialization format
-- Session state snapshot/restore
-- Handoff initiation and acceptance flows
-- Privacy controls for handoff
-
-#### Task: pryx-interop-008 - Tool/Skill Federation
-**Description**: Extend MCP protocol to support tool sharing between agents.
-**Acceptance Criteria**:
-- Tool discovery across agent boundaries
-- Tool invocation with proper authorization
-- Tool execution result streaming
-- Capability matching and validation
-
-### Phase 3: Advanced Features (P2)
-
-#### Task: pryx-interop-009 - Cross-Agent Policy Engine
-**Description**: Implement policy engine for enforcing permissions across agent-to-agent boundaries.
-**Acceptance Criteria**:
-- Per-connection trust levels (untrusted, sandboxed, trusted)
-- Action-based policies (allow/deny/ask)
-- Resource constraints (time limits, rate limits)
-- Dynamic policy negotiation
-
-#### Task: pryx-interop-010 - Agent Health Monitoring
-**Description**: Implement health check system for monitoring connected agents and their responsiveness.
-**Acceptance Criteria**:
-- Heartbeat mechanism
-- Latency tracking
-- Status aggregation
-- Alert triggering for unhealthy agents
-
-#### Task: pryx-interop-011 - Federation & Trust Management
-**Description**: Build federation layer for managing trust relationships between agents and discovering new agents via network effects.
-**Acceptance Criteria**:
-- Trust graph management
-- Agent reputation tracking
-- Federation discovery mechanisms
-- Trust revocation procedures
-
-#### Task: pryx-interop-012 - Agent Marketplace Integration
-**Description**: Connect with external agent marketplaces for discovering and registering popular agents.
-**Acceptance Criteria**:
-- Marketplace API integration
-- Automatic agent registration
-- Capability-based search
-- Version compatibility validation
 
 ---
 

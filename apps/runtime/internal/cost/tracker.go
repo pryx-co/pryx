@@ -67,7 +67,7 @@ func (t *CostTracker) GetSessionCosts(sessionID string) ([]CostInfo, error) {
 
 // GetDailyCosts retrieves costs for a specific day
 func (t *CostTracker) GetDailyCosts(date time.Time) (CostSummary, error) {
-	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	endOfDay := startOfDay.Add(24 * time.Hour)
 
 	opts := audit.QueryOptions{
