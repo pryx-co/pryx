@@ -68,8 +68,6 @@ func main() {
 
 	kc := keychain.New("pryx")
 
-	migrateProviderKeys(cfg, kc)
-
 	telProvider, err := telemetry.NewProvider(cfg, kc)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize telemetry: %v", err)
@@ -157,23 +155,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(ctx)
-}
-
-func migrateProviderKeys(cfg *config.Config, kc *keychain.Keychain) {
-	migrations := []struct {
-		provider string
-		key      string
-	}{
-		{"openai", ""},
-		{"anthropic", ""},
-		{"glm", ""},
-	}
-
-	for _, m := range migrations {
-		if existing, err := kc.GetProviderKey(m.provider); err == nil && existing != "" {
-			continue
-		}
-	}
 }
 
 func usage() {
