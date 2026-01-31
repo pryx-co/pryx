@@ -2,6 +2,7 @@ package nlp
 
 import (
 	"regexp"
+	"strings"
 )
 
 // Intent represents the user's intended action
@@ -18,7 +19,13 @@ const (
 	IntentExplain  Intent = "explain"
 	IntentRefactor Intent = "refactor"
 	IntentDebug    Intent = "debug"
-	IntentUnknown  Intent = "unknown"
+	// Setup-related intents
+	IntentSetup     Intent = "setup"
+	IntentConnect   Intent = "connect"
+	IntentConfigure Intent = "configure"
+	IntentEnable    Intent = "enable"
+	IntentDisable   Intent = "disable"
+	IntentUnknown   Intent = "unknown"
 )
 
 // Entity represents an extracted entity from the text
@@ -58,17 +65,17 @@ func NewParser() *Parser {
 func (p *Parser) initializePatterns() {
 	// Create patterns
 	p.intentPatterns[IntentCreate] = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)\b(create|make|generate|new|add)\b`),
+		regexp.MustCompile(`(?i)\b(create|make|generate|new)\b`),
 		regexp.MustCompile(`(?i)\b(write|build|implement)\s+(a|an|the)?\s*\w+\b`),
 	}
 
 	p.intentPatterns[IntentRead] = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)\b(show|display|get|read|view|list|find)\b`),
+		regexp.MustCompile(`(?i)\b(show|display|read|view|list)\b`),
 		regexp.MustCompile(`(?i)\b(what is|tell me about|describe)\b`),
 	}
 
 	p.intentPatterns[IntentUpdate] = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)\b(update|modify|change|edit|fix|improve)\b`),
+		regexp.MustCompile(`(?i)\b(update|modify|edit|fix|improve)\b`),
 		regexp.MustCompile(`(?i)\b(make it|should be|needs to be)\b`),
 	}
 
@@ -83,7 +90,7 @@ func (p *Parser) initializePatterns() {
 	}
 
 	p.intentPatterns[IntentRun] = []*regexp.Regexp{
-		regexp.MustCompile(`(?i)\b(run|execute|start|launch|perform)\b`),
+		regexp.MustCompile(`(?i)\b(run|execute|launch|perform)\b`),
 		regexp.MustCompile(`(?i)\b(do|carry out)\b`),
 	}
 
@@ -107,12 +114,55 @@ func (p *Parser) initializePatterns() {
 		regexp.MustCompile(`(?i)\b(there is a|there's a) (bug|error|problem|issue)\b`),
 	}
 
+	// Setup-related intent patterns
+	// Note: Order matters - more specific patterns first
+	p.intentPatterns[IntentDisable] = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(disable|deactivate)\b`),
+		regexp.MustCompile(`(?i)\bturn\s+(my|the)?\s*\w+\s+off\b`),
+		regexp.MustCompile(`(?i)\bturn\s+off\b`),
+		regexp.MustCompile(`(?i)\bturn\s+(my|the)?\s*\w+\s+off\b`),
+		regexp.MustCompile(`(?i)\bstop\s+(my|the)?\s*\w+\b`),
+	}
+
+	p.intentPatterns[IntentEnable] = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(enable|activate)\b`),
+		regexp.MustCompile(`(?i)\bturn\s+(my|the)?\s*\w+\s+on\b`),
+		regexp.MustCompile(`(?i)\bturn\s+on\b`),
+		regexp.MustCompile(`(?i)\buse\s+(my|a|the)?\s*(tool|feature|plugin|integration)\b`),
+	}
+
+	p.intentPatterns[IntentSetup] = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(setup|install|initialize|prepare)\b`),
+		regexp.MustCompile(`(?i)\bget\s+ready\b`),
+		regexp.MustCompile(`(?i)\b(help\s+me\s+(to\s+)?(set\s+up|get\s+started|configure))\b`),
+		regexp.MustCompile(`(?i)\b(i\s+want\s+to\s+(use|set\s+up))\b`),
+	}
+
+	p.intentPatterns[IntentConnect] = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(connect|link|integrate|attach)\b`),
+		regexp.MustCompile(`(?i)\b(add\s+(my|a|the)?\s*(bot|channel|integration))\b`),
+		regexp.MustCompile(`(?i)\b(join|hook\s+up)\b`),
+	}
+
+	p.intentPatterns[IntentConfigure] = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(configure|adjust|customize|tweak)\b`),
+		regexp.MustCompile(`(?i)\b(set\s+up\s+(my|the)?\s*(settings|config|configuration))\b`),
+		regexp.MustCompile(`(?i)\b(change\s+(my|the)?\s*(settings|config|configuration))\b`),
+		regexp.MustCompile(`(?i)\bchange\b`), // This will score lower than specific configure patterns
+	}
+
 	// Entity patterns
 	p.entityPatterns["file"] = regexp.MustCompile(`(?i)\b(file|document)\s+(?:named?\s+)?["']?([\w\-\.\/]+)["']?\b`)
 	p.entityPatterns["function"] = regexp.MustCompile(`(?i)\b(function|method|def|routine)\s+(?:named?\s+)?["']?([\w\-]+)["']?\b`)
 	p.entityPatterns["class"] = regexp.MustCompile(`(?i)\b(class|struct|type)\s+(?:named?\s+)?["']?([\w\-]+)["']?\b`)
 	p.entityPatterns["path"] = regexp.MustCompile(`(?i)\b(path|directory|folder|dir)\s+(?:at\s+)?["']?([\w\-\.\/]+)["']?\b`)
 	p.entityPatterns["language"] = regexp.MustCompile(`(?i)\b(in|using|with)\s+(go|golang|python|javascript|typescript|rust|java|c\+\+|ruby)\b`)
+
+	// Setup-related entity patterns
+	p.entityPatterns["provider"] = regexp.MustCompile(`(?i)\b(openai|anthropic|google|claude|gpt|gemini|palm|mistral|llama|ollama|cohere|azure)\b`)
+	p.entityPatterns["channel"] = regexp.MustCompile(`(?i)\b(telegram|discord|slack|teams|whatsapp|messenger|signal|matrix|irc)\b`)
+	p.entityPatterns["integration"] = regexp.MustCompile(`(?i)\b(mcp|webhook|api|rest|graphql|grpc|websocket|skill|tool|plugin|filesystem)\b`)
+	p.entityPatterns["token"] = regexp.MustCompile(`(?i)\b(?:token|key|api[- ]?key|secret|auth[- ]?token)[:\s]+([\w\-\.]+)\b`)
 }
 
 // Parse analyzes text and extracts intent and entities
@@ -184,7 +234,7 @@ func (p *Parser) extractEntities(text string) []Entity {
 				value := text[match[2]:match[3]]
 				entities = append(entities, Entity{
 					Type:  entityType,
-					Value: value,
+					Value: strings.ToLower(value),
 					Start: match[2],
 					End:   match[3],
 				})
@@ -225,6 +275,42 @@ func (p *Parser) SuggestCommands(result ParseResult) []string {
 	return suggestions
 }
 
+// SuggestSetupAction suggests setup actions based on the parse result
+func (p *Parser) SuggestSetupAction(result ParseResult) []string {
+	var suggestions []string
+
+	switch result.Intent {
+	case IntentSetup:
+		suggestions = append(suggestions, "setup", "init", "install")
+	case IntentConnect:
+		suggestions = append(suggestions, "connect", "link", "integrate")
+	case IntentConfigure:
+		suggestions = append(suggestions, "config", "settings", "customize")
+	case IntentEnable:
+		suggestions = append(suggestions, "enable", "activate", "start")
+	case IntentDisable:
+		suggestions = append(suggestions, "disable", "deactivate", "stop")
+	default:
+		return suggestions
+	}
+
+	// Add context-specific suggestions based on entities
+	for _, entity := range result.Entities {
+		switch entity.Type {
+		case "provider":
+			suggestions = append(suggestions, "provider "+entity.Value)
+		case "channel":
+			suggestions = append(suggestions, "channel "+entity.Value)
+		case "integration":
+			suggestions = append(suggestions, "integration "+entity.Value)
+		case "token":
+			suggestions = append(suggestions, "set token")
+		}
+	}
+
+	return suggestions
+}
+
 // IsAmbiguous returns true if the intent confidence is low
 func (p *Parser) IsAmbiguous(result ParseResult) bool {
 	return result.Confidence < 0.6 || result.Intent == IntentUnknown
@@ -233,17 +319,22 @@ func (p *Parser) IsAmbiguous(result ParseResult) bool {
 // GetIntentDescription returns a human-readable description of an intent
 func (p *Parser) GetIntentDescription(intent Intent) string {
 	descriptions := map[Intent]string{
-		IntentCreate:   "Creating something new",
-		IntentRead:     "Reading or viewing information",
-		IntentUpdate:   "Updating or modifying something",
-		IntentDelete:   "Deleting or removing something",
-		IntentSearch:   "Searching for something",
-		IntentRun:      "Running or executing something",
-		IntentTest:     "Testing or validating something",
-		IntentExplain:  "Explaining or describing something",
-		IntentRefactor: "Refactoring or optimizing code",
-		IntentDebug:    "Debugging or fixing issues",
-		IntentUnknown:  "Unclear intent",
+		IntentCreate:    "Creating something new",
+		IntentRead:      "Reading or viewing information",
+		IntentUpdate:    "Updating or modifying something",
+		IntentDelete:    "Deleting or removing something",
+		IntentSearch:    "Searching for something",
+		IntentRun:       "Running or executing something",
+		IntentTest:      "Testing or validating something",
+		IntentExplain:   "Explaining or describing something",
+		IntentRefactor:  "Refactoring or optimizing code",
+		IntentDebug:     "Debugging or fixing issues",
+		IntentSetup:     "Setting up or initializing something",
+		IntentConnect:   "Connecting or integrating with a service",
+		IntentConfigure: "Configuring settings or options",
+		IntentEnable:    "Enabling a feature or service",
+		IntentDisable:   "Disabling a feature or service",
+		IntentUnknown:   "Unclear intent",
 	}
 
 	if desc, ok := descriptions[intent]; ok {
