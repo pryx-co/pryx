@@ -230,10 +230,18 @@ func (s *Server) handleProviderModels(w http.ResponseWriter, r *http.Request) {
 		models := s.catalog.GetProviderModels(providerID)
 		var result []map[string]interface{}
 		for _, m := range models {
-			result = append(result, map[string]interface{}{
-				"id":   m.ID,
-				"name": m.Name,
-			})
+			modelData := map[string]interface{}{
+				"id":                 m.ID,
+				"name":               m.Name,
+				"context_window":     m.Limit.Context,
+				"max_output_tokens":  m.Limit.Output,
+				"supports_tools":     m.ToolCall,
+				"supports_vision":    m.SupportsVision(),
+				"supports_reasoning": m.Reasoning,
+				"input_price_1m":     m.Cost.Input,
+				"output_price_1m":    m.Cost.Output,
+			}
+			result = append(result, modelData)
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"models": result})
 		return
@@ -276,11 +284,19 @@ func (s *Server) handleModelsList(w http.ResponseWriter, r *http.Request) {
 	if s.catalog != nil {
 		var result []map[string]interface{}
 		for _, m := range s.catalog.Models {
-			result = append(result, map[string]interface{}{
-				"id":       m.ID,
-				"name":     m.Name,
-				"provider": m.Provider,
-			})
+			modelData := map[string]interface{}{
+				"id":                 m.ID,
+				"name":               m.Name,
+				"provider":           m.Provider,
+				"context_window":     m.Limit.Context,
+				"max_output_tokens":  m.Limit.Output,
+				"supports_tools":     m.ToolCall,
+				"supports_vision":    m.SupportsVision(),
+				"supports_reasoning": m.Reasoning,
+				"input_price_1m":     m.Cost.Input,
+				"output_price_1m":    m.Cost.Output,
+			}
+			result = append(result, modelData)
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"models": result})
 		return

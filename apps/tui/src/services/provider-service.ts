@@ -9,6 +9,14 @@ export interface Provider {
 export interface Model {
   id: string;
   name: string;
+  provider: string;
+  context_window?: number;
+  max_output_tokens?: number;
+  supports_tools?: boolean;
+  supports_vision?: boolean;
+  supports_reasoning?: boolean;
+  input_price_1m?: number;
+  output_price_1m?: number;
 }
 
 export interface ProvidersResponse {

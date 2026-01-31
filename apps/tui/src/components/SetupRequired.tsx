@@ -157,24 +157,35 @@ export default function SetupRequired(props: SetupRequiredProps) {
               <text fg="gray">Selected: {selectedProvider()?.name}</text>
             </box>
 
-            <box marginTop={1}>
-              <text fg="gray">Model:</text>
-              <box flexDirection="column">
-                {models().length > 0 ? (
-                  models().map(m => (
-                    <box
-                      borderStyle="single"
-                      borderColor={modelName() === m.id ? "cyan" : "gray"}
-                      padding={1}
-                    >
-                      <text fg={modelName() === m.id ? "cyan" : "white"}>{m.name}</text>
-                    </box>
-                  ))
-                ) : (
-                  <text fg="gray">No models available</text>
-                )}
+              <box marginTop={1}>
+                <text fg="gray">Model:</text>
+                <box flexDirection="column">
+                  {models().length > 0 ? (
+                    models().map(m => {
+                      const priceInfo = m.input_price_1m && m.output_price_1m
+                        ? ` $${m.input_price_1m}/$${m.output_price_1m} per 1M tokens`
+                        : "";
+                      const ctxInfo = m.context_window ? ` ${m.context_window}k ctx` : "";
+                      const toolsInfo = m.supports_tools ? " tools" : "";
+
+                      return (
+                        <box
+                          borderStyle="single"
+                          borderColor={modelName() === m.id ? "cyan" : "gray"}
+                          padding={1}
+                        >
+                          <text fg={modelName() === m.id ? "cyan" : "white"}>{m.name}</text>
+                          {priceInfo && (
+                            <text fg="gray">{priceInfo}{ctxInfo}{toolsInfo}</text>
+                          )}
+                        </box>
+                      );
+                    })
+                  ) : (
+                    <text fg="gray">No models available</text>
+                  )}
+                </box>
               </box>
-            </box>
 
             <box marginTop={1}>
               <text fg="gray">

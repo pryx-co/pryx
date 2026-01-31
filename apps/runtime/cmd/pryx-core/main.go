@@ -19,6 +19,7 @@ import (
 	"pryx-core/internal/channels"
 	"pryx-core/internal/channels/telegram"
 	"pryx-core/internal/config"
+	"pryx-core/internal/constraints"
 	"pryx-core/internal/doctor"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mesh"
@@ -135,23 +136,30 @@ func main() {
 	// Load models catalog (may be slow - load async)
 	profiler.StartPhase("models.load")
 	var catalog *models.Catalog
+	catalogLoaded := make(chan *models.Catalog, 1)
 	go func() {
 		modelsService := models.NewService()
 		cat, err := modelsService.Load()
 		if err != nil {
 			log.Printf("Warning: Failed to load models catalog: %v", err)
 			profiler.EndPhase("models.load", err)
+			catalogLoaded <- nil
 			return
 		}
 		catalog = cat
+		catalogLoaded <- catalog
 		log.Printf("Loaded %d providers and %d models from catalog", len(catalog.Providers), len(catalog.Models))
 		profiler.EndPhase("models.load", nil)
 	}()
+
+	// Initialize constraints catalog with models.dev data when catalog is loaded
+	_ = constraints.FromModelsDevCatalog
 
 	// Initialize server
 	var srv *server.Server
 	if err := profiler.TimeFunc("server.init", func() error {
 		srv = server.New(cfg, s.DB, kc)
+		// Set catalog if already loaded (rare race condition)
 		if catalog != nil {
 			srv.SetCatalog(catalog)
 		}
@@ -160,6 +168,19 @@ func main() {
 		log.Fatalf("Failed to initialize server: %v", err)
 	}
 	b := srv.Bus()
+
+	// Wait for catalog to load after server starts and update it
+	go func() {
+		select {
+		case cat := <-catalogLoaded:
+			if cat != nil {
+				srv.SetCatalog(cat)
+				log.Printf("Catalog updated on server after async load")
+			}
+		case <-time.After(5 * time.Second):
+			log.Printf("Catalog load timed out, continuing without it")
+		}
+	}()
 
 	// Initialize mesh manager
 	profiler.StartPhase("mesh.init")
@@ -190,7 +211,7 @@ func main() {
 	var agt *agent.Agent
 	go func() {
 		var err error
-		agt, err = agent.New(cfg, b, kc)
+		agt, err = agent.New(cfg, b, kc, catalog)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize Agent: %v", err)
 			profiler.EndPhase("agent.init", err)

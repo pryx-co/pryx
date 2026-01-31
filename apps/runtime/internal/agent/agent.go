@@ -13,6 +13,7 @@ import (
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
+	"pryx-core/internal/models"
 	"pryx-core/internal/prompt"
 )
 
@@ -24,7 +25,7 @@ type Agent struct {
 	version       string
 }
 
-func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain) (*Agent, error) {
+func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog) (*Agent, error) {
 	var apiKey string
 	var baseURL string
 
@@ -41,9 +42,27 @@ func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain) (*Agent, 
 		return nil, fmt.Errorf("unsupported model provider: %s", cfg.ModelProvider)
 	}
 
-	provider, err := factory.NewProvider(cfg.ModelProvider, apiKey, baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LLM provider: %w", err)
+	var provider llm.Provider
+	var err error
+
+	// Try to use catalog-aware factory if catalog is available
+	if catalog != nil {
+		providerFactory := factory.NewProviderFactory(catalog, kc)
+		provider, err = providerFactory.CreateProvider(cfg.ModelProvider, cfg.ModelName, apiKey)
+		if err != nil {
+			log.Printf("Warning: Failed to create provider from catalog: %v, using fallback", err)
+			// Fallback to low-level factory
+			provider, err = factory.NewProvider(cfg.ModelProvider, apiKey, baseURL)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create LLM provider: %w", err)
+			}
+		}
+	} else {
+		// Fallback to low-level factory without catalog
+		provider, err = factory.NewProvider(cfg.ModelProvider, apiKey, baseURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create LLM provider: %w", err)
+		}
 	}
 
 	promptBuilder := prompt.NewBuilder(prompt.DefaultPryxDir(), prompt.ModeFull)

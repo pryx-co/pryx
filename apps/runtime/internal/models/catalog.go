@@ -177,6 +177,43 @@ func (s *Service) GetCatalog() *Catalog {
 	return s.catalog
 }
 
+// GetPricingData returns pricing information for all models
+func (s *Service) GetPricingData() map[string]interface{} {
+	if s.catalog == nil {
+		return nil
+	}
+
+	result := make(map[string]interface{})
+	for modelID, model := range s.catalog.Models {
+		result[modelID] = map[string]interface{}{
+			"input_price_1m":  model.Cost.Input,
+			"output_price_1m": model.Cost.Output,
+			"context_window":  model.Limit.Context,
+			"max_output":      model.Limit.Output,
+		}
+	}
+	return result
+}
+
+// GetModelPricing returns pricing for a specific model
+func (s *Service) GetModelPricing(modelID string) (map[string]interface{}, bool) {
+	if s.catalog == nil {
+		return nil, false
+	}
+
+	model, ok := s.catalog.GetModel(modelID)
+	if !ok {
+		return nil, false
+	}
+
+	return map[string]interface{}{
+		"input_price_1m":  model.Cost.Input,
+		"output_price_1m": model.Cost.Output,
+		"context_window":  model.Limit.Context,
+		"max_output":      model.Limit.Output,
+	}, true
+}
+
 func (s *Service) fetchFromAPI() (*Catalog, error) {
 	resp, err := http.Get(ModelsDevAPI)
 	if err != nil {
