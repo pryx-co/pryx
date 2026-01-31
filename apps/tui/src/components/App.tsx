@@ -9,6 +9,7 @@ import Chat from "./Chat";
 import SessionExplorer from "./SessionExplorer";
 import Settings from "./Settings";
 import Channels from "./Channels";
+import ChannelManager from "./ChannelManager";
 import Skills from "./Skills";
 import SearchableCommandPalette, { Command } from "./SearchableCommandPalette";
 import KeyboardShortcuts from "./KeyboardShortcuts";
@@ -335,7 +336,7 @@ export default function App() {
               <SessionExplorer />
             </Match>
             <Match when={view() === "channels"}>
-              <Channels />
+              <ChannelManager onClose={() => setView("chat")} />
             </Match>
             <Match when={view() === "settings"}>
               <Settings />
