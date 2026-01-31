@@ -15,6 +15,8 @@ func BundledProvider(name string) (ToolProvider, error) {
 		return NewClipboardProvider(), nil
 	case "browser":
 		return NewBrowserProvider(), nil
+	case "screen":
+		return NewScreenProvider(), nil
 	default:
 		return nil, errors.New("unknown bundled server")
 	}
