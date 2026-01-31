@@ -3,10 +3,13 @@
 package factory
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
+	"pryx-core/internal/auth"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/providers"
@@ -120,7 +123,6 @@ func (f *ProviderFactory) GetCatalog() *models.Catalog {
 	return f.catalog
 }
 
-// resolveAPIKey resolves the API key from the provided value, keychain, or environment.
 func (f *ProviderFactory) resolveAPIKey(providerID, providedKey string, providerInfo models.ProviderInfo) string {
 	if providedKey != "" {
 		return providedKey
@@ -227,6 +229,40 @@ func ensureV1Suffix(url string) string {
 		return url + "/v1"
 	}
 	return url
+}
+
+// supportsOAuth checks if a provider supports OAuth authentication.
+func (f *ProviderFactory) supportsOAuth(providerID string) bool {
+	_, ok := auth.ProviderConfigs[providerID]
+	return ok
+}
+
+// getOAuthToken retrieves OAuth token from keychain with automatic refresh.
+func (f *ProviderFactory) getOAuthToken(providerID string) string {
+	if f.keychain == nil {
+		return ""
+	}
+
+	oauth := auth.NewProviderOAuth(f.keychain)
+
+	needsRefresh, err := oauth.IsTokenExpired(providerID)
+	if err != nil {
+		return ""
+	}
+
+	if needsRefresh {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := oauth.RefreshToken(ctx, providerID); err != nil {
+			return ""
+		}
+	}
+
+	token, err := oauth.GetToken(providerID)
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 // Provider constants for supported LLM providers.
