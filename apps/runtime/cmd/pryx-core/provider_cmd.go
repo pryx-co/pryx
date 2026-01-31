@@ -76,6 +76,15 @@ func runProvider(args []string) int {
 			return 1
 		}
 		return providerTest(args[1], cfg, kc)
+	case "oauth":
+		if len(args) < 2 {
+			fmt.Println("Usage: pryx-core provider oauth <provider>")
+			fmt.Println("")
+			fmt.Println("Supported providers:")
+			fmt.Println("  google - Google AI (Gemini)")
+			return 1
+		}
+		return runProviderOAuth([]string{args[1]})
 	default:
 		usageProvider()
 		return 1
@@ -91,11 +100,13 @@ func usageProvider() {
 	fmt.Println("  pryx-core provider remove <name>           Remove provider config")
 	fmt.Println("  pryx-core provider use <name>              Set as active/default provider")
 	fmt.Println("  pryx-core provider test <name>             Test connection to provider")
+	fmt.Println("  pryx-core provider oauth <provider>        Authenticate via OAuth (Google)")
 	fmt.Println("")
 	fmt.Println("Examples:")
 	fmt.Println("  pryx-core provider add openai")
 	fmt.Println("  pryx-core provider set-key anthropic")
 	fmt.Println("  pryx-core provider use groq")
+	fmt.Println("  pryx-core provider oauth google")
 	fmt.Println("")
 	fmt.Println("Note: Providers are loaded dynamically from models.dev (50+ providers supported)")
 }
@@ -196,6 +207,11 @@ func isProviderConfigured(name string, cfg *config.Config, kc *keychain.Keychain
 		return true
 	}
 
+	// Check for OAuth tokens
+	if isOAuthConfigured(name, kc) {
+		return true
+	}
+
 	// Check environment variables
 	envVars := getProviderEnvVars(name)
 	for _, env := range envVars {
@@ -210,6 +226,10 @@ func isProviderConfigured(name string, cfg *config.Config, kc *keychain.Keychain
 func getKeyStatus(name string, kc *keychain.Keychain) string {
 	if _, err := kc.GetProviderKey(name); err == nil {
 		return "configured (keychain)"
+	}
+
+	if isOAuthConfigured(name, kc) {
+		return "configured (OAuth)"
 	}
 
 	envVars := getProviderEnvVars(name)
@@ -313,10 +333,18 @@ func providerAdd(name string, cfg *config.Config, path string, kc *keychain.Keyc
 	fmt.Printf("Adding provider: %s\n", providerInfo.Name)
 	fmt.Println()
 
+	// Check if provider supports OAuth
+	if supportsOAuth(name) {
+		fmt.Println("This provider supports OAuth authentication.")
+		fmt.Printf("Run 'pryx-core provider oauth %s' for OAuth flow (recommended)\n", name)
+		fmt.Println("Or continue with API key below.")
+		fmt.Println()
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Get API key (optional for some providers like Ollama)
-	fmt.Print("API Key (press Enter to skip for local providers): ")
+	fmt.Print("API Key (press Enter to skip for local providers or use OAuth): ")
 	apiKey, _ := reader.ReadString('\n')
 	apiKey = strings.TrimSpace(apiKey)
 
@@ -345,6 +373,16 @@ func providerAdd(name string, cfg *config.Config, path string, kc *keychain.Keyc
 	fmt.Printf("Run 'pryx-core provider test %s' to verify connection\n", name)
 
 	return 0
+}
+
+// supportsOAuth checks if a provider supports OAuth authentication
+func supportsOAuth(name string) bool {
+	switch name {
+	case "google":
+		return true
+	default:
+		return false
+	}
 }
 
 func providerSetKey(name string, kc *keychain.Keychain) int {

@@ -78,11 +78,39 @@ func main() {
 	if err := profiler.TimeFunc("store.init", func() error {
 		var err error
 		s, err = store.New(cfg.DatabasePath)
-		return err
+		if err != nil {
+			return err
+		}
+		if cfg.MaxMessagesPerSession > 0 {
+			s.SetMaxMessages(cfg.MaxMessagesPerSession)
+		}
+		return nil
 	}); err != nil {
 		log.Fatalf("Failed to initialize store: %v", err)
 	}
 	defer s.Close()
+
+	var memProfiler *performance.MemoryProfiler
+	if cfg.EnableMemoryProfiling {
+		memProfiler = performance.NewMemoryProfiler()
+		memProfiler.SetLimits(performance.DefaultMemoryLimits)
+		memProfiler.SetCallbacks(
+			func(usage performance.MemorySnapshot, limit performance.MemoryLimit) {
+				log.Printf("⚡ Memory warning: %d bytes allocated (%.1f%%)",
+					usage.AllocBytes,
+					float64(usage.AllocBytes)/float64(limit.MaxAllocBytes)*100)
+			},
+			func(usage performance.MemorySnapshot, limit performance.MemoryLimit) {
+				log.Printf("⚠ Memory critical: %d bytes allocated (%.1f%%) - running GC",
+					usage.AllocBytes,
+					float64(usage.AllocBytes)/float64(limit.MaxAllocBytes)*100)
+				memProfiler.ForceGC()
+			},
+		)
+		memProfiler.StartMonitoring()
+		defer memProfiler.PrintReport()
+		log.Println("Memory profiling enabled")
+	}
 
 	// Initialize keychain
 	var kc *keychain.Keychain
@@ -276,6 +304,7 @@ func usage() {
 	log.Println("    remove <name>                        Remove provider config")
 	log.Println("    use <name>                           Set as active/default provider")
 	log.Println("    test <name>                          Test connection to provider")
+	log.Println("    oauth <provider>                     Authenticate via OAuth (Google)")
 	log.Println("")
 	log.Println("  doctor                               Run diagnostics")
 	log.Println("  login                                Log in to Pryx Cloud")
