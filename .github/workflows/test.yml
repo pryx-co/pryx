@@ -16,7 +16,7 @@ jobs:
   # Go Runtime Tests
   test-runtime:
     name: Runtime Tests (Go)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -55,7 +55,7 @@ jobs:
   # Rust Host Tests
   test-host:
     name: Host Tests (Rust)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +93,7 @@ jobs:
   # Lint checks
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v4
 
@@ -140,7 +140,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [blacksmith-4vcpu-ubuntu-2404, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -177,7 +177,7 @@ jobs:
   # E2E Tests (only on main branch)
   test-e2e:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'e2e')
     needs: [test-runtime, test-host, test-tui]
     steps:
@@ -199,7 +199,7 @@ jobs:
   # Coverage summary
   coverage:
     name: Coverage Report
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [test-runtime, test-host, test-tui]
     steps:
       - uses: actions/checkout@v4
