@@ -22,7 +22,30 @@ export default function Channels() {
       placeholder: "123456:ABC-...",
     },
     { id: "sep1", type: "header", label: " " },
-    { id: "h2", type: "header", label: "GENERIC WEBHOOK" },
+    { id: "h2", type: "header", label: "SLACK APP" },
+    { id: "sl_status", type: "toggle", key: "slack_enabled", label: "Status" },
+    {
+      id: "sl_app_token",
+      type: "input",
+      key: "slack_app_token",
+      label: "App Token",
+      placeholder: "xoxb-...",
+    },
+    {
+      id: "sl_bot_token",
+      type: "input",
+      key: "slack_bot_token",
+      label: "Bot Token",
+      placeholder: "xoxb-...",
+    },
+    {
+      id: "sl_mode",
+      type: "select",
+      key: "slack_mode",
+      label: "Mode",
+    },
+    { id: "sep2", type: "header", label: " " },
+    { id: "h3", type: "header", label: "GENERIC WEBHOOK" },
     { id: "wh_status", type: "toggle", key: "webhook_enabled", label: "Status" },
   ]);
   const [selectedIndex, setSelectedIndex] = createSignal(1);

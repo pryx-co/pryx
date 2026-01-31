@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+	"pryx-core/internal/channels/slack"
 )
 
 // Config holds all configuration settings for the Pryx runtime.
@@ -28,13 +29,25 @@ type Config struct {
 
 	// Channels
 	// TelegramToken is the bot token for Telegram integration.
-	TelegramToken string `yaml:"telegram_token"`
 	// TelegramEnabled enables or disables the Telegram bot.
-	TelegramEnabled bool `yaml:"telegram_enabled"`
+	TelegramToken   string `yaml:"telegram_token"`
+	TelegramEnabled bool   `yaml:"telegram_enabled"`
+	// SlackAppToken and SlackBotToken are the tokens for Slack integration.
+	// SlackEnabled enables or disables the Slack bot.
+	SlackAppToken string `yaml:"slack_app_token"`
+	SlackBotToken string `yaml:"slack_bot_token"`
+	SlackEnabled  bool   `yaml:"slack_enabled"`
+
+	// Memory Management
+	// MaxMessagesPerSession limits the number of messages kept per session (0 = unlimited).
+	MaxMessagesPerSession int `yaml:"max_messages_per_session"`
+	// WebSocketBufferSize sets the WebSocket message buffer size.
+	WebSocketBufferSize int `yaml:"websocket_buffer_size"`
+	// EnableMemoryProfiling enables memory usage monitoring.
+	EnableMemoryProfiling bool `yaml:"enable_memory_profiling"`
 }
 
 // ProviderKeyNames maps provider IDs to their keychain key names.
-// These keys are used to store and retrieve API keys from the system keychain.
 var ProviderKeyNames = map[string]string{
 	"openai":     "provider:openai",
 	"anthropic":  "provider:anthropic",
@@ -46,6 +59,7 @@ var ProviderKeyNames = map[string]string{
 	"cohere":     "provider:cohere",
 	"google":     "provider:google",
 	"glm":        "provider:glm",
+	"slack":      "provider:slack",
 }
 
 // DefaultPath returns the default configuration file path.
@@ -60,12 +74,16 @@ func DefaultPath() string {
 // Returns a Config with default values if no configuration file exists.
 func Load() *Config {
 	cfg := &Config{
-		ListenAddr:     ":0", // Use :0 for dynamic port allocation
-		DatabasePath:   "pryx.db",
-		CloudAPIUrl:    "https://pryx.dev/api",
-		ModelProvider:  "ollama",
-		ModelName:      "llama3",
-		OllamaEndpoint: "http://localhost:11434",
+		ListenAddr:      ":0", // Use :0 for dynamic port allocation
+		DatabasePath:    "pryx.db",
+		CloudAPIUrl:     "https://pryx.dev/api",
+		ModelProvider:   "ollama",
+		ModelName:       "llama3",
+		OllamaEndpoint:  "http://localhost:11434",
+		TelegramEnabled: false,
+		SlackEnabled:    false,
+		SlackAppToken:   "",
+		SlackBotToken:   "",
 	}
 
 	// Try loading from default file
@@ -85,6 +103,15 @@ func Load() *Config {
 	}
 	if v := os.Getenv("PRYX_CLOUD_API_URL"); v != "" {
 		cfg.CloudAPIUrl = v
+	}
+	if v := os.Getenv("PRYX_SLACK_APP_TOKEN"); v != "" {
+		cfg.SlackAppToken = v
+	}
+	if v := os.Getenv("PRYX_SLACK_BOT_TOKEN"); v != "" {
+		cfg.SlackBotToken = v
+	}
+	if v := os.Getenv("PRYX_SLACK_ENABLED"); v != "" {
+		cfg.SlackEnabled = true
 	}
 
 	return cfg

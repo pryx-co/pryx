@@ -202,6 +202,13 @@ func main() {
 				log.Printf("Failed to register Telegram: %v", err)
 			}
 		}
+		if cfg.SlackEnabled && cfg.SlackAppToken != "" && cfg.SlackBotToken != "" {
+			log.Println("Starting Slack App...")
+			slack := slack.NewSlackChannel("slack-main", cfg.SlackAppToken, cfg.SlackBotToken, b)
+			if err := chanMgr.Register(slack); err != nil {
+				log.Printf("Failed to register Slack: %v", err)
+			}
+		}
 		return nil
 	})
 	defer chanMgr.Shutdown()
