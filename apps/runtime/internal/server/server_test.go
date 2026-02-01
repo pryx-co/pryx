@@ -220,20 +220,26 @@ func TestHandleMCPCall_MissingTool(t *testing.T) {
 }
 
 func TestCorsMiddleware(t *testing.T) {
-	cfg := &config.Config{ListenAddr: ":0"}
+	cfg := &config.Config{
+		ListenAddr:     ":0",
+		AllowedOrigins: []string{"https://example.com"},
+	}
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := keychain.New("test")
 
 	server := New(cfg, s.DB, kc)
 
+	// Test preflight with allowed origin
 	req := httptest.NewRequest("OPTIONS", "/health", nil)
+	req.Header.Set("Origin", "https://example.com")
 	rec := httptest.NewRecorder()
 
 	server.router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, "*", rec.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "https://example.com", rec.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "true", rec.Header().Get("Access-Control-Allow-Credentials"))
 	assert.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), "GET")
 }
 
