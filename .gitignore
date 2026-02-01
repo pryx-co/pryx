@@ -51,4 +51,14 @@ temp/
 *.key
 secrets/
 
-node_modules/
+# Data
+pryx.db
+*.db
+*.db-journal
+
+# Go coverage and test artifacts
+coverage.out
+*.test
+apps/runtime/*.test
+apps/runtime/coverage.out
+

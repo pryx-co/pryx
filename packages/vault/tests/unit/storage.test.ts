@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { VaultStorage, createVaultStorage } from '../../src/storage';
-import { FileNotFoundError, CorruptedVaultError, EntryNotFoundError, DuplicateEntryError } from '../../src/storage-types';
+import { FileNotFoundError, CorruptedVaultError, EntryNotFoundError, DuplicateEntryError, VaultFile } from '../../src/storage-types';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -252,7 +252,7 @@ describe('VaultStorage', () => {
       expect(entries[0].name).toBe('Entry 1');
       expect(entries[0].type).toBe('credential');
       expect(entries[0].accessCount).toBe(5);
-      expect(entries[0].encryptedData).toBeUndefined();
+      expect('encryptedData' in entries[0]).toBe(false);
     });
   });
 
@@ -278,7 +278,7 @@ describe('VaultStorage', () => {
 
     it('should detect missing metadata', async () => {
       const vault = storage.createEmptyVault();
-      vault.metadata = null as any;
+      (vault as Partial<VaultFile>).metadata = undefined;
 
       const report = await storage.verifyIntegrity(vault);
 

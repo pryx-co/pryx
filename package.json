@@ -52,6 +52,11 @@
     "rust": ">=1.70.0",
     "go": ">=1.22.0"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "workers/*"
+  ],
   "devDependencies": {
     "oxlint": "latest",
     "@commitlint/cli": "^19.7.1",

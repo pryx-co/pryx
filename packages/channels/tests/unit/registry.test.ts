@@ -25,7 +25,7 @@ describe('ChannelRegistry', () => {
         id: 'telegram-bot',
         name: 'My Telegram Bot',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: {
           botToken: 'test-token',
           chatId: '123456',
@@ -43,7 +43,7 @@ describe('ChannelRegistry', () => {
         id: 'discord-bot',
         name: 'Discord Bot',
         type: 'discord' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: {
           botToken: 'discord-token',
           applicationId: 'app-id',
@@ -61,7 +61,7 @@ describe('ChannelRegistry', () => {
         id: 'webhook-endpoint',
         name: 'Webhook Endpoint',
         type: 'webhook' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: {
           url: 'https://api.example.com/webhook',
           method: 'POST' as const,
@@ -81,7 +81,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       };
 
@@ -95,7 +95,7 @@ describe('ChannelRegistry', () => {
         id: 'invalid',
         name: '',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: {},
       };
 
@@ -109,7 +109,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -130,7 +130,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -150,7 +150,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -172,14 +172,14 @@ describe('ChannelRegistry', () => {
         id: 'channel1',
         name: 'Channel 1',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token1' },
       });
       registry.addChannel({
         id: 'channel2',
         name: 'Channel 2',
         type: 'discord' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token2', applicationId: 'app' },
       });
 
@@ -195,14 +195,14 @@ describe('ChannelRegistry', () => {
         id: 'enabled',
         name: 'Enabled',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
       registry.addChannel({
         id: 'disabled',
         name: 'Disabled',
         type: 'telegram' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -219,21 +219,21 @@ describe('ChannelRegistry', () => {
         id: 'telegram1',
         name: 'Telegram 1',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
       registry.addChannel({
         id: 'discord1',
         name: 'Discord 1',
         type: 'discord' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token', applicationId: 'app' },
       });
       registry.addChannel({
         id: 'telegram2',
         name: 'Telegram 2',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -250,7 +250,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -264,7 +264,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -280,14 +280,14 @@ describe('ChannelRegistry', () => {
         id: 'test1',
         name: 'Test 1',
         type: 'telegram' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
       registry.addChannel({
         id: 'test2',
         name: 'Test 2',
         type: 'telegram' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -301,14 +301,14 @@ describe('ChannelRegistry', () => {
         id: 'test1',
         name: 'Test 1',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
       registry.addChannel({
         id: 'test2',
         name: 'Test 2',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -324,14 +324,14 @@ describe('ChannelRegistry', () => {
         id: 'telegram1',
         name: 'Telegram 1',
         type: 'telegram' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
       registry.addChannel({
         id: 'discord1',
         name: 'Discord 1',
         type: 'discord' as const,
-        enabled: false,
+        enabled: false, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token', applicationId: 'app' },
       });
 
@@ -348,7 +348,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -373,7 +373,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -403,7 +403,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -420,7 +420,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 
@@ -437,7 +437,7 @@ describe('ChannelRegistry', () => {
           id: 'test',
           name: 'Test',
           type: 'telegram',
-          enabled: true,
+          enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
           config: { botToken: 'token' },
         }],
       };
@@ -451,7 +451,7 @@ describe('ChannelRegistry', () => {
     it('should throw on unsupported version', () => {
       const json = { version: 999, channels: [] };
 
-      expect(() => registry.fromJSON(json as any)).toThrow(ChannelValidationError);
+      expect(() => registry.fromJSON(json)).toThrow(ChannelValidationError);
     });
   });
 
@@ -461,7 +461,7 @@ describe('ChannelRegistry', () => {
         id: 'test',
         name: 'Test',
         type: 'telegram' as const,
-        enabled: true,
+        enabled: true, settings: { allowCommands: true, autoReply: false, filterPatterns: [], allowedUsers: [], blockedUsers: [] },
         config: { botToken: 'token' },
       });
 

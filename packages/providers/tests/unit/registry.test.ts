@@ -257,7 +257,7 @@ describe('ProviderRegistry', () => {
     it('should throw on unsupported version', () => {
       const json = { version: 999, providers: [] };
 
-      expect(() => registry.fromJSON(json as any)).toThrow(ProviderValidationError);
+      expect(() => registry.fromJSON(json)).toThrow(ProviderValidationError);
     });
   });
 
