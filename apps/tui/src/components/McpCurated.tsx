@@ -52,20 +52,21 @@ export default function McpCurated(props: McpCuratedProps) {
 
   createEffect(() => {
     let filtered = servers();
-    
+
     if (selectedCategory()) {
       filtered = filtered.filter(s => s.category === selectedCategory());
     }
-    
+
     if (searchQuery()) {
       const query = searchQuery().toLowerCase();
-      filtered = filtered.filter(s =>
-        s.name.toLowerCase().includes(query) ||
-        s.description.toLowerCase().includes(query) ||
-        s.tools.some(t => t.name.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        s =>
+          s.name.toLowerCase().includes(query) ||
+          s.description.toLowerCase().includes(query) ||
+          s.tools.some(t => t.name.toLowerCase().includes(query))
       );
     }
-    
+
     setFilteredServers(filtered);
     setSelectedIndex(0);
   });
@@ -77,7 +78,7 @@ export default function McpCurated(props: McpCuratedProps) {
       const data = await mcpService().getCuratedServers();
       setServers(data);
       setFilteredServers(data);
-    } catch (e) {
+    } catch (_e) {
       setError("Failed to load curated servers");
     } finally {
       setLoading(false);
@@ -173,7 +174,9 @@ export default function McpCurated(props: McpCuratedProps) {
 
   return (
     <box flexDirection="column" flexGrow={1}>
-      <text fg={palette.accent} marginBottom={1}>Browse Curated Servers</text>
+      <text fg={palette.accent} marginBottom={1}>
+        Browse Curated Servers
+      </text>
 
       <Show when={error()}>
         <box marginBottom={1}>
@@ -191,7 +194,7 @@ export default function McpCurated(props: McpCuratedProps) {
           <box flexDirection="row" gap={1}>
             <text fg={palette.dim}>Filter: Tab</text>
             <For each={categories()}>
-              {(cat) => (
+              {cat => (
                 <box
                   borderStyle="single"
                   borderColor={selectedCategory() === cat ? palette.accent : palette.border}
@@ -204,7 +207,11 @@ export default function McpCurated(props: McpCuratedProps) {
               )}
             </For>
             <Show when={selectedCategory()}>
-              <box borderStyle="single" borderColor={palette.accent} padding={{ left: 1, right: 1 }}>
+              <box
+                borderStyle="single"
+                borderColor={palette.accent}
+                padding={{ left: 1, right: 1 }}
+              >
                 <text fg={palette.accent}>✓ All</text>
               </box>
             </Show>
@@ -288,8 +295,10 @@ export default function McpCurated(props: McpCuratedProps) {
 
       <Show when={showConfirm() && selectedServer()}>
         <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-          <text fg={palette.accent} marginBottom={1}>Add Server?</text>
-          
+          <text fg={palette.accent} marginBottom={1}>
+            Add Server?
+          </text>
+
           <box flexDirection="row" marginBottom={1}>
             <text fg={palette.text}>{selectedServer()!.name}</text>
           </box>
@@ -305,9 +314,7 @@ export default function McpCurated(props: McpCuratedProps) {
             <text fg={palette.dim}>Tools ({selectedServer()!.tools.length}):</text>
             <box flexDirection="column" marginTop={1}>
               <For each={selectedServer()!.tools}>
-                {(tool) => (
-                  <text fg={palette.dim}>• {tool.name}</text>
-                )}
+                {tool => <text fg={palette.dim}>• {tool.name}</text>}
               </For>
             </box>
           </box>

@@ -1,4 +1,4 @@
-import { Effect, Layer, Stream, Console, Schedule } from "effect";
+import { Effect, Stream, Console } from "effect";
 import { WebSocketService, WebSocketServiceLive } from "./services/ws";
 
 const program = Effect.gen(function* () {
