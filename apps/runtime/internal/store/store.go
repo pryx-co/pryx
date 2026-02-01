@@ -11,8 +11,10 @@ import (
 
 // Default message limits
 const (
+	// DefaultMaxMessagesPerSession is the default limit for messages per session.
 	DefaultMaxMessagesPerSession = 1000
-	MaxAllowedMessages           = 10000
+	// MaxAllowedMessages is the absolute hard limit for messages per session.
+	MaxAllowedMessages = 10000
 )
 
 // Store provides database access with message limits

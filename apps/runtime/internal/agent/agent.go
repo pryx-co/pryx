@@ -21,6 +21,7 @@ import (
 	"pryx-core/internal/skills"
 )
 
+// Agent orchestrates the interaction between the user, LLM, and tools.
 type Agent struct {
 	cfg           *config.Config
 	bus           *bus.Bus
@@ -33,6 +34,7 @@ type Agent struct {
 	ragMemory     *memory.RAGManager
 }
 
+// New creates a new Agent instance with the provided configuration and dependencies.
 func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry, mcpManager *mcp.Manager, agentbusService *agentbus.Service, ragMemory *memory.RAGManager) (*Agent, error) {
 	var apiKey string
 	var baseURL string
@@ -91,6 +93,7 @@ func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *
 	}, nil
 }
 
+// Run starts the agent's main event loop, listening for chat requests and channel messages.
 func (a *Agent) Run(ctx context.Context) error {
 	// Subscribe to incoming messages
 	events, cancel := a.bus.Subscribe(bus.EventChatRequest, bus.EventChannelMessage)

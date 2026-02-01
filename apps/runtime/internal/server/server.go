@@ -26,6 +26,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// SpawnTool defines the interface for the agent spawning capability.
 type SpawnTool interface {
 	Name() string
 	Description() string
@@ -36,6 +37,8 @@ type SpawnTool interface {
 	ForkSession(sourceSessionID string) (string, error)
 }
 
+// Server is the main HTTP server for the Pryx runtime.
+// It manages routing, middleware, and integration with various subsystems like MCP, skills, and agents.
 type Server struct {
 	cfg          *config.Config
 	db           *sql.DB
@@ -54,6 +57,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
+// New creates a new Server instance with the provided configuration and dependencies.
 func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -178,30 +182,38 @@ func (s *Server) routes() {
 	s.router.Post("/api/v1/memory/search", s.handleMemorySearch)
 }
 
+// Bus returns the event bus instance.
 func (s *Server) Bus() *bus.Bus {
 	return s.bus
 }
 
+// Skills returns the skills registry instance.
 func (s *Server) Skills() *skills.Registry {
 	return s.skills
 }
 
+// MCP returns the MCP manager instance.
 func (s *Server) MCP() *mcp.Manager {
 	return s.mcp
 }
 
+// Agents returns the agent bus service instance.
 func (s *Server) Agents() *agentbus.Service {
 	return s.agentbus
 }
 
+// Memory returns the RAG memory manager instance.
 func (s *Server) Memory() *memory.RAGManager {
 	return s.ragMemory
 }
 
+// Handler returns the HTTP handler for the server.
 func (s *Server) Handler() http.Handler {
 	return s.router
 }
 
+// Start starts the HTTP server and blocks until it stops.
+// It automatically allocates a port if configured to do so.
 func (s *Server) Start() error {
 	// Find an available port if not explicitly set or if set to :0
 	addr := s.cfg.ListenAddr
@@ -235,6 +247,7 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(addr, s.router)
 }
 
+// Serve serves HTTP requests on the provided listener.
 func (s *Server) Serve(l net.Listener) error {
 	s.httpMu.Lock()
 	if s.httpServer == nil {
@@ -248,6 +261,7 @@ func (s *Server) Serve(l net.Listener) error {
 	return srv.Serve(l)
 }
 
+// Shutdown gracefully shuts down the server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.httpMu.Lock()
 	srv := s.httpServer
@@ -258,10 +272,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return srv.Shutdown(ctx)
 }
 
+// SetCatalog sets the model catalog for the server.
 func (s *Server) SetCatalog(catalog *models.Catalog) {
 	s.catalog = catalog
 }
 
+// SetSpawnTool sets the spawn tool for the server.
 func (s *Server) SetSpawnTool(tool SpawnTool) {
 	s.spawnTool = tool
 }

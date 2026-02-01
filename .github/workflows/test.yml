@@ -17,6 +17,7 @@ jobs:
   test-runtime:
     name: Runtime Tests (Go)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -39,11 +40,11 @@ jobs:
 
       - name: Run unit tests
         working-directory: apps/runtime
-        run: go test -v -race -coverprofile=coverage.out ./internal/...
+        run: go test -v -race -timeout 20m -coverprofile=coverage.out ./internal/...
 
       - name: Run integration tests
         working-directory: apps/runtime
-        run: go test -v -race -tags=integration ./tests/integration/...
+        run: go test -v -race -timeout 20m -tags=integration ./tests/integration/...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -212,7 +213,7 @@ jobs:
       - name: Generate coverage report
         working-directory: apps/runtime
         run: |
-          go test -race -coverprofile=coverage.out ./...
+          go test -race -timeout 20m -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out
 
       - name: Check coverage threshold

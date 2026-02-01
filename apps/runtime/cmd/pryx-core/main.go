@@ -31,11 +31,15 @@ import (
 	"pryx-core/internal/telemetry"
 )
 
+// Global variables set during build time.
 var (
-	Version   = "1.0.0"
+	// Version is the current version of the application.
+	Version = "1.0.0"
+	// BuildDate is the date when the application was built.
 	BuildDate = "unknown"
 )
 
+// main is the entry point of the pryx-core application.
 func main() {
 	if len(os.Args) >= 2 {
 		switch os.Args[1] {
