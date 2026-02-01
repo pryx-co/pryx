@@ -13,6 +13,7 @@ import (
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
+	"pryx-core/internal/mcp"
 	"pryx-core/internal/models"
 	"pryx-core/internal/prompt"
 	"pryx-core/internal/skills"
@@ -25,9 +26,10 @@ type Agent struct {
 	promptBuilder *prompt.Builder
 	version       string
 	skills        *skills.Registry
+	mcp           *mcp.Manager
 }
 
-func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry) (*Agent, error) {
+func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry, mcpManager *mcp.Manager) (*Agent, error) {
 	var apiKey string
 	var baseURL string
 
@@ -79,6 +81,7 @@ func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *
 		promptBuilder: promptBuilder,
 		version:       "dev",
 		skills:        skillsRegistry,
+		mcp:           mcpManager,
 	}, nil
 }
 
@@ -227,12 +230,24 @@ func (a *Agent) buildSystemPrompt(sessionID string) (string, error) {
 }
 
 func (a *Agent) getAvailableTools() []string {
-	return []string{
-		"filesystem",
-		"shell",
-		"browser",
-		"clipboard",
+	if a.mcp == nil {
+		return []string{}
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tools, err := a.mcp.ListToolsFlat(ctx, false)
+	if err != nil {
+		log.Printf("Agent: Failed to list MCP tools: %v", err)
+		return []string{}
+	}
+
+	var result []string
+	for _, tool := range tools {
+		result = append(result, tool.Name)
+	}
+	return result
 }
 
 func (a *Agent) getAvailableSkills() []string {

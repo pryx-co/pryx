@@ -146,6 +146,10 @@ func (s *Server) Skills() *skills.Registry {
 	return s.skills
 }
 
+func (s *Server) MCP() *mcp.Manager {
+	return s.mcp
+}
+
 func (s *Server) Handler() http.Handler {
 	return s.router
 }
