@@ -182,7 +182,7 @@ func runChannelAdd(args []string, cfg *config.Config) int {
 	// Create new channel
 	now := getTimestamp()
 	newChannel := ChannelConfig{
-		ID:        fmt.Sprintf("%s-%d", channelType, now),
+		ID:        fmt.Sprintf("%s-%s", channelType, now),
 		Type:      channelType,
 		Name:      name,
 		Enabled:   false, // Disabled by default until tested
