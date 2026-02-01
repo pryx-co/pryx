@@ -13,6 +13,7 @@ import (
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
+	"pryx-core/internal/store"
 )
 
 // SubAgent represents a spawned child agent running in its own goroutine
@@ -61,17 +62,19 @@ type Spawner struct {
 	cfg       *config.Config
 	bus       *bus.Bus
 	keychain  *keychain.Keychain
+	store     *store.Store
 	mu        sync.RWMutex
 	agents    map[string]*SubAgent
 	maxAgents int
 }
 
 // NewSpawner creates a new agent spawner
-func NewSpawner(cfg *config.Config, b *bus.Bus, kc *keychain.Keychain) *Spawner {
+func NewSpawner(cfg *config.Config, b *bus.Bus, kc *keychain.Keychain, st *store.Store) *Spawner {
 	return &Spawner{
 		cfg:       cfg,
 		bus:       b,
 		keychain:  kc,
+		store:     st,
 		agents:    make(map[string]*SubAgent),
 		maxAgents: 10,
 	}
@@ -121,14 +124,17 @@ func (s *Spawner) Spawn(ctx context.Context, parentID, sessionID, task, systemCo
 
 // Fork creates a fork of an existing session (like OpenCode's session.fork)
 func (s *Spawner) Fork(ctx context.Context, sourceSessionID string) (string, error) {
-	// Generate new session ID
-	newSessionID := generateSessionID()
+	if s.store == nil {
+		return "", fmt.Errorf("store not available for session fork")
+	}
 
-	// TODO: Copy session state from source to new session
-	// For now, we just create a new empty session reference
+	newSession, err := s.store.CopySession(sourceSessionID, fmt.Sprintf("Fork of %s", sourceSessionID))
+	if err != nil {
+		return "", fmt.Errorf("failed to fork session: %w", err)
+	}
 
-	log.Printf("Forked session %s to %s", sourceSessionID, newSessionID)
-	return newSessionID, nil
+	log.Printf("Forked session %s to %s", sourceSessionID, newSession.ID)
+	return newSession.ID, nil
 }
 
 // Get retrieves a sub-agent by ID

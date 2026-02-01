@@ -234,7 +234,7 @@ func main() {
 
 	// Initialize spawner
 	profiler.TimeFunc("spawner.init", func() error {
-		spawner := spawn.NewSpawner(cfg, b, kc)
+		spawner := spawn.NewSpawner(cfg, b, kc, s)
 		spawnTool := spawn.NewSpawnTool(spawner, b)
 		srv.SetSpawnTool(spawnTool)
 		log.Println("Sub-agent spawner initialized (max agents: 10)")
