@@ -11,11 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"pryx-core/internal/agentbus"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/config"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mcp"
 	"pryx-core/internal/mcp/discovery"
+	"pryx-core/internal/memory"
 	"pryx-core/internal/models"
 	"pryx-core/internal/policy"
 	"pryx-core/internal/skills"
@@ -40,11 +42,13 @@ type Server struct {
 	keychain     *keychain.Keychain
 	router       *chi.Mux
 	bus          *bus.Bus
+	agentbus     *agentbus.Service
 	mcp          *mcp.Manager
 	mcpDiscovery *discovery.DiscoveryService
 	skills       *skills.Registry
 	catalog      *models.Catalog
 	spawnTool    SpawnTool
+	ragMemory    *memory.RAGManager
 
 	httpMu     sync.Mutex
 	httpServer *http.Server
@@ -85,6 +89,34 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	}
 
 	s.mcp = mcp.NewManager(s.bus, p, kc)
+
+	// Initialize agentbus (agent connectivity hub)
+	s.agentbus = agentbus.NewService(s.bus, agentbus.HubConfig{
+		Name:               "pryx-agentbus",
+		Namespace:          "default",
+		LogLevel:           "info",
+		AutoDetectEnabled:  cfg.AgentDetectEnabled,
+		AutoDetectInterval: cfg.AgentDetectInterval,
+		PackageDir:         cfg.SkillsPath,
+		CacheDir:           cfg.CachePath,
+		MaxConnections:     20,
+		ReconnectEnabled:   true,
+	})
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.agentbus.Start(ctx); err != nil {
+			s.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, "", map[string]interface{}{
+				"kind":  "agentbus.start_failed",
+				"error": err.Error(),
+			}))
+			return
+		}
+		s.bus.Publish(bus.NewEvent(bus.EventTraceEvent, "", map[string]interface{}{
+			"kind": "agentbus.started",
+		}))
+	}()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -106,6 +138,10 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	}()
 
 	s.routes()
+
+	s.ragMemory = memory.NewRAGManager(db, cfg.MemoryEnabled)
+	log.Printf("RAG Memory system initialized (enabled: %v)", cfg.MemoryEnabled)
+
 	return s
 }
 
@@ -136,6 +172,10 @@ func (s *Server) routes() {
 	s.router.Get("/api/v1/sessions/{id}", s.handleSessionGet)
 	s.router.Delete("/api/v1/sessions/{id}", s.handleSessionDelete)
 	s.router.Post("/api/v1/sessions/fork", s.handleSessionFork)
+
+	s.router.Get("/api/v1/memory", s.handleMemoryList)
+	s.router.Post("/api/v1/memory", s.handleMemoryWrite)
+	s.router.Post("/api/v1/memory/search", s.handleMemorySearch)
 }
 
 func (s *Server) Bus() *bus.Bus {
@@ -148,6 +188,14 @@ func (s *Server) Skills() *skills.Registry {
 
 func (s *Server) MCP() *mcp.Manager {
 	return s.mcp
+}
+
+func (s *Server) Agents() *agentbus.Service {
+	return s.agentbus
+}
+
+func (s *Server) Memory() *memory.RAGManager {
+	return s.ragMemory
 }
 
 func (s *Server) Handler() http.Handler {

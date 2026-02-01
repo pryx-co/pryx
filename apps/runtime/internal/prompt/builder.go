@@ -111,6 +111,11 @@ func (b *Builder) buildFull(metadata Metadata) (string, error) {
 		parts = append(parts, "")
 	}
 
+	if metadata.MemoryContext != "" {
+		parts = append(parts, metadata.MemoryContext)
+		parts = append(parts, "")
+	}
+
 	parts = append(parts, "=== CONSTRAINTS ===")
 	parts = append(parts, getDefaultConstraints())
 
@@ -154,6 +159,7 @@ type Metadata struct {
 	AvailableSkills []string
 	AvailableAgents []string
 	Confidence      ConfidenceLevel
+	MemoryContext   string
 }
 
 type ConfidenceLevel int

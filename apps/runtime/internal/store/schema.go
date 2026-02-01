@@ -42,4 +42,38 @@ CREATE INDEX IF NOT EXISTS idx_audit_session_id ON audit_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_surface ON audit_log(surface);
 CREATE INDEX IF NOT EXISTS idx_audit_tool ON audit_log(tool);
+
+-- Memory entries table for RAG system
+CREATE TABLE IF NOT EXISTS memory_entries (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    date TEXT,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    access_count INTEGER DEFAULT 0,
+    last_accessed DATETIME
+);
+
+-- Memory sources (which files/tools contributed to this memory)
+CREATE TABLE IF NOT EXISTS memory_sources (
+    id TEXT PRIMARY KEY,
+    entry_id TEXT,
+    source_type TEXT,
+    source_path TEXT,
+    FOREIGN KEY (entry_id) REFERENCES memory_entries(id) ON DELETE CASCADE
+);
+
+-- Vector embeddings (placeholder for future embedding provider plugin)
+CREATE TABLE IF NOT EXISTS memory_vectors (
+    entry_id TEXT PRIMARY KEY,
+    embedding BLOB,
+    FOREIGN KEY (entry_id) REFERENCES memory_entries(id) ON DELETE CASCADE
+);
+
+-- Indexes for memory tables
+CREATE INDEX IF NOT EXISTS idx_memory_type ON memory_entries(type);
+CREATE INDEX IF NOT EXISTS idx_memory_date ON memory_entries(date);
+CREATE INDEX IF NOT EXISTS idx_memory_created_at ON memory_entries(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_sources_entry_id ON memory_sources(entry_id);
 `

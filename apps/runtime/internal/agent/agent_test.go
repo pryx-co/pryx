@@ -99,7 +99,7 @@ func TestAgent_New(t *testing.T) {
 			kc := keychain.New("test")
 			catalog := &models.Catalog{}
 
-			agent, err := New(cfg, eventBus, kc, catalog, nil, nil)
+			agent, err := New(cfg, eventBus, kc, catalog, nil, nil, nil, nil)
 
 			if tt.wantError {
 				if err == nil {
@@ -134,7 +134,7 @@ func TestAgent_Run_ContextCancellation(t *testing.T) {
 	eventBus := bus.New()
 	kc := keychain.New("test")
 	catalog := &models.Catalog{}
-	agent, err := New(cfg, eventBus, kc, catalog, nil, nil)
+	agent, err := New(cfg, eventBus, kc, catalog, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("Failed to create agent: %v", err)
 	}

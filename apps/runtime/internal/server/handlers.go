@@ -1,27 +1,24 @@
-// Package server provides the HTTP server and WebSocket handlers for the Pryx runtime.
-// It handles REST API endpoints, WebSocket connections, and serves as the main interface
-// for clients like the TUI and host application.
 package server
 
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"pryx-core/internal/memory"
 	"pryx-core/internal/skills"
 	"pryx-core/internal/validation"
 )
 
 // handleHealth returns a simple health check response.
-// Returns HTTP 200 with "OK" body if the server is running.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
 // handleMCPTools returns the list of available MCP tools.
-// Supports a "refresh" query parameter to force reloading tools from MCP servers.
 func (s *Server) handleMCPTools(w http.ResponseWriter, r *http.Request) {
 	refresh := strings.TrimSpace(r.URL.Query().Get("refresh")) == "1"
 	tools, err := s.mcp.ListToolsFlat(r.Context(), refresh)
@@ -45,7 +42,6 @@ type mcpCallRequest struct {
 }
 
 // handleMCPCall executes an MCP tool call.
-// Validates the request, calls the tool, and returns the result.
 func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 	req := mcpCallRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -437,5 +433,161 @@ func (s *Server) handleSessionFork(w http.ResponseWriter, r *http.Request) {
 		"id":                newSessionID,
 		"source_session_id": req.SourceSessionID,
 		"new_session_id":    newSessionID,
+	})
+}
+
+// === Memory API Handlers ===
+
+// handleMemoryList returns a list of memory entries
+func (s *Server) handleMemoryList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.ragMemory == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "memory system not available"})
+		return
+	}
+
+	memType := r.URL.Query().Get("type")
+	date := r.URL.Query().Get("date")
+	limit := 100
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if n, err := strconv.Atoi(l); err == nil && n > 0 {
+			limit = n
+		}
+	}
+
+	opts := memory.SearchOptions{
+		Type:  memory.MemoryType(memType),
+		Date:  date,
+		Limit: limit,
+	}
+
+	entries, err := s.ragMemory.List(opts)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"entries": entries,
+		"count":   len(entries),
+	})
+}
+
+// handleMemoryWrite writes a new memory entry
+func (s *Server) handleMemoryWrite(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.ragMemory == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "memory system not available"})
+		return
+	}
+
+	var req struct {
+		Type    string                `json:"type"`
+		Content string                `json:"content"`
+		Date    string                `json:"date,omitempty"`
+		Sources []memory.MemorySource `json:"sources,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if req.Content == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "content is required"})
+		return
+	}
+
+	var entryID string
+	var err error
+
+	switch req.Type {
+	case "daily":
+		entryID, err = s.ragMemory.WriteDaily(req.Content, req.Sources)
+	case "longterm":
+		entryID, err = s.ragMemory.WriteLongterm(req.Content, req.Sources)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid type, must be 'daily' or 'longterm'"})
+		return
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id":      entryID,
+		"type":    req.Type,
+		"content": req.Content,
+	})
+}
+
+// handleMemorySearch searches memory entries
+func (s *Server) handleMemorySearch(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.ragMemory == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "memory system not available"})
+		return
+	}
+
+	var req struct {
+		Query         string `json:"query"`
+		Type          string `json:"type,omitempty"`
+		Limit         int    `json:"limit,omitempty"`
+		IncludeFTS    bool   `json:"include_fts,omitempty"`
+		IncludeVector bool   `json:"include_vector,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if req.Query == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "query is required"})
+		return
+	}
+
+	if req.Limit <= 0 {
+		req.Limit = 10
+	}
+	if req.Limit > 100 {
+		req.Limit = 100
+	}
+
+	opts := memory.SearchOptions{
+		Type:          memory.MemoryType(req.Type),
+		Limit:         req.Limit,
+		IncludeFTS:    req.IncludeFTS || true,
+		IncludeVector: req.IncludeVector,
+	}
+
+	results, err := s.ragMemory.Search(r.Context(), req.Query, opts)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"query":   req.Query,
+		"results": results,
+		"count":   len(results),
 	})
 }

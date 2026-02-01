@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"pryx-core/internal/agentbus"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/channels"
 	"pryx-core/internal/config"
@@ -14,6 +15,7 @@ import (
 	"pryx-core/internal/llm"
 	"pryx-core/internal/llm/factory"
 	"pryx-core/internal/mcp"
+	"pryx-core/internal/memory"
 	"pryx-core/internal/models"
 	"pryx-core/internal/prompt"
 	"pryx-core/internal/skills"
@@ -22,14 +24,16 @@ import (
 type Agent struct {
 	cfg           *config.Config
 	bus           *bus.Bus
+	agentbus      *agentbus.Service
 	provider      llm.Provider
 	promptBuilder *prompt.Builder
 	version       string
 	skills        *skills.Registry
 	mcp           *mcp.Manager
+	ragMemory     *memory.RAGManager
 }
 
-func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry, mcpManager *mcp.Manager) (*Agent, error) {
+func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry, mcpManager *mcp.Manager, agentbusService *agentbus.Service, ragMemory *memory.RAGManager) (*Agent, error) {
 	var apiKey string
 	var baseURL string
 
@@ -77,11 +81,13 @@ func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *
 	return &Agent{
 		cfg:           cfg,
 		bus:           eventBus,
+		agentbus:      agentbusService,
 		provider:      provider,
 		promptBuilder: promptBuilder,
 		version:       "dev",
 		skills:        skillsRegistry,
 		mcp:           mcpManager,
+		ragMemory:     ragMemory,
 	}, nil
 }
 
@@ -218,12 +224,26 @@ func (a *Agent) buildSystemPrompt(sessionID string) (string, error) {
 		return "You are Pryx, a helpful AI assistant.", nil
 	}
 
+	memoryContext := ""
+	if a.cfg.MemoryEnabled && a.ragMemory != nil && a.ragMemory.Enabled() {
+		if a.cfg.MemoryAutoFlush && a.ragMemory.AutoFlush() != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			memContext, _ := a.ragMemory.AutoFlush().GetMemoryContextForAgent("current context", 5)
+			if memContext != "" {
+				memoryContext = memContext
+			}
+			_ = ctx
+		}
+	}
+
 	metadata := prompt.Metadata{
 		CurrentTime:     time.Now(),
 		Version:         a.version,
 		SessionID:       sessionID,
 		AvailableTools:  a.getAvailableTools(),
 		AvailableSkills: a.getAvailableSkills(),
+		MemoryContext:   memoryContext,
 	}
 
 	return a.promptBuilder.Build(metadata)

@@ -5,6 +5,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -15,8 +16,18 @@ type Config struct {
 	ListenAddr string `yaml:"listen_addr"`
 	// DatabasePath is the path to the SQLite database file.
 	DatabasePath string `yaml:"database_path"`
+	// SkillsPath is the directory where skills are installed.
+	SkillsPath string `yaml:"skills_path"`
+	// CachePath is the directory for cached data.
+	CachePath string `yaml:"cache_path"`
 	// CloudAPIUrl is the URL of the Pryx Cloud API.
 	CloudAPIUrl string `yaml:"cloud_api_url"`
+
+	// Agent Detection
+	// AgentDetectEnabled enables automatic detection of external agents.
+	AgentDetectEnabled bool `yaml:"agent_detect_enabled"`
+	// AgentDetectInterval is how often to scan for agents.
+	AgentDetectInterval time.Duration `yaml:"agent_detect_interval"`
 
 	// AI Configuration
 	// ModelProvider is the LLM provider to use (openai, anthropic, ollama, glm).
@@ -44,6 +55,14 @@ type Config struct {
 	WebSocketBufferSize int `yaml:"websocket_buffer_size"`
 	// EnableMemoryProfiling enables memory usage monitoring.
 	EnableMemoryProfiling bool `yaml:"enable_memory_profiling"`
+
+	// RAG Memory System
+	// MemoryEnabled enables the RAG memory system.
+	MemoryEnabled bool `yaml:"memory_enabled"`
+	// MemoryAutoFlush enables automatic memory flushing before context compaction.
+	MemoryAutoFlush bool `yaml:"memory_auto_flush"`
+	// MemoryFlushThresholdTokens triggers auto-flush when token count approaches this threshold.
+	MemoryFlushThresholdTokens int `yaml:"memory_flush_threshold_tokens"`
 }
 
 // ProviderKeyNames maps provider IDs to their keychain key names.
@@ -73,16 +92,23 @@ func DefaultPath() string {
 // Returns a Config with default values if no configuration file exists.
 func Load() *Config {
 	cfg := &Config{
-		ListenAddr:      ":0", // Use :0 for dynamic port allocation
-		DatabasePath:    "pryx.db",
-		CloudAPIUrl:     "https://pryx.dev/api",
-		ModelProvider:   "ollama",
-		ModelName:       "llama3",
-		OllamaEndpoint:  "http://localhost:11434",
-		TelegramEnabled: false,
-		SlackEnabled:    false,
-		SlackAppToken:   "",
-		SlackBotToken:   "",
+		ListenAddr:                 ":0", // Use :0 for dynamic port allocation
+		DatabasePath:               "pryx.db",
+		SkillsPath:                 "skills",
+		CachePath:                  "cache",
+		CloudAPIUrl:                "https://pryx.dev/api",
+		ModelProvider:              "ollama",
+		ModelName:                  "llama3",
+		OllamaEndpoint:             "http://localhost:11434",
+		TelegramEnabled:            false,
+		SlackEnabled:               false,
+		SlackAppToken:              "",
+		SlackBotToken:              "",
+		AgentDetectEnabled:         false,
+		AgentDetectInterval:        30 * time.Second,
+		MemoryEnabled:              true,
+		MemoryAutoFlush:            true,
+		MemoryFlushThresholdTokens: 100000,
 	}
 
 	// Try loading from default file

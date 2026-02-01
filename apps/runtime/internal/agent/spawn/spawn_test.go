@@ -8,7 +8,9 @@ import (
 
 	"pryx-core/internal/bus"
 	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/llm"
+	"pryx-core/internal/store"
 )
 
 // MockProvider implements llm.Provider for testing
@@ -42,8 +44,10 @@ func TestNewSpawner(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
 
-	spawner := NewSpawner(cfg, eventBus, nil)
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	if spawner == nil {
 		t.Fatal("NewSpawner() returned nil")
@@ -108,7 +112,9 @@ func TestSpawner_Spawn(t *testing.T) {
 			}
 
 			eventBus := bus.New()
-			spawner := NewSpawner(cfg, eventBus, nil)
+			kc := keychain.New("test")
+			s, _ := store.New(":memory:")
+			spawner := NewSpawner(cfg, eventBus, kc, s)
 			spawner.maxAgents = tt.maxAgents
 
 			// Pre-populate agents if needed
@@ -170,7 +176,9 @@ func TestSpawner_Get(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	// Test getting non-existent agent
 	agent, ok := spawner.Get("non-existent")
@@ -202,7 +210,9 @@ func TestSpawner_List(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	// Test empty list
 	list := spawner.List()
@@ -236,7 +246,9 @@ func TestSpawner_Cancel(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	// Test cancel non-existent agent
 	err := spawner.Cancel("non-existent")
@@ -276,7 +288,9 @@ func TestSpawner_Cleanup(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	now := time.Now()
 
@@ -336,12 +350,20 @@ func TestSpawner_Fork(t *testing.T) {
 		ModelProvider: "openai",
 	}
 	eventBus := bus.New()
-	spawner := NewSpawner(cfg, eventBus, nil)
+	kc := keychain.New("test")
+	s, _ := store.New(":memory:")
+	spawner := NewSpawner(cfg, eventBus, kc, s)
 
 	ctx := context.Background()
-	sourceSessionID := "source-session-123"
 
-	newSessionID, err := spawner.Fork(ctx, sourceSessionID)
+	// Create the source session first - note: CreateSession generates a UUID, not using the title as ID
+	sourceSession, err := s.CreateSession("test source session")
+	if err != nil {
+		t.Fatalf("Failed to create source session: %v", err)
+	}
+
+	// Fork using the actual session ID (not the title)
+	newSessionID, err := spawner.Fork(ctx, sourceSession.ID)
 
 	if err != nil {
 		t.Errorf("Fork() unexpected error = %v", err)
@@ -351,7 +373,7 @@ func TestSpawner_Fork(t *testing.T) {
 		t.Error("Fork() returned empty session ID")
 	}
 
-	if newSessionID == sourceSessionID {
+	if newSessionID == sourceSession.ID {
 		t.Error("Fork() returned same session ID as source")
 	}
 
