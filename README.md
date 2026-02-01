@@ -586,3 +586,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 **Made with ❤️ by the Pryx Team**
 
 *Take control of your AI. Be sovereign.*
+
