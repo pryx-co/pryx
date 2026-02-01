@@ -166,9 +166,14 @@ func (g *Gateway) identify() error {
 		identify.Shard = &[2]int{g.config.ShardID, g.config.NumShards}
 	}
 
+	data, err := marshalJSON(identify)
+	if err != nil {
+		return fmt.Errorf("failed to marshal identify: %w", err)
+	}
+
 	payload := GatewayPayload{
 		Op:   int(GatewayOpIdentify),
-		Data: mustMarshal(identify),
+		Data: data,
 	}
 
 	if err := g.writePayload(payload); err != nil {
@@ -195,9 +200,14 @@ func (g *Gateway) resume() error {
 		Seq:       int(sequence),
 	}
 
+	data, err := marshalJSON(resume)
+	if err != nil {
+		return fmt.Errorf("failed to marshal resume: %w", err)
+	}
+
 	payload := GatewayPayload{
 		Op:   int(GatewayOpResume),
-		Data: mustMarshal(resume),
+		Data: data,
 	}
 
 	if err := g.writePayload(payload); err != nil {
@@ -275,7 +285,11 @@ func (g *Gateway) sendHeartbeat() {
 
 	var data json.RawMessage
 	if seq > 0 {
-		data = mustMarshal(seq)
+		var err error
+		data, err = marshalJSON(seq)
+		if err != nil {
+			return
+		}
 	} else {
 		data = json.RawMessage("null")
 	}
@@ -476,13 +490,13 @@ func (g *Gateway) GetSequence() int64 {
 	return atomic.LoadInt64(&g.sequence)
 }
 
-// mustMarshal marshals data to JSON, panicking on error
-func mustMarshal(v interface{}) json.RawMessage {
+// marshalJSON marshals data to JSON, returning an error on failure
+func marshalJSON(v interface{}) (json.RawMessage, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
 	}
-	return data
+	return data, nil
 }
 
 // min returns the minimum of two durations
