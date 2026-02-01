@@ -163,11 +163,12 @@ func (f *ProviderFactory) getOAuthToken(providerID string) string {
 	if needsRefresh {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		// Try to refresh, but don't block too long or fail hard if it fails
-		// If refresh fails, we'll try to use the existing token (might still work) or fall back
+		// Try to refresh the token. If refresh fails, return empty string
+		// to allow fallback to API key instead of using potentially expired token.
 		if err := oauth.RefreshToken(ctx, providerID); err != nil {
 			return ""
 		}
+		// Refresh succeeded, get the new token
 		token, _ = f.keychain.Get("oauth_" + providerID + "_access")
 	}
 
