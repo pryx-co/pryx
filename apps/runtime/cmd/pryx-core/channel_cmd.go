@@ -567,7 +567,7 @@ func saveChannels(channels []ChannelConfig) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0600)
 }
 
 func getChannelsPath() string {
