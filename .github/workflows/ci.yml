@@ -5,10 +5,10 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: ['**']
     tags: ['v*']
   pull_request:
-    branches: [main, develop]
+    branches: ['**']
   workflow_dispatch:
 
 env:
