@@ -106,7 +106,20 @@ func (a *Agent) Run(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			go a.handleEvent(ctx, evt)
+			// Handle event in goroutine with panic recovery
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("Agent: Recovered from panic in event handler: %v", r)
+						a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, evt.SessionID, map[string]interface{}{
+							"kind":  "agent.handler.panic",
+							"error": fmt.Sprintf("%v", r),
+							"event": evt.Event,
+						}))
+					}
+				}()
+				a.handleEvent(ctx, evt)
+			}()
 		}
 	}
 }
@@ -121,6 +134,17 @@ func (a *Agent) handleEvent(ctx context.Context, evt bus.Event) {
 }
 
 func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
+	// Panic recovery at handler level
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Agent: Recovered from panic in handleChatRequest: %v", r)
+			a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, evt.SessionID, map[string]interface{}{
+				"kind":  "agent.chat_request.panic",
+				"error": fmt.Sprintf("%v", r),
+			}))
+		}
+	}()
+
 	payload, ok := evt.Payload.(map[string]interface{})
 	if !ok {
 		log.Println("Agent: Invalid chat request payload")
@@ -155,6 +179,10 @@ func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
 	stream, err := a.provider.Stream(ctx, req)
 	if err != nil {
 		log.Printf("Agent: LLM error: %v", err)
+		a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, sessionID, map[string]interface{}{
+			"kind":  "agent.llm_error",
+			"error": err.Error(),
+		}))
 		return
 	}
 
@@ -162,6 +190,10 @@ func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
 	for chunk := range stream {
 		if chunk.Err != nil {
 			log.Printf("Agent: Stream error: %v", chunk.Err)
+			a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, sessionID, map[string]interface{}{
+				"kind":  "agent.stream_error",
+				"error": chunk.Err.Error(),
+			}))
 			break
 		}
 		fullResponse.WriteString(chunk.Content)
@@ -181,6 +213,17 @@ func (a *Agent) handleChatRequest(ctx context.Context, evt bus.Event) {
 }
 
 func (a *Agent) handleChannelMessage(ctx context.Context, evt bus.Event) {
+	// Panic recovery at handler level
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Agent: Recovered from panic in handleChannelMessage: %v", r)
+			a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, evt.SessionID, map[string]interface{}{
+				"kind":  "agent.channel_message.panic",
+				"error": fmt.Sprintf("%v", r),
+			}))
+		}
+	}()
+
 	msg, ok := evt.Payload.(channels.Message)
 	if !ok {
 		log.Println("Agent: Invalid channel message payload")
@@ -207,6 +250,10 @@ func (a *Agent) handleChannelMessage(ctx context.Context, evt bus.Event) {
 	resp, err := a.provider.Complete(ctx, req)
 	if err != nil {
 		log.Printf("Agent: LLM error: %v", err)
+		a.bus.Publish(bus.NewEvent(bus.EventErrorOccurred, "", map[string]interface{}{
+			"kind":  "agent.channel.llm_error",
+			"error": err.Error(),
+		}))
 		return
 	}
 
