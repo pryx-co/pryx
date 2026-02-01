@@ -6,6 +6,14 @@ const (
 	SourceBundled   Source = "bundled"
 	SourceManaged   Source = "managed"
 	SourceWorkspace Source = "workspace"
+	SourceRemote    Source = "remote" // Downloaded from URL
+)
+
+type SkillType string
+
+const (
+	SkillTypeTool  SkillType = "tool"  // Local executable/binary
+	SkillTypeAgent SkillType = "agent" // Remote API/service
 )
 
 type Requirements struct {
@@ -35,6 +43,9 @@ type Installer struct {
 
 type PryxMetadata struct {
 	Emoji    string       `yaml:"emoji,omitempty" json:"emoji,omitempty"`
+	Type     string       `yaml:"type,omitempty" json:"type,omitempty"`
+	Endpoint string       `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	Auth     string       `yaml:"auth,omitempty" json:"auth,omitempty"`
 	Requires Requirements `yaml:"requires,omitempty" json:"requires,omitempty"`
 	Install  []Installer  `yaml:"install,omitempty" json:"install,omitempty"`
 }

@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"pryx-core/internal/universal/social"
 )
 
 // NetworkAgent represents an agent accessed via network URL
@@ -458,11 +456,6 @@ func (a *NetworkAdapter) SearchAgents(ctx context.Context, query string, criteri
 	}
 
 	return results.Agents, nil
-}
-
-// SocialAdapter returns a social adapter for network interactions
-func (a *NetworkAdapter) SocialAdapter(token string) *social.MoltbookAdapter {
-	return social.NewMoltbookAdapter(a.config.BaseURL)
 }
 
 // Helper functions

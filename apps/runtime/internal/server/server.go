@@ -142,6 +142,10 @@ func (s *Server) Bus() *bus.Bus {
 	return s.bus
 }
 
+func (s *Server) Skills() *skills.Registry {
+	return s.skills
+}
+
 func (s *Server) Handler() http.Handler {
 	return s.router
 }

@@ -15,6 +15,7 @@ import (
 	"pryx-core/internal/llm/factory"
 	"pryx-core/internal/models"
 	"pryx-core/internal/prompt"
+	"pryx-core/internal/skills"
 )
 
 type Agent struct {
@@ -23,9 +24,10 @@ type Agent struct {
 	provider      llm.Provider
 	promptBuilder *prompt.Builder
 	version       string
+	skills        *skills.Registry
 }
 
-func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog) (*Agent, error) {
+func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *models.Catalog, skillsRegistry *skills.Registry) (*Agent, error) {
 	var apiKey string
 	var baseURL string
 
@@ -76,6 +78,7 @@ func New(cfg *config.Config, eventBus *bus.Bus, kc *keychain.Keychain, catalog *
 		provider:      provider,
 		promptBuilder: promptBuilder,
 		version:       "dev",
+		skills:        skillsRegistry,
 	}, nil
 }
 
@@ -233,5 +236,13 @@ func (a *Agent) getAvailableTools() []string {
 }
 
 func (a *Agent) getAvailableSkills() []string {
-	return []string{}
+	if a.skills == nil {
+		return []string{}
+	}
+
+	var result []string
+	for _, skill := range a.skills.List() {
+		result = append(result, skill.ID)
+	}
+	return result
 }

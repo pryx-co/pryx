@@ -221,7 +221,7 @@ func main() {
 	var agt *agent.Agent
 	go func() {
 		var err error
-		agt, err = agent.New(cfg, b, kc, catalog)
+		agt, err = agent.New(cfg, b, kc, catalog, srv.Skills())
 		if err != nil {
 			log.Printf("Warning: Failed to initialize Agent: %v", err)
 			profiler.EndPhase("agent.init", err)

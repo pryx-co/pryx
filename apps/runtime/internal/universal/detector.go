@@ -47,6 +47,13 @@ func (d *Detector) Stop(ctx context.Context) {
 	close(d.stopCh)
 }
 
+func safeProtocol(protocols []string) string {
+	if len(protocols) > 0 {
+		return protocols[0]
+	}
+	return "stdio"
+}
+
 // DetectAll scans for agents using all methods
 func (d *Detector) DetectAll(ctx context.Context) ([]DetectedAgent, error) {
 	var agents []DetectedAgent
