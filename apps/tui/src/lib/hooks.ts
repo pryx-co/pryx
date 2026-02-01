@@ -16,7 +16,12 @@ log("MODULE LOADED");
 
 // Create a managed runtime that includes our Live services
 export const AppRuntime = ManagedRuntime.make(
-  Layer.mergeAll(WebSocketServiceLive, HealthCheckServiceLive, ProviderServiceLive, SkillsServiceLive)
+  Layer.mergeAll(
+    WebSocketServiceLive,
+    HealthCheckServiceLive,
+    ProviderServiceLive,
+    SkillsServiceLive
+  )
 );
 
 /**

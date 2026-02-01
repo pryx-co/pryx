@@ -150,7 +150,11 @@ export class McpService {
     return await response.json();
   }
 
-  async testTool(serverId: string, toolName: string, parameters: Record<string, any>): Promise<any> {
+  async testTool(
+    serverId: string,
+    toolName: string,
+    parameters: Record<string, any>
+  ): Promise<any> {
     const response = await fetch(`${API_BASE}/mcp/servers/${serverId}/tools/${toolName}/test`, {
       method: "POST",
       headers: {

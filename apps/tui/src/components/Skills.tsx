@@ -19,10 +19,12 @@ export default function Skills() {
     AppRuntime.runFork(
       service.fetchSkills.pipe(
         Effect.tap(skills => Effect.sync(() => setSkills(skills))),
-        Effect.catchAll(err => Effect.sync(() => {
-          setError(err.message || "Failed to load skills");
-          setLoading(false);
-        }))
+        Effect.catchAll(err =>
+          Effect.sync(() => {
+            setError(err.message || "Failed to load skills");
+            setLoading(false);
+          })
+        )
       )
     );
   });

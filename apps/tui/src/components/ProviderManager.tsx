@@ -1,7 +1,11 @@
 import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
 import { useEffectService, AppRuntime } from "../lib/hooks";
-import { ProviderService, Provider as ProviderType, Model as ModelType } from "../services/provider-service";
+import {
+  ProviderService,
+  Provider as ProviderType,
+  Model as ModelType,
+} from "../services/provider-service";
 import { loadConfig, saveConfig, AppConfig } from "../services/config";
 import { palette } from "../theme";
 import { Effect } from "effect";
@@ -35,7 +39,9 @@ export default function ProviderManager(props: ProviderManagerProps) {
   const [apiKey, setApiKey] = createSignal("");
   const [models, setModels] = createSignal<ModelType[]>([]);
   const [selectedModel, setSelectedModel] = createSignal("");
-  const [testResult, setTestResult] = createSignal<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = createSignal<{ success: boolean; message: string } | null>(
+    null
+  );
   const [config, setConfig] = createSignal<AppConfig>({});
 
   onMount(() => {
@@ -45,23 +51,27 @@ export default function ProviderManager(props: ProviderManagerProps) {
 
     AppRuntime.runFork(
       service.fetchProviders.pipe(
-        Effect.tap(providers => Effect.sync(() => {
-          setProviders(providers);
-          loadConfiguredProviders();
-        })),
-        Effect.catchAll(() => Effect.sync(() => {
-          setProviders([
-            { id: "openai", name: "OpenAI", requires_api_key: true },
-            { id: "anthropic", name: "Anthropic", requires_api_key: true },
-            { id: "google", name: "Google AI", requires_api_key: true },
-            { id: "openrouter", name: "OpenRouter", requires_api_key: true },
-            { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
-            { id: "groq", name: "Groq", requires_api_key: true },
-            { id: "xai", name: "xAI", requires_api_key: true },
-            { id: "mistral", name: "Mistral AI", requires_api_key: true },
-            { id: "cohere", name: "Cohere", requires_api_key: true },
-          ]);
-        }))
+        Effect.tap(providers =>
+          Effect.sync(() => {
+            setProviders(providers);
+            loadConfiguredProviders();
+          })
+        ),
+        Effect.catchAll(() =>
+          Effect.sync(() => {
+            setProviders([
+              { id: "openai", name: "OpenAI", requires_api_key: true },
+              { id: "anthropic", name: "Anthropic", requires_api_key: true },
+              { id: "google", name: "Google AI", requires_api_key: true },
+              { id: "openrouter", name: "OpenRouter", requires_api_key: true },
+              { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
+              { id: "groq", name: "Groq", requires_api_key: true },
+              { id: "xai", name: "xAI", requires_api_key: true },
+              { id: "mistral", name: "Mistral AI", requires_api_key: true },
+              { id: "cohere", name: "Cohere", requires_api_key: true },
+            ]);
+          })
+        )
       )
     );
   });
@@ -80,7 +90,7 @@ export default function ProviderManager(props: ProviderManagerProps) {
       const hasKey = keyField ? !!cfg[keyField] : false;
       const isOllama = p.id === "ollama";
       const isActive = cfg.model_provider === p.id;
-      
+
       if (hasKey || isOllama) {
         configured.push({
           id: p.id,
@@ -91,34 +101,34 @@ export default function ProviderManager(props: ProviderManagerProps) {
         });
       }
     });
-    
+
     setConfiguredProviders(configured);
   };
 
   const handleAddProvider = async () => {
     if (!selectedProvider()) return;
-    
+
     const provider = selectedProvider()!;
     const keyFieldMap: Record<string, string> = {
       openai: "openai_key",
       anthropic: "anthropic_key",
       google: "google_key",
     };
-    
+
     const updates: AppConfig = {
       model_provider: provider.id,
       model_name: selectedModel() || undefined,
     };
-    
+
     const keyField = keyFieldMap[provider.id];
     if (keyField && apiKey().trim()) {
       updates[keyField] = apiKey().trim();
     }
-    
+
     if (provider.id === "ollama") {
       updates.ollama_endpoint = apiKey().trim() || "http://localhost:11434";
     }
-    
+
     try {
       saveConfig({ ...config(), ...updates });
       setConfig({ ...config(), ...updates });
@@ -153,19 +163,19 @@ export default function ProviderManager(props: ProviderManagerProps) {
       anthropic: "anthropic_key",
       google: "google_key",
     };
-    
+
     const keyField = keyFieldMap[providerId];
     const updates: AppConfig = {};
-    
+
     if (keyField) {
       updates[keyField] = undefined;
     }
-    
+
     if (config().model_provider === providerId) {
       updates.model_provider = undefined;
       updates.model_name = undefined;
     }
-    
+
     try {
       const newConfig = { ...config() };
       Object.keys(updates).forEach(key => {
@@ -205,14 +215,14 @@ export default function ProviderManager(props: ProviderManagerProps) {
       };
       const keyField = keyFieldMap[providerId];
       const hasKey = keyField ? !!config()[keyField] : false;
-      
+
       if (hasKey) {
         setTestResult({ success: true, message: `Connected to ${provider.name}` });
       } else {
         setTestResult({ success: false, message: "API key not configured" });
       }
     }
-    
+
     setLoading(false);
   };
 
@@ -264,7 +274,7 @@ export default function ProviderManager(props: ProviderManagerProps) {
           evt.preventDefault();
           const idx = selectedIndex();
           const configured = configuredProviders();
-          
+
           if (idx < configured.length) {
             setSelectedProvider(providers().find(p => p.id === configured[idx].id) || null);
             setViewMode("edit");
@@ -398,7 +408,7 @@ export default function ProviderManager(props: ProviderManagerProps) {
           <text fg={palette.dim} marginBottom={1}>
             Configured Providers ({configuredProviders().length})
           </text>
-          
+
           <box flexDirection="column" flexGrow={1}>
             <For each={configuredProviders()}>
               {(provider, index) => (
@@ -436,13 +446,19 @@ export default function ProviderManager(props: ProviderManagerProps) {
               flexDirection="row"
               padding={1}
               marginTop={1}
-              backgroundColor={selectedIndex() === configuredProviders().length ? palette.bgSelected : undefined}
+              backgroundColor={
+                selectedIndex() === configuredProviders().length ? palette.bgSelected : undefined
+              }
             >
               <box width={3}>
                 <text fg={palette.accent}>+</text>
               </box>
               <box>
-                <text fg={selectedIndex() === configuredProviders().length ? palette.accent : palette.text}>
+                <text
+                  fg={
+                    selectedIndex() === configuredProviders().length ? palette.accent : palette.text
+                  }
+                >
                   Add New Provider
                 </text>
               </box>
@@ -451,20 +467,30 @@ export default function ProviderManager(props: ProviderManagerProps) {
             <box
               flexDirection="row"
               padding={1}
-              backgroundColor={selectedIndex() === configuredProviders().length + 1 ? palette.bgSelected : undefined}
+              backgroundColor={
+                selectedIndex() === configuredProviders().length + 1
+                  ? palette.bgSelected
+                  : undefined
+              }
             >
               <box width={3}>
                 <text fg={palette.dim}>×</text>
               </box>
               <box>
-                <text fg={selectedIndex() === configuredProviders().length + 1 ? palette.accent : palette.dim}>
+                <text
+                  fg={
+                    selectedIndex() === configuredProviders().length + 1
+                      ? palette.accent
+                      : palette.dim
+                  }
+                >
                   Close
                 </text>
               </box>
             </box>
           </box>
         </box>
-        
+
         <box flexDirection="column" marginTop={1}>
           <text fg={palette.dim}>↑↓ Navigate | Enter Select | A Add | Esc Close</text>
           <text fg={palette.dim}>On provider: T Test | S Set Active | D Delete</text>
@@ -473,10 +499,14 @@ export default function ProviderManager(props: ProviderManagerProps) {
 
       <Show when={viewMode() === "add"}>
         <box flexDirection="column" flexGrow={1}>
-          <text fg={palette.accent} marginBottom={1}>Add New Provider</text>
-          
+          <text fg={palette.accent} marginBottom={1}>
+            Add New Provider
+          </text>
+
           <Show when={!selectedProvider()}>
-            <text fg={palette.dim} marginBottom={1}>Select a provider:</text>
+            <text fg={palette.dim} marginBottom={1}>
+              Select a provider:
+            </text>
             <box flexDirection="column" flexGrow={1}>
               <For each={providers()}>
                 {(provider, index) => (
@@ -503,24 +533,22 @@ export default function ProviderManager(props: ProviderManagerProps) {
               </For>
             </box>
           </Show>
-          
+
           <Show when={selectedProvider()}>
             <box flexDirection="column" marginTop={1}>
               <text fg={palette.text}>Selected: {selectedProvider()?.name}</text>
-              
+
               <Show when={models().length > 0}>
                 <box marginTop={1}>
                   <text fg={palette.dim}>Available Models:</text>
                   <box flexDirection="column" marginLeft={2}>
                     <For each={models()}>
-                      {(model) => (
-                        <text fg={palette.dim}>• {model.name}</text>
-                      )}
+                      {model => <text fg={palette.dim}>• {model.name}</text>}
                     </For>
                   </box>
                 </box>
               </Show>
-              
+
               <box marginTop={1}>
                 <text fg={palette.dim}>
                   {selectedProvider()?.requires_api_key ? "API Key:" : "Endpoint URL:"}
@@ -537,7 +565,7 @@ export default function ProviderManager(props: ProviderManagerProps) {
                   <text fg={palette.accent}>▌</text>
                 </box>
               </box>
-              
+
               <box marginTop={2} flexDirection="row" gap={2}>
                 <box borderStyle="single" borderColor={palette.accent} padding={1}>
                   <text fg={palette.accent}>Enter to Save</text>
@@ -556,23 +584,27 @@ export default function ProviderManager(props: ProviderManagerProps) {
           <text fg={palette.accent} marginBottom={1}>
             {selectedProvider()?.name}
           </text>
-          
+
           <box flexDirection="column" gap={1}>
             <box flexDirection="row">
               <text fg={palette.dim}>Status: </text>
               <text fg={palette.success}>Connected</text>
             </box>
-            
+
             <box flexDirection="row">
               <text fg={palette.dim}>Active: </text>
-              <text fg={config().model_provider === selectedProvider()?.id ? palette.success : palette.dim}>
+              <text
+                fg={
+                  config().model_provider === selectedProvider()?.id ? palette.success : palette.dim
+                }
+              >
                 {config().model_provider === selectedProvider()?.id ? "Yes" : "No"}
               </text>
             </box>
-            
+
             <Show when={testResult()}>
-              <box 
-                borderStyle="single" 
+              <box
+                borderStyle="single"
                 borderColor={testResult()?.success ? palette.success : palette.error}
                 padding={1}
                 marginTop={1}
@@ -582,16 +614,16 @@ export default function ProviderManager(props: ProviderManagerProps) {
                 </text>
               </box>
             </Show>
-            
+
             <Show when={loading()}>
               <box marginTop={1}>
                 <text fg={palette.accent}>Testing connection...</text>
               </box>
             </Show>
           </box>
-          
+
           <box flexGrow={1} />
-          
+
           <box flexDirection="column" marginTop={1}>
             <text fg={palette.dim}>T Test Connection | S Set Active | D Delete | Esc Back</text>
           </box>
@@ -600,7 +632,9 @@ export default function ProviderManager(props: ProviderManagerProps) {
 
       <Show when={viewMode() === "delete_confirm"}>
         <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-          <text fg={palette.error} marginBottom={1}>⚠ Delete Provider?</text>
+          <text fg={palette.error} marginBottom={1}>
+            ⚠ Delete Provider?
+          </text>
           <text fg={palette.text} marginBottom={1}>
             Are you sure you want to remove {selectedProvider()?.name}?
           </text>

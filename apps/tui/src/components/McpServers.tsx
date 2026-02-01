@@ -106,7 +106,7 @@ export default function McpServers(props: McpServersProps) {
           evt.preventDefault();
           const idx = selectedIndex();
           const srvs = servers();
-          
+
           if (idx < srvs.length) {
             setSelectedServer(srvs[idx]);
             setViewMode("details");
@@ -217,13 +217,13 @@ export default function McpServers(props: McpServersProps) {
           <text fg={palette.dim} marginBottom={1}>
             Configured Servers ({servers().length})
           </text>
-          
+
           <Show when={loading()}>
             <box marginBottom={1}>
               <text fg={palette.accent}>Loading...</text>
             </box>
           </Show>
-          
+
           <box flexDirection="column" flexGrow={1}>
             <For each={servers()}>
               {(server, index) => (
@@ -233,7 +233,9 @@ export default function McpServers(props: McpServersProps) {
                   backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                 >
                   <box width={3}>
-                    <text fg={server.enabled ? statusColors[server.status] || palette.dim : palette.dim}>
+                    <text
+                      fg={server.enabled ? statusColors[server.status] || palette.dim : palette.dim}
+                    >
                       {server.enabled ? "●" : "○"}
                     </text>
                   </box>
@@ -243,9 +245,7 @@ export default function McpServers(props: McpServersProps) {
                     </text>
                   </box>
                   <box width={12}>
-                    <text fg={statusColors[server.status] || palette.dim}>
-                      {server.status}
-                    </text>
+                    <text fg={statusColors[server.status] || palette.dim}>{server.status}</text>
                   </box>
                   <box width={8}>
                     <text fg={ratingColors[server.securityRating] || palette.dim}>
@@ -253,9 +253,7 @@ export default function McpServers(props: McpServersProps) {
                     </text>
                   </box>
                   <box flexGrow={1}>
-                    <text fg={palette.dim}>
-                      {server.tools.length} tools
-                    </text>
+                    <text fg={palette.dim}>{server.tools.length} tools</text>
                   </box>
                   <box width={10}>
                     <Show when={!server.enabled}>
@@ -270,7 +268,9 @@ export default function McpServers(props: McpServersProps) {
               flexDirection="row"
               padding={1}
               marginTop={1}
-              backgroundColor={selectedIndex() === servers().length ? palette.bgSelected : undefined}
+              backgroundColor={
+                selectedIndex() === servers().length ? palette.bgSelected : undefined
+              }
             >
               <box width={3}>
                 <text fg={palette.accent}>+</text>
@@ -285,7 +285,9 @@ export default function McpServers(props: McpServersProps) {
             <box
               flexDirection="row"
               padding={1}
-              backgroundColor={selectedIndex() === servers().length + 1 ? palette.bgSelected : undefined}
+              backgroundColor={
+                selectedIndex() === servers().length + 1 ? palette.bgSelected : undefined
+              }
             >
               <box width={3}>
                 <text fg={palette.accent}>+</text>
@@ -300,7 +302,9 @@ export default function McpServers(props: McpServersProps) {
             <box
               flexDirection="row"
               padding={1}
-              backgroundColor={selectedIndex() === servers().length + 2 ? palette.bgSelected : undefined}
+              backgroundColor={
+                selectedIndex() === servers().length + 2 ? palette.bgSelected : undefined
+              }
             >
               <box width={3}>
                 <text fg={palette.dim}>×</text>
@@ -313,7 +317,7 @@ export default function McpServers(props: McpServersProps) {
             </box>
           </box>
         </box>
-        
+
         <box flexDirection="column" marginTop={1}>
           <text fg={palette.dim}>↑↓ Navigate | Enter Select | E Toggle | D Delete | Esc Close</text>
         </box>
@@ -321,7 +325,7 @@ export default function McpServers(props: McpServersProps) {
 
       <Show when={viewMode() === "curated"}>
         <McpCurated
-          onSelect={(server) => {
+          onSelect={server => {
             handleServerAdded();
           }}
           onClose={() => setViewMode("list")}
@@ -329,10 +333,7 @@ export default function McpServers(props: McpServersProps) {
       </Show>
 
       <Show when={viewMode() === "add"}>
-        <McpAddServer
-          onAdded={handleServerAdded}
-          onCancel={() => setViewMode("list")}
-        />
+        <McpAddServer onAdded={handleServerAdded} onCancel={() => setViewMode("list")} />
       </Show>
 
       <Show when={viewMode() === "details" && selectedServer()}>
@@ -340,7 +341,7 @@ export default function McpServers(props: McpServersProps) {
           <text fg={palette.accent} marginBottom={1}>
             {selectedServer()!.name}
           </text>
-          
+
           <box flexDirection="column" gap={1}>
             <box flexDirection="row">
               <text fg={palette.dim}>Status: </text>
@@ -348,45 +349,43 @@ export default function McpServers(props: McpServersProps) {
                 {selectedServer()!.status}
               </text>
             </box>
-            
+
             <box flexDirection="row">
               <text fg={palette.dim}>Security Rating: </text>
               <text fg={ratingColors[selectedServer()!.securityRating] || palette.dim}>
                 {selectedServer()!.securityRating}
               </text>
             </box>
-            
+
             <box flexDirection="row">
               <text fg={palette.dim}>Enabled: </text>
               <text fg={selectedServer()!.enabled ? palette.success : palette.dim}>
                 {selectedServer()!.enabled ? "Yes" : "No"}
               </text>
             </box>
-            
+
             <box flexDirection="row">
               <text fg={palette.dim}>Transport: </text>
               <text fg={palette.text}>{selectedServer()!.transport}</text>
             </box>
-            
+
             <box flexDirection="row">
               <text fg={palette.dim}>URL: </text>
               <text fg={palette.dim}>{selectedServer()!.url}</text>
             </box>
-            
+
             <box marginTop={1}>
               <text fg={palette.dim}>Tools ({selectedServer()!.tools.length}):</text>
               <box flexDirection="column" marginLeft={2} marginTop={1}>
                 <For each={selectedServer()!.tools}>
-                  {(tool) => (
-                    <text fg={palette.dim}>• {tool.name}</text>
-                  )}
+                  {tool => <text fg={palette.dim}>• {tool.name}</text>}
                 </For>
               </box>
             </box>
           </box>
-          
+
           <box flexGrow={1} />
-          
+
           <box flexDirection="column" marginTop={1}>
             <text fg={palette.dim}>E Toggle Enable | D Delete | Esc Back</text>
           </box>
@@ -395,7 +394,9 @@ export default function McpServers(props: McpServersProps) {
 
       <Show when={viewMode() === "delete_confirm"}>
         <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-          <text fg={palette.error} marginBottom={1}>⚠ Delete Server?</text>
+          <text fg={palette.error} marginBottom={1}>
+            ⚠ Delete Server?
+          </text>
           <text fg={palette.text} marginBottom={1}>
             Are you sure you want to remove {selectedServer()?.name}?
           </text>

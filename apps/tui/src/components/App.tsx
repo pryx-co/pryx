@@ -22,7 +22,17 @@ import PolicyApprovals from "./PolicyApprovals";
 import MeshStatus from "./MeshStatus";
 import { palette } from "../theme";
 
-type View = "chat" | "sessions" | "settings" | "channels" | "skills" | "mcp" | "cost" | "agents" | "policies" | "mesh";
+type View =
+  | "chat"
+  | "sessions"
+  | "settings"
+  | "channels"
+  | "skills"
+  | "mcp"
+  | "cost"
+  | "agents"
+  | "policies"
+  | "mesh";
 
 export default function App() {
   const renderer = useRenderer();
@@ -64,7 +74,7 @@ export default function App() {
     const pollInterval = 5000;
 
     AppRuntime.runFork(
-      service.pollHealth(pollInterval, (result) => {
+      service.pollHealth(pollInterval, result => {
         if (result.status === "ok") {
           if (result.providers && result.providers.length > 0) {
             setHasProvider(true);
@@ -267,7 +277,18 @@ export default function App() {
     },
   ];
 
-  const views: View[] = ["chat", "sessions", "channels", "skills", "settings", "mcp", "cost", "agents", "policies", "mesh"];
+  const views: View[] = [
+    "chat",
+    "sessions",
+    "channels",
+    "skills",
+    "settings",
+    "mcp",
+    "cost",
+    "agents",
+    "policies",
+    "mesh",
+  ];
 
   useKeyboard(evt => {
     if (showHelp() || showCommands() || showProviderManager()) {
@@ -295,7 +316,7 @@ export default function App() {
       case "3":
       case "4":
       case "5":
-      case "6": 
+      case "6":
       case "7":
       case "8":
       case "9": {
@@ -340,61 +361,61 @@ export default function App() {
         <box flexDirection="row" padding={1} gap={2}>
           {/* View switcher with mouse support */}
           <box flexDirection="row" gap={1}>
-            <text 
+            <text
               fg={view() === "chat" ? palette.accent : palette.dim}
               bg={view() === "chat" ? palette.bgSelected : undefined}
             >
               1.Chat
             </text>
-            <text 
+            <text
               fg={view() === "sessions" ? palette.accent : palette.dim}
               bg={view() === "sessions" ? palette.bgSelected : undefined}
             >
               2.Sessions
             </text>
-            <text 
+            <text
               fg={view() === "channels" ? palette.accent : palette.dim}
               bg={view() === "channels" ? palette.bgSelected : undefined}
             >
               3.Channels
             </text>
-            <text 
+            <text
               fg={view() === "skills" ? palette.accent : palette.dim}
               bg={view() === "skills" ? palette.bgSelected : undefined}
             >
               4.Skills
             </text>
-            <text 
+            <text
               fg={view() === "settings" ? palette.accent : palette.dim}
               bg={view() === "settings" ? palette.bgSelected : undefined}
             >
               5.Settings
             </text>
-            <text 
+            <text
               fg={view() === "mcp" ? palette.accent : palette.dim}
               bg={view() === "mcp" ? palette.bgSelected : undefined}
             >
               6.MCP
             </text>
-            <text 
+            <text
               fg={view() === "cost" ? palette.accent : palette.dim}
               bg={view() === "cost" ? palette.bgSelected : undefined}
             >
               7.Cost
             </text>
-            <text 
+            <text
               fg={view() === "agents" ? palette.accent : palette.dim}
               bg={view() === "agents" ? palette.bgSelected : undefined}
             >
               8.Agents
             </text>
-            <text 
+            <text
               fg={view() === "policies" ? palette.accent : palette.dim}
               bg={view() === "policies" ? palette.bgSelected : undefined}
             >
               9.Policies
             </text>
-            <text 
+            <text
               fg={view() === "mesh" ? palette.accent : palette.dim}
               bg={view() === "mesh" ? palette.bgSelected : undefined}
             >
@@ -414,8 +435,8 @@ export default function App() {
         <box flexGrow={1} padding={1}>
           <Switch>
             <Match when={view() === "chat"}>
-              <Chat 
-                disabled={showCommands() || showHelp() || showProviderManager()} 
+              <Chat
+                disabled={showCommands() || showHelp() || showProviderManager()}
                 onConnectCommand={() => setShowProviderManager(true)}
               />
             </Match>

@@ -2,9 +2,9 @@
  * Channel type definitions for Pryx TUI
  */
 
-export type ChannelType = 'webhook' | 'telegram' | 'discord' | 'slack' | 'email' | 'whatsapp';
+export type ChannelType = "webhook" | "telegram" | "discord" | "slack" | "email" | "whatsapp";
 
-export type ChannelStatus = 'connected' | 'disconnected' | 'error' | 'pending_setup';
+export type ChannelStatus = "connected" | "disconnected" | "error" | "pending_setup";
 
 export interface Channel {
   id: string;
@@ -17,9 +17,9 @@ export interface Channel {
   updatedAt: string;
 }
 
-export type ChannelConfig = 
-  | WebhookConfig 
-  | TelegramConfig 
+export type ChannelConfig =
+  | WebhookConfig
+  | TelegramConfig
   | DiscordConfig
   | SlackConfig
   | EmailConfig
@@ -28,16 +28,16 @@ export type ChannelConfig =
 export interface WebhookConfig {
   url: string;
   secret?: string;
-  method: 'POST' | 'GET' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "POST" | "GET" | "PUT" | "DELETE" | "PATCH";
   headers?: Record<string, string>;
 }
 
 export interface TelegramConfig {
   token: string;
-  mode: 'webhook' | 'polling';
+  mode: "webhook" | "polling";
   webhookUrl?: string;
   allowedChats?: string[];
-  parseMode?: 'Markdown' | 'MarkdownV2' | 'HTML';
+  parseMode?: "Markdown" | "MarkdownV2" | "HTML";
 }
 
 export interface DiscordConfig {
@@ -52,7 +52,7 @@ export interface SlackConfig {
   appToken: string;
   botToken: string;
   signingSecret?: string;
-  mode: 'socket' | 'webhook';
+  mode: "socket" | "webhook";
   allowedChannels?: string[];
 }
 
@@ -106,43 +106,43 @@ export interface ChannelTestResult {
 export interface ChannelActivity {
   id: string;
   channelId: string;
-  type: 'message_received' | 'message_sent' | 'error' | 'status_change';
+  type: "message_received" | "message_sent" | "error" | "status_change";
   content: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
 }
 
 export const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
-  webhook: 'Webhook',
-  telegram: 'Telegram',
-  discord: 'Discord',
-  slack: 'Slack',
-  email: 'Email',
-  whatsapp: 'WhatsApp',
+  webhook: "Webhook",
+  telegram: "Telegram",
+  discord: "Discord",
+  slack: "Slack",
+  email: "Email",
+  whatsapp: "WhatsApp",
 };
 
 export const CHANNEL_STATUS_LABELS: Record<ChannelStatus, string> = {
-  connected: 'Connected',
-  disconnected: 'Disconnected',
-  error: 'Error',
-  pending_setup: 'Pending Setup',
+  connected: "Connected",
+  disconnected: "Disconnected",
+  error: "Error",
+  pending_setup: "Pending Setup",
 };
 
 export const CHANNEL_STATUS_COLORS: Record<ChannelStatus, string> = {
-  connected: '#4CAF50',
-  disconnected: '#9E9E9E',
-  error: '#F44336',
-  pending_setup: '#FF9800',
+  connected: "#4CAF50",
+  disconnected: "#9E9E9E",
+  error: "#F44336",
+  pending_setup: "#FF9800",
 };
 
 export const DEFAULT_CHANNEL_CONFIGS: Record<ChannelType, Record<string, unknown>> = {
   webhook: {
-    method: 'POST',
+    method: "POST",
     headers: {},
   },
   telegram: {
-    mode: 'polling',
-    parseMode: 'Markdown',
+    mode: "polling",
+    parseMode: "Markdown",
     allowedChats: [],
   },
   discord: {
@@ -151,26 +151,26 @@ export const DEFAULT_CHANNEL_CONFIGS: Record<ChannelType, Record<string, unknown
     intents: 0,
   },
   slack: {
-    mode: 'socket',
+    mode: "socket",
     allowedChannels: [],
   },
   email: {
     imap: {
-      host: '',
+      host: "",
       port: 993,
       secure: true,
-      username: '',
-      password: '',
+      username: "",
+      password: "",
     },
     smtp: {
-      host: '',
+      host: "",
       port: 587,
       secure: true,
-      username: '',
-      password: '',
+      username: "",
+      password: "",
     },
     pollingInterval: 30000,
-    folders: ['INBOX'],
+    folders: ["INBOX"],
   },
   whatsapp: {
     allowedContacts: [],

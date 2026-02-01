@@ -2,12 +2,7 @@ import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid
 import { useKeyboard } from "@opentui/solid";
 import { palette } from "../theme";
 import type { Channel, ChannelType, ChannelStatus } from "../types/channels";
-import {
-  getChannels,
-  deleteChannel,
-  toggleChannel,
-  testConnection,
-} from "../services/channels";
+import { getChannels, deleteChannel, toggleChannel, testConnection } from "../services/channels";
 import {
   CHANNEL_TYPE_LABELS,
   CHANNEL_STATUS_LABELS,
@@ -70,11 +65,7 @@ export default function ChannelManager(props: ChannelManagerProps) {
   const handleToggleEnable = async (channel: Channel) => {
     try {
       await toggleChannel(channel.id, !channel.enabled);
-      setSuccess(
-        channel.enabled
-          ? `✓ ${channel.name} disabled`
-          : `✓ ${channel.name} enabled`
-      );
+      setSuccess(channel.enabled ? `✓ ${channel.name} disabled` : `✓ ${channel.name} enabled`);
       await loadChannels();
       setTimeout(() => setSuccess(""), 2000);
     } catch (e) {
@@ -111,20 +102,20 @@ export default function ChannelManager(props: ChannelManagerProps) {
     }
   };
 
-  useKeyboard((evt) => {
+  useKeyboard(evt => {
     if (viewMode() === "list") {
       switch (evt.name) {
         case "up":
         case "arrowup": {
           evt.preventDefault();
-          setSelectedIndex((i) => Math.max(0, i - 1));
+          setSelectedIndex(i => Math.max(0, i - 1));
           break;
         }
         case "down":
         case "arrowdown": {
           evt.preventDefault();
           const maxIndex = channels().length + 1;
-          setSelectedIndex((i) => Math.min(maxIndex, i + 1));
+          setSelectedIndex(i => Math.min(maxIndex, i + 1));
           break;
         }
         case "return":
@@ -270,11 +261,7 @@ export default function ChannelManager(props: ChannelManagerProps) {
         </box>
         <box flexGrow={1} />
         <box flexDirection="column" alignItems="flex-end">
-          <box
-            borderStyle="single"
-            borderColor={palette.accent}
-            padding={{ left: 1, right: 1 }}
-          >
+          <box borderStyle="single" borderColor={palette.accent} padding={{ left: 1, right: 1 }}>
             <text fg={palette.accent}>A - Add Channel</text>
           </box>
           <text fg={palette.dim}>[Esc to close]</text>
@@ -303,12 +290,7 @@ export default function ChannelManager(props: ChannelManagerProps) {
           </Show>
 
           <Show when={channels().length === 0 && !loading()}>
-            <box
-              flexDirection="column"
-              flexGrow={1}
-              alignItems="center"
-              justifyContent="center"
-            >
+            <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
               <text fg={palette.dim}>No channels configured</text>
               <box marginTop={1}>
                 <text fg={palette.accent}>Press 'A' to add your first channel</text>
@@ -319,7 +301,11 @@ export default function ChannelManager(props: ChannelManagerProps) {
           <Show when={channels().length > 0}>
             <box flexDirection="column" flexGrow={1}>
               {/* Column Headers */}
-              <box flexDirection="row" padding={1} borderStyle="single" borderColor={palette.border}
+              <box
+                flexDirection="row"
+                padding={1}
+                borderStyle="single"
+                borderColor={palette.border}
               >
                 <box width={4}>
                   <text fg={palette.dim}></text>
@@ -347,26 +333,18 @@ export default function ChannelManager(props: ChannelManagerProps) {
                   <box
                     flexDirection="row"
                     padding={1}
-                    backgroundColor={
-                      index() === selectedIndex() ? palette.bgSelected : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                   >
                     <box width={4}>
                       <text>{PLATFORM_ICONS[channel.type]}</text>
                     </box>
                     <box width={20}>
-                      <text
-                        fg={
-                          index() === selectedIndex() ? palette.accent : palette.text
-                        }
-                      >
+                      <text fg={index() === selectedIndex() ? palette.accent : palette.text}>
                         {channel.name}
                       </text>
                     </box>
                     <box width={12}>
-                      <text fg={palette.dim}>
-                        {CHANNEL_TYPE_LABELS[channel.type]}
-                      </text>
+                      <text fg={palette.dim}>{CHANNEL_TYPE_LABELS[channel.type]}</text>
                     </box>
                     <box width={14}>
                       <box flexDirection="row">
@@ -395,21 +373,13 @@ export default function ChannelManager(props: ChannelManagerProps) {
             flexDirection="row"
             padding={1}
             marginTop={channels().length > 0 ? 1 : 0}
-            backgroundColor={
-              selectedIndex() === channels().length ? palette.bgSelected : undefined
-            }
+            backgroundColor={selectedIndex() === channels().length ? palette.bgSelected : undefined}
           >
             <box width={4}>
               <text fg={palette.accent}>+</text>
             </box>
             <box>
-              <text
-                fg={
-                  selectedIndex() === channels().length
-                    ? palette.accent
-                    : palette.text
-                }
-              >
+              <text fg={selectedIndex() === channels().length ? palette.accent : palette.text}>
                 Add New Channel
               </text>
             </box>
@@ -420,22 +390,14 @@ export default function ChannelManager(props: ChannelManagerProps) {
             flexDirection="row"
             padding={1}
             backgroundColor={
-              selectedIndex() === channels().length + 1
-                ? palette.bgSelected
-                : undefined
+              selectedIndex() === channels().length + 1 ? palette.bgSelected : undefined
             }
           >
             <box width={4}>
               <text fg={palette.dim}>×</text>
             </box>
             <box>
-              <text
-                fg={
-                  selectedIndex() === channels().length + 1
-                    ? palette.accent
-                    : palette.dim
-                }
-              >
+              <text fg={selectedIndex() === channels().length + 1 ? palette.accent : palette.dim}>
                 Back to Main Menu
               </text>
             </box>
@@ -445,17 +407,17 @@ export default function ChannelManager(props: ChannelManagerProps) {
         {/* Footer */}
         <box flexDirection="column" marginTop={1}>
           <text fg={palette.dim}>
-            ↑↓ Navigate | Enter Select | E Toggle | T Test | D Delete | A Add | Esc
-            Back
+            ↑↓ Navigate | Enter Select | E Toggle | T Test | D Delete | A Add | Esc Back
           </text>
         </box>
       </Show>
 
       {/* Add Channel View */}
       <Show when={viewMode() === "add"}>
-        <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center"
-        >
-          <text fg={palette.accent} marginBottom={1}>Add Channel</text>
+        <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
+          <text fg={palette.accent} marginBottom={1}>
+            Add Channel
+          </text>
           <text fg={palette.dim}>Channel wizard coming soon...</text>
           <box marginTop={2}>
             <text fg={palette.dim}>Press Esc to go back</text>
@@ -475,9 +437,7 @@ export default function ChannelManager(props: ChannelManagerProps) {
           <box flexDirection="column" gap={1}>
             <box flexDirection="row">
               <text fg={palette.dim}>Type: </text>
-              <text fg={palette.text}>
-                {CHANNEL_TYPE_LABELS[selectedChannel()!.type]}
-              </text>
+              <text fg={palette.text}>{CHANNEL_TYPE_LABELS[selectedChannel()!.type]}</text>
             </box>
 
             <box flexDirection="row">
@@ -489,9 +449,7 @@ export default function ChannelManager(props: ChannelManagerProps) {
 
             <box flexDirection="row">
               <text fg={palette.dim}>Enabled: </text>
-              <text
-                fg={selectedChannel()!.enabled ? palette.success : palette.dim}
-              >
+              <text fg={selectedChannel()!.enabled ? palette.success : palette.dim}>
                 {selectedChannel()!.enabled ? "Yes" : "No"}
               </text>
             </box>
@@ -503,16 +461,12 @@ export default function ChannelManager(props: ChannelManagerProps) {
 
             <box flexDirection="row">
               <text fg={palette.dim}>Created: </text>
-              <text fg={palette.dim}>
-                {formatDate(selectedChannel()!.createdAt)}
-              </text>
+              <text fg={palette.dim}>{formatDate(selectedChannel()!.createdAt)}</text>
             </box>
 
             <box flexDirection="row">
               <text fg={palette.dim}>Updated: </text>
-              <text fg={palette.dim}>
-                {formatDate(selectedChannel()!.updatedAt)}
-              </text>
+              <text fg={palette.dim}>{formatDate(selectedChannel()!.updatedAt)}</text>
             </box>
           </box>
 
@@ -526,13 +480,10 @@ export default function ChannelManager(props: ChannelManagerProps) {
 
       {/* Delete Confirmation */}
       <Show when={viewMode() === "delete_confirm"}>
-        <box
-          flexDirection="column"
-          flexGrow={1}
-          alignItems="center"
-          justifyContent="center"
-        >
-          <text fg={palette.error} marginBottom={1}>⚠ Delete Channel?</text>
+        <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
+          <text fg={palette.error} marginBottom={1}>
+            ⚠ Delete Channel?
+          </text>
           <text fg={palette.text} marginBottom={1}>
             Are you sure you want to remove {selectedChannel()?.name}?
           </text>
@@ -549,19 +500,20 @@ export default function ChannelManager(props: ChannelManagerProps) {
 
       {/* Test Result */}
       <Show when={viewMode() === "test_result" && testResult()}>
-        <box
-          flexDirection="column"
-          flexGrow={1}
-          alignItems="center"
-          justifyContent="center"
-        >
+        <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
           <Show when={testResult()?.success}>
-            <text fg={palette.success} marginBottom={1}>✓ Connection Test Passed</text>
+            <text fg={palette.success} marginBottom={1}>
+              ✓ Connection Test Passed
+            </text>
           </Show>
           <Show when={!testResult()?.success}>
-            <text fg={palette.error} marginBottom={1}>✗ Connection Test Failed</text>
+            <text fg={palette.error} marginBottom={1}>
+              ✗ Connection Test Failed
+            </text>
           </Show>
-          <text fg={palette.text} marginBottom={1}>{testResult()?.message}</text>
+          <text fg={palette.text} marginBottom={1}>
+            {testResult()?.message}
+          </text>
           <box marginTop={2}>
             <text fg={palette.dim}>Press Enter or Esc to continue</text>
           </box>

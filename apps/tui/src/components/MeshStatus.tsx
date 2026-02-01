@@ -41,7 +41,9 @@ export default function MeshStatus(props: MeshStatusProps) {
   const [pairingCode, setPairingCode] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal("");
-  const [pairingStatus, setPairingStatus] = createSignal<"idle" | "pairing" | "success" | "failed">("idle");
+  const [pairingStatus, setPairingStatus] = createSignal<"idle" | "pairing" | "success" | "failed">(
+    "idle"
+  );
 
   onMount(() => {
     loadDevices();
@@ -62,9 +64,9 @@ export default function MeshStatus(props: MeshStatusProps) {
     keyboard.bind("u", () => unpairDevice());
     keyboard.bind("v", () => viewDevice());
     keyboard.bind("s", () => syncDevice());
-      keyboard.bind("q", () => {
-        props.onClose();
-      });
+    keyboard.bind("q", () => {
+      props.onClose();
+    });
     keyboard.bind("esc", () => {
       if (showPairModal()) {
         setShowPairModal(false);
@@ -153,12 +155,9 @@ export default function MeshStatus(props: MeshStatusProps) {
     if (!device) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/mesh/devices/${device.id}/unpair`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/mesh/devices/${device.id}/unpair`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to unpair device");
@@ -175,12 +174,9 @@ export default function MeshStatus(props: MeshStatusProps) {
     if (!device) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/mesh/devices/${device.id}/sync`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/mesh/devices/${device.id}/sync`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to sync device");
@@ -258,7 +254,9 @@ export default function MeshStatus(props: MeshStatusProps) {
         <Text>
           View: <Text bold>[1]</Text> Devices <Text bold>[2]</Text> Events
         </Text>
-        <Text>Quit: <Text bold>[Q]</Text></Text>
+        <Text>
+          Quit: <Text bold>[Q]</Text>
+        </Text>
       </Box>
 
       <Show when={loading()}>
@@ -301,9 +299,7 @@ export default function MeshStatus(props: MeshStatusProps) {
                     <Button onClick={startPairing}>Pair</Button>
                   </Box>
                   <Box flexGrow={1}>
-                    <Button onClick={() => setShowPairModal(false)}>
-                      Cancel
-                    </Button>
+                    <Button onClick={() => setShowPairModal(false)}>Cancel</Button>
                   </Box>
                 </Box>
               </Show>
@@ -326,11 +322,7 @@ export default function MeshStatus(props: MeshStatusProps) {
           </Show>
 
           <Show when={view() === "devices"}>
-            <Box
-              flexDirection="row"
-              padding={1}
-              backgroundColor={palette.bgSecondary}
-            >
+            <Box flexDirection="row" padding={1} backgroundColor={palette.bgSecondary}>
               <Box flexGrow={1}>
                 <Text bold>Total Devices</Text>
                 <Text fontSize={2}>{devices().length}</Text>
@@ -338,13 +330,13 @@ export default function MeshStatus(props: MeshStatusProps) {
               <Box flexGrow={1}>
                 <Text bold>Online</Text>
                 <Text fontSize={2} color={palette.success}>
-                  {devices().filter((d) => d.status === "online").length}
+                  {devices().filter(d => d.status === "online").length}
                 </Text>
               </Box>
               <Box flexGrow={1}>
                 <Text bold>Offline</Text>
                 <Text fontSize={2} color={palette.dim}>
-                  {devices().filter((d) => d.status === "offline").length}
+                  {devices().filter(d => d.status === "offline").length}
                 </Text>
               </Box>
             </Box>
@@ -364,18 +356,11 @@ export default function MeshStatus(props: MeshStatusProps) {
                   <Box
                     flexDirection="row"
                     padding={0.5}
-                    backgroundColor={
-                      index() === selectedIndex()
-                        ? palette.bgSelected
-                        : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                     onClick={() => setSelectedIndex(index())}
                   >
                     <Text width={25}>{device.name}</Text>
-                    <Text
-                      width={15}
-                      color={getStatusColor(device.status)}
-                    >
+                    <Text width={15} color={getStatusColor(device.status)}>
                       {getStatusLabel(device.status)}
                     </Text>
                     <Text width={15}>{getRoleLabel(device.role)}</Text>
@@ -388,9 +373,7 @@ export default function MeshStatus(props: MeshStatusProps) {
 
               <Show when={devices().length === 0}>
                 <Box padding={2} textAlign="center">
-                  <Text color={palette.dim}>
-                    No devices paired. Press [P] to pair a device.
-                  </Text>
+                  <Text color={palette.dim}>No devices paired. Press [P] to pair a device.</Text>
                 </Box>
               </Show>
 
@@ -409,7 +392,9 @@ export default function MeshStatus(props: MeshStatusProps) {
               marginTop={1}
               backgroundColor={palette.bgSecondary}
             >
-              <Text>Pair: <Text bold>[P]</Text></Text>
+              <Text>
+                Pair: <Text bold>[P]</Text>
+              </Text>
               <Box flexGrow={1} />
               <Text>
                 Refresh: <Text bold>[R]</Text> Unpair: <Text bold>[U]</Text> Sync:{" "}
@@ -419,11 +404,7 @@ export default function MeshStatus(props: MeshStatusProps) {
           </Show>
 
           <Show when={view() === "events"}>
-            <Box
-              flexDirection="row"
-              padding={1}
-              backgroundColor={palette.bgSecondary}
-            >
+            <Box flexDirection="row" padding={1} backgroundColor={palette.bgSecondary}>
               <Box flexGrow={1}>
                 <Text bold>Total Events</Text>
                 <Text fontSize={2}>{events().length}</Text>
@@ -431,13 +412,13 @@ export default function MeshStatus(props: MeshStatusProps) {
               <Box flexGrow={1}>
                 <Text bold>Successful</Text>
                 <Text fontSize={2} color={palette.success}>
-                  {events().filter((e) => e.success).length}
+                  {events().filter(e => e.success).length}
                 </Text>
               </Box>
               <Box flexGrow={1}>
                 <Text bold>Failed</Text>
                 <Text fontSize={2} color={palette.error}>
-                  {events().filter((e) => !e.success).length}
+                  {events().filter(e => !e.success).length}
                 </Text>
               </Box>
             </Box>
@@ -457,21 +438,12 @@ export default function MeshStatus(props: MeshStatusProps) {
                   <Box
                     flexDirection="row"
                     padding={0.5}
-                    backgroundColor={
-                      index() === selectedIndex()
-                        ? palette.bgSelected
-                        : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                     onClick={() => setSelectedIndex(index())}
                   >
                     <Text width={25}>{event.deviceName}</Text>
-                    <Text width={20}>
-                      {getEventTypeLabel(event.type)}
-                    </Text>
-                    <Text
-                      width={15}
-                      color={event.success ? palette.success : palette.error}
-                    >
+                    <Text width={20}>{getEventTypeLabel(event.type)}</Text>
+                    <Text width={15} color={event.success ? palette.success : palette.error}>
                       {event.success ? "✓" : "✗"}
                     </Text>
                     <Text width={20}>{event.timestamp}</Text>
@@ -481,9 +453,7 @@ export default function MeshStatus(props: MeshStatusProps) {
 
               <Show when={events().length === 0}>
                 <Box padding={2} textAlign="center">
-                  <Text color={palette.dim}>
-                    No sync events yet.
-                  </Text>
+                  <Text color={palette.dim}>No sync events yet.</Text>
                 </Box>
               </Show>
             </Box>
@@ -496,7 +466,8 @@ export default function MeshStatus(props: MeshStatusProps) {
 
 const Box: any = (props: any) => props.children;
 const Text: any = (props: any) => {
-  const content = typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
+  const content =
+    typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
   return <span style={props}>{content}</span>;
 };
 const TextInput: any = (props: any) => (

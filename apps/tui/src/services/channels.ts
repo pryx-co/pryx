@@ -1,6 +1,6 @@
 /**
  * Channel API Service
- * 
+ *
  * Provides HTTP API calls to the Pryx runtime for channel management.
  */
 
@@ -10,20 +10,20 @@ import type {
   HealthStatus,
   ChannelTestResult,
   ChannelActivity,
-} from '../types/channels';
+} from "../types/channels";
 
-const API_BASE = '/api';
+const API_BASE = "/api";
 
 /**
  * Get all configured channels
  */
 export const getChannels = async (): Promise<Channel[]> => {
   const response = await fetch(`${API_BASE}/channels`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch channels: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -32,11 +32,11 @@ export const getChannels = async (): Promise<Channel[]> => {
  */
 export const getChannel = async (id: string): Promise<Channel> => {
   const response = await fetch(`${API_BASE}/channels/${id}`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch channel: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -47,15 +47,15 @@ export const createChannel = async (
   config: ChannelConfig & { name: string; type: string }
 ): Promise<Channel> => {
   const response = await fetch(`${API_BASE}/channels`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to create channel: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -67,15 +67,15 @@ export const updateChannel = async (
   config: Partial<ChannelConfig> & { name?: string; enabled?: boolean }
 ): Promise<Channel> => {
   const response = await fetch(`${API_BASE}/channels/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to update channel: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -84,9 +84,9 @@ export const updateChannel = async (
  */
 export const deleteChannel = async (id: string): Promise<void> => {
   const response = await fetch(`${API_BASE}/channels/${id}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to delete channel: ${response.statusText}`);
   }
@@ -97,11 +97,11 @@ export const deleteChannel = async (id: string): Promise<void> => {
  */
 export const testConnection = async (id: string): Promise<ChannelTestResult> => {
   const response = await fetch(`${API_BASE}/channels/${id}/test`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to test connection: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -110,21 +110,18 @@ export const testConnection = async (id: string): Promise<ChannelTestResult> => 
  */
 export const getChannelHealth = async (id: string): Promise<HealthStatus> => {
   const response = await fetch(`${API_BASE}/channels/${id}/health`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch health: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
 /**
  * Toggle channel enabled/disabled state
  */
-export const toggleChannel = async (
-  id: string,
-  enabled: boolean
-): Promise<Channel> => {
+export const toggleChannel = async (id: string, enabled: boolean): Promise<Channel> => {
   return updateChannel(id, { enabled });
 };
 
@@ -135,14 +132,12 @@ export const getChannelActivity = async (
   id: string,
   limit: number = 50
 ): Promise<ChannelActivity[]> => {
-  const response = await fetch(
-    `${API_BASE}/channels/${id}/activity?limit=${limit}`
-  );
-  
+  const response = await fetch(`${API_BASE}/channels/${id}/activity?limit=${limit}`);
+
   if (!response.ok) {
     throw new Error(`Failed to fetch activity: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -151,13 +146,13 @@ export const getChannelActivity = async (
  */
 export const connectChannel = async (id: string): Promise<Channel> => {
   const response = await fetch(`${API_BASE}/channels/${id}/connect`, {
-    method: 'POST',
+    method: "POST",
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to connect channel: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -166,13 +161,13 @@ export const connectChannel = async (id: string): Promise<Channel> => {
  */
 export const disconnectChannel = async (id: string): Promise<Channel> => {
   const response = await fetch(`${API_BASE}/channels/${id}/disconnect`, {
-    method: 'POST',
+    method: "POST",
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to disconnect channel: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
@@ -183,10 +178,10 @@ export const getChannelTypes = async (): Promise<
   Array<{ type: string; name: string; description: string }>
 > => {
   const response = await fetch(`${API_BASE}/channels/types`);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch channel types: ${response.statusText}`);
   }
-  
+
   return response.json();
 };

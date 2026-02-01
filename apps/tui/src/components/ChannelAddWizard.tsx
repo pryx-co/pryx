@@ -1,15 +1,8 @@
 import { createSignal, createEffect, For, Show, onMount } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
 import { palette } from "../theme";
-import type {
-  ChannelType,
-  ChannelConfig,
-  ChannelFormData,
-} from "../types/channels";
-import {
-  CHANNEL_TYPE_LABELS,
-  DEFAULT_CHANNEL_CONFIGS,
-} from "../types/channels";
+import type { ChannelType, ChannelConfig, ChannelFormData } from "../types/channels";
+import { CHANNEL_TYPE_LABELS, DEFAULT_CHANNEL_CONFIGS } from "../types/channels";
 import { createChannel, testConnection } from "../services/channels";
 
 interface ChannelAddWizardProps {
@@ -58,30 +51,26 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
   const currentType = () => AVAILABLE_TYPES[selectedTypeIndex()];
 
   createEffect(() => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       type: currentType(),
       config: { ...DEFAULT_CHANNEL_CONFIGS[currentType()] },
     }));
   });
 
-  useKeyboard((evt) => {
+  useKeyboard(evt => {
     if (step() === "type") {
       switch (evt.name) {
         case "up":
         case "arrowup": {
           evt.preventDefault();
-          setSelectedTypeIndex((i) =>
-            Math.max(0, i - 1)
-          );
+          setSelectedTypeIndex(i => Math.max(0, i - 1));
           break;
         }
         case "down":
         case "arrowdown": {
           evt.preventDefault();
-          setSelectedTypeIndex((i) =>
-            Math.min(AVAILABLE_TYPES.length - 1, i + 1)
-          );
+          setSelectedTypeIndex(i => Math.min(AVAILABLE_TYPES.length - 1, i + 1));
           break;
         }
         case "return":
@@ -103,20 +92,18 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
         case "up":
         case "arrowup": {
           evt.preventDefault();
-          setFocusedField((i) => Math.max(0, i - 1));
+          setFocusedField(i => Math.max(0, i - 1));
           break;
         }
         case "down":
         case "arrowdown": {
           evt.preventDefault();
-          setFocusedField((i) =>
-            Math.min(fields.length - 1, i + 1)
-          );
+          setFocusedField(i => Math.min(fields.length - 1, i + 1));
           break;
         }
         case "tab": {
           evt.preventDefault();
-          setFocusedField((i) => (i + 1) % fields.length);
+          setFocusedField(i => (i + 1) % fields.length);
           break;
         }
         case "return":
@@ -171,9 +158,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
 
   const getConfigFields = () => {
     const type = formData().type;
-    const baseFields = [
-      { key: "name", label: "Channel Name", type: "text", required: true },
-    ];
+    const baseFields = [{ key: "name", label: "Channel Name", type: "text", required: true }];
 
     switch (type) {
       case "webhook":
@@ -318,7 +303,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
   };
 
   const handleFieldChange = (key: string, value: any) => {
-    setFormData((prev) => {
+    setFormData(prev => {
       const newConfig = { ...prev.config };
       setNestedValue(newConfig, key, value);
       return { ...prev, config: newConfig };
@@ -326,7 +311,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
   };
 
   const handleNameChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, name: value }));
+    setFormData(prev => ({ ...prev, name: value }));
   };
 
   const handleTest = async () => {
@@ -376,13 +361,8 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
         <For each={steps}>
           {(s, idx) => (
             <>
-              <text
-                fg={
-                  idx() <= currentIdx ? palette.accent : palette.dim
-                }
-              >
-                {idx() <= currentIdx ? "●" : "○"} {" "}
-                {s.charAt(0).toUpperCase() + s.slice(1)}
+              <text fg={idx() <= currentIdx ? palette.accent : palette.dim}>
+                {idx() <= currentIdx ? "●" : "○"} {s.charAt(0).toUpperCase() + s.slice(1)}
               </text>
               <Show when={idx() < steps.length - 1}>
                 <text fg={palette.dim}> → </text>
@@ -440,23 +420,13 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
               <box
                 flexDirection="row"
                 padding={1}
-                backgroundColor={
-                  index() === selectedTypeIndex()
-                    ? palette.bgSelected
-                    : undefined
-                }
+                backgroundColor={index() === selectedTypeIndex() ? palette.bgSelected : undefined}
               >
                 <box width={4}>
                   <text>{PLATFORM_ICONS[type]}</text>
                 </box>
                 <box width={15}>
-                  <text
-                    fg={
-                      index() === selectedTypeIndex()
-                        ? palette.accent
-                        : palette.text
-                    }
-                  >
+                  <text fg={index() === selectedTypeIndex() ? palette.accent : palette.text}>
                     {CHANNEL_TYPE_LABELS[type]}
                   </text>
                 </box>
@@ -475,9 +445,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
           </For>
         </box>
         <box flexDirection="column" marginTop={1}>
-          <text fg={palette.dim}>
-            ↑↓ Select | Enter Continue | Esc Cancel
-          </text>
+          <text fg={palette.dim}>↑↓ Select | Enter Continue | Esc Cancel</text>
         </box>
       </Show>
 
@@ -493,25 +461,12 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
                 <box
                   flexDirection="row"
                   padding={1}
-                  backgroundColor={
-                    index() === focusedField()
-                      ? palette.bgSelected
-                      : undefined
-                  }
+                  backgroundColor={index() === focusedField() ? palette.bgSelected : undefined}
                 >
                   <box width={20}>
-                    <text
-                      fg={
-                        index() === focusedField()
-                          ? palette.accent
-                          : palette.text
-                      }
-                    >
+                    <text fg={index() === focusedField() ? palette.accent : palette.text}>
                       {field.label}
-                      {field.required && (
-                        <text fg={palette.error}>*</text>
-                      )}
-                      :
+                      {field.required && <text fg={palette.error}>*</text>}:
                     </text>
                   </box>
                   <box flexGrow={1}>
@@ -521,30 +476,15 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
                         <text fg={palette.text}>
                           {field.type === "password"
                             ? "•".repeat(
-                                String(
-                                  getNestedValue(
-                                    formData().config,
-                                    field.key
-                                  ) || ""
-                                ).length
+                                String(getNestedValue(formData().config, field.key) || "").length
                               )
-                            : String(
-                                getNestedValue(
-                                  formData().config,
-                                  field.key
-                                ) || ""
-                              )}
-                          {index() === focusedField() && (
-                            <text fg={palette.accent}>▌</text>
-                          )}
+                            : String(getNestedValue(formData().config, field.key) || "")}
+                          {index() === focusedField() && <text fg={palette.accent}>▌</text>}
                         </text>
                       }
                     >
                       <text fg={palette.text}>
-                        {String(
-                          getNestedValue(formData().config, field.key) ||
-                            field.options?.[0]
-                        )}
+                        {String(getNestedValue(formData().config, field.key) || field.options?.[0])}
                         <text fg={palette.dim}> ▼</text>
                       </text>
                     </Show>
@@ -555,20 +495,13 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
           </box>
         </box>
         <box flexDirection="column" marginTop={1}>
-          <text fg={palette.dim}>
-            ↑↓ Navigate | Tab Next | Enter Test | Esc Back
-          </text>
+          <text fg={palette.dim}>↑↓ Navigate | Tab Next | Enter Test | Esc Back</text>
         </box>
       </Show>
 
       {/* Step 3: Test */}
       <Show when={step() === "test"}>
-        <box
-          flexDirection="column"
-          flexGrow={1}
-          alignItems="center"
-          justifyContent="center"
-        >
+        <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
           <Show when={loading()}>
             <text fg={palette.accent} marginBottom={1}>
               Testing connection...
@@ -590,9 +523,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
         </box>
         <box flexDirection="column" marginTop={1}>
           <text fg={palette.dim}>
-            {testResult()?.success
-              ? "Enter Continue | Esc Back"
-              : "Enter Retry | Esc Back"}
+            {testResult()?.success ? "Enter Continue | Esc Back" : "Enter Retry | Esc Back"}
           </text>
         </box>
       </Show>
@@ -611,8 +542,7 @@ export default function ChannelAddWizard(props: ChannelAddWizardProps) {
             <box flexDirection="row">
               <text fg={palette.dim}>Type: </text>
               <text fg={palette.text}>
-                {PLATFORM_ICONS[formData().type]}{" "}
-                {CHANNEL_TYPE_LABELS[formData().type]}
+                {PLATFORM_ICONS[formData().type]} {CHANNEL_TYPE_LABELS[formData().type]}
               </text>
             </box>
             <box flexDirection="row">

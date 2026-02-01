@@ -52,9 +52,9 @@ export default function CostDashboard(props: CostDashboardProps) {
     keyboard.bind("s", () => toggleSort());
     keyboard.bind("b", () => showBudgetSettings());
     keyboard.bind("o", () => showOptimizations());
-      keyboard.bind("q", () => {
-        props.onClose();
-      });
+    keyboard.bind("q", () => {
+      props.onClose();
+    });
   };
 
   const loadCostData = async () => {
@@ -150,11 +150,12 @@ export default function CostDashboard(props: CostDashboardProps) {
         <Text bold>💰 Cost Dashboard</Text>
         <Box flexGrow={1} />
         <Text>
-          Sort: <Text bold>[S]</Text> |{" "}
-          Period: <Text bold>[1]</Text> Daily <Text bold>[2]</Text> Weekly <Text bold>[3]</Text>{" "}
-          Monthly
+          Sort: <Text bold>[S]</Text> | Period: <Text bold>[1]</Text> Daily <Text bold>[2]</Text>{" "}
+          Weekly <Text bold>[3]</Text> Monthly
         </Text>
-        <Text>Quit: <Text bold>[Q]</Text></Text>
+        <Text>
+          Quit: <Text bold>[Q]</Text>
+        </Text>
       </Box>
 
       <Show when={loading()}>
@@ -171,11 +172,7 @@ export default function CostDashboard(props: CostDashboardProps) {
 
       <Show when={!loading() && !error()}>
         <Box flexDirection="column" padding={1}>
-          <Box
-            flexDirection="row"
-            padding={1}
-            backgroundColor={palette.secondary}
-          >
+          <Box flexDirection="row" padding={1} backgroundColor={palette.secondary}>
             <Box flexGrow={1}>
               <Text bold>Total Cost</Text>
               <Text fontSize={2}>{formatCurrency(totalCost())}</Text>
@@ -195,25 +192,33 @@ export default function CostDashboard(props: CostDashboardProps) {
           </Box>
 
           <Show when={budget() && budget()!.enabled}>
-            <Box
-              padding={1}
-              marginTop={1}
-              backgroundColor={palette.background}
-            >
+            <Box padding={1} marginTop={1} backgroundColor={palette.background}>
               <Text bold>Budget Status</Text>
               <Box flexDirection="row" alignItems="center" marginTop={1}>
                 <Text width={15}>Usage:</Text>
-                <Text color={getBudgetStatus() === "critical" ? palette.error : getBudgetStatus() === "warning" ? palette.warning : palette.success}>
+                <Text
+                  color={
+                    getBudgetStatus() === "critical"
+                      ? palette.error
+                      : getBudgetStatus() === "warning"
+                        ? palette.warning
+                        : palette.success
+                  }
+                >
                   {getBudgetUsage()}%
                 </Text>
                 <Box flexGrow={1} />
-                <Text>{formatCurrency(budget()!.current)} / {formatCurrency(budget()!.limit)}</Text>
+                <Text>
+                  {formatCurrency(budget()!.current)} / {formatCurrency(budget()!.limit)}
+                </Text>
               </Box>
               <Box flexDirection="row" alignItems="center" marginTop={1}>
                 <Text width={15}>Remaining:</Text>
                 <Text bold>{formatCurrency(budget()!.limit - budget()!.current)}</Text>
                 <Box flexGrow={1} />
-                <Text>Manage Budget: <Text bold>[B]</Text></Text>
+                <Text>
+                  Manage Budget: <Text bold>[B]</Text>
+                </Text>
               </Box>
             </Box>
           </Show>
@@ -222,18 +227,17 @@ export default function CostDashboard(props: CostDashboardProps) {
             <Text bold>Cost Breakdown</Text>
           </Box>
 
-          <Box
-            flexDirection="column"
-            flexGrow={1}
-            padding={1}
-            backgroundColor={palette.background}
-          >
+          <Box flexDirection="column" flexGrow={1} padding={1} backgroundColor={palette.background}>
             <Box flexDirection="row" padding={0.5}>
               <Text width={15}>Date</Text>
               <Text width={20}>Provider</Text>
               <Text width={15}>Model</Text>
-              <Text width={10} textAlign="right">Tokens</Text>
-              <Text width={10} textAlign="right">Cost</Text>
+              <Text width={10} textAlign="right">
+                Tokens
+              </Text>
+              <Text width={10} textAlign="right">
+                Cost
+              </Text>
             </Box>
 
             <Box flexDirection="column">
@@ -242,14 +246,8 @@ export default function CostDashboard(props: CostDashboardProps) {
                   <Box
                     flexDirection="row"
                     padding={0.5}
-                    backgroundColor={
-                      index() === selectedIndex() ? palette.primary : undefined
-                    }
-                    color={
-                      index() === selectedIndex()
-                        ? palette.background
-                        : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.primary : undefined}
+                    color={index() === selectedIndex() ? palette.background : undefined}
                   >
                     <Text width={15}>{entry.date}</Text>
                     <Text width={20}>{entry.provider}</Text>
@@ -266,15 +264,14 @@ export default function CostDashboard(props: CostDashboardProps) {
             </Box>
           </Box>
 
-          <Box
-            flexDirection="row"
-            padding={1}
-            marginTop={1}
-            backgroundColor={palette.secondary}
-          >
-            <Text>Show Budget: <Text bold>[B]</Text></Text>
+          <Box flexDirection="row" padding={1} marginTop={1} backgroundColor={palette.secondary}>
+            <Text>
+              Show Budget: <Text bold>[B]</Text>
+            </Text>
             <Box flexGrow={1} />
-            <Text>Optimizations: <Text bold>[O]</Text></Text>
+            <Text>
+              Optimizations: <Text bold>[O]</Text>
+            </Text>
           </Box>
         </Box>
       </Show>
@@ -284,6 +281,7 @@ export default function CostDashboard(props: CostDashboardProps) {
 
 const Box: any = (props: any) => props.children;
 const Text: any = (props: any) => {
-  const content = typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
+  const content =
+    typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
   return <span style={props}>{content}</span>;
 };

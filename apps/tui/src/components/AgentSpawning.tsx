@@ -55,9 +55,9 @@ export default function AgentSpawning() {
     keyboard.bind("a", () => attachToSession());
     keyboard.bind("r", () => restartAgent());
     keyboard.bind("l", () => viewLogs());
-      keyboard.bind("q", () => {
-        props.onClose();
-      });
+    keyboard.bind("q", () => {
+      props.onClose();
+    });
     keyboard.bind("esc", () => {
       if (showCreateModal()) {
         setShowCreateModal(false);
@@ -125,12 +125,9 @@ export default function AgentSpawning() {
     if (!agent) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/agents/${agent.id}/stop`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/agents/${agent.id}/stop`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to stop agent");
@@ -147,12 +144,9 @@ export default function AgentSpawning() {
     if (!agent) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/agents/${agent.id}/kill`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/agents/${agent.id}/kill`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to kill agent");
@@ -169,12 +163,9 @@ export default function AgentSpawning() {
     if (!agent) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/agents/${agent.id}/restart`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/agents/${agent.id}/restart`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to restart agent");
@@ -247,7 +238,7 @@ export default function AgentSpawning() {
   };
 
   const getAgentCount = (status: AgentStatus) => {
-    return agents().filter((a) => a.status === status).length;
+    return agents().filter(a => a.status === status).length;
   };
 
   return (
@@ -262,10 +253,12 @@ export default function AgentSpawning() {
         <Box flexGrow={1} />
         <Text>
           <Text bold>[C]</Text>reate <Text bold>[S]</Text>top <Text bold>[K]</Text>ill{" "}
-          <Text bold>[R]</Text>estart <Text bold>[V]</Text>iew{" "}
-          <Text bold>[A]</Text>ttach <Text bold>[L]</Text>ogs
+          <Text bold>[R]</Text>estart <Text bold>[V]</Text>iew <Text bold>[A]</Text>ttach{" "}
+          <Text bold>[L]</Text>ogs
         </Text>
-        <Text>Quit: <Text bold>[Q]</Text></Text>
+        <Text>
+          Quit: <Text bold>[Q]</Text>
+        </Text>
       </Box>
 
       <Show when={loading()}>
@@ -282,11 +275,7 @@ export default function AgentSpawning() {
 
       <Show when={!loading() && !error()}>
         <Box flexDirection="column" padding={1}>
-          <Box
-            flexDirection="row"
-            padding={1}
-            backgroundColor={palette.bgSecondary}
-          >
+          <Box flexDirection="row" padding={1} backgroundColor={palette.bgSecondary}>
             <Box flexGrow={1}>
               <Text bold>Total Agents</Text>
               <Text fontSize={2}>{agents().length}</Text>
@@ -360,9 +349,7 @@ export default function AgentSpawning() {
                   <Button onClick={createAgent}>Create</Button>
                 </Box>
                 <Box flexGrow={1}>
-                  <Button onClick={() => setShowCreateModal(false)}>
-                    Cancel
-                  </Button>
+                  <Button onClick={() => setShowCreateModal(false)}>Cancel</Button>
                 </Box>
               </Box>
             </Box>
@@ -372,35 +359,19 @@ export default function AgentSpawning() {
             <Text bold>Active Agents</Text>
           </Box>
 
-          <Box
-            flexDirection="column"
-            flexGrow={1}
-            padding={1}
-            backgroundColor={palette.background}
-          >
+          <Box flexDirection="column" flexGrow={1} padding={1} backgroundColor={palette.background}>
             <For each={agents()}>
               {(agent, index) => (
                 <Box
                   flexDirection="row"
                   padding={0.5}
-                  backgroundColor={
-                    index() === selectedIndex()
-                      ? palette.bgSelected
-                      : undefined
-                  }
-                  color={
-                    index() === selectedIndex()
-                      ? palette.text
-                      : undefined
-                  }
+                  backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
+                  color={index() === selectedIndex() ? palette.text : undefined}
                   onClick={() => setSelectedIndex(index())}
                 >
                   <Text width={25}>{agent.name}</Text>
                   <Text width={15}>{getAgentTypeLabel(agent.type)}</Text>
-                  <Text
-                    width={15}
-                    color={getStatusColor(agent.status)}
-                  >
+                  <Text width={15} color={getStatusColor(agent.status)}>
                     {getStatusLabel(agent.status)}
                   </Text>
                   <Text width={20}>{agent.created}</Text>
@@ -411,24 +382,18 @@ export default function AgentSpawning() {
 
             <Show when={agents().length === 0}>
               <Box padding={2} textAlign="center">
-                <Text color={palette.dim}>
-                  No agents running. Press [C] to create one.
-                </Text>
+                <Text color={palette.dim}>No agents running. Press [C] to create one.</Text>
               </Box>
             </Show>
           </Box>
 
-          <Box
-            flexDirection="row"
-            padding={1}
-            marginTop={1}
-            backgroundColor={palette.bgSecondary}
-          >
-            <Text>Create: <Text bold>[C]</Text></Text>
+          <Box flexDirection="row" padding={1} marginTop={1} backgroundColor={palette.bgSecondary}>
+            <Text>
+              Create: <Text bold>[C]</Text>
+            </Text>
             <Box flexGrow={1} />
             <Text>
-              Stop: <Text bold>[S]</Text> Kill: <Text bold>[K]</Text> Restart:{" "}
-              <Text bold>[R]</Text>
+              Stop: <Text bold>[S]</Text> Kill: <Text bold>[K]</Text> Restart: <Text bold>[R]</Text>
             </Text>
           </Box>
         </Box>
@@ -439,7 +404,8 @@ export default function AgentSpawning() {
 
 const Box: any = (props: any) => props.children;
 const Text: any = (props: any) => {
-  const content = typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
+  const content =
+    typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
   return <span style={props}>{content}</span>;
 };
 const TextInput: any = (props: any) => (

@@ -61,9 +61,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
         setShowCreateModal(false);
       }
     });
-      keyboard.bind("q", () => {
-        props.onClose();
-      });
+    keyboard.bind("q", () => {
+      props.onClose();
+    });
   };
 
   const loadPolicies = async () => {
@@ -84,9 +84,7 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
 
   const loadRequests = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:3000/api/approvals/pending"
-      );
+      const response = await fetch("http://localhost:3000/api/approvals/pending");
       if (!response.ok) {
         throw new Error("Failed to load approval requests");
       }
@@ -150,12 +148,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
     if (!policy) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/policies/${policy.id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/policies/${policy.id}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to delete policy");
@@ -172,12 +167,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
     if (!policy) return;
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/policies/${policy.id}/toggle`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/policies/${policy.id}/toggle`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to toggle policy");
@@ -198,12 +190,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
 
   const approveRequest = async (requestId: string) => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/approvals/${requestId}/approve`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/approvals/${requestId}/approve`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to approve request");
@@ -217,12 +206,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
 
   const denyRequest = async (requestId: string) => {
     try {
-      const response = await fetch(
-        `http://localhost:3000/api/approvals/${requestId}/deny`,
-        {
-          method: "POST",
-        }
-      );
+      const response = await fetch(`http://localhost:3000/api/approvals/${requestId}/deny`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to deny request");
@@ -295,7 +281,9 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
         <Text>
           View: <Text bold>[1]</Text> Policies <Text bold>[2]</Text> Requests
         </Text>
-        <Text>Quit: <Text bold>[Q]</Text></Text>
+        <Text>
+          Quit: <Text bold>[Q]</Text>
+        </Text>
       </Box>
 
       <Show when={error()}>
@@ -307,11 +295,7 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
       <Show when={!loading()}>
         <Box flexDirection="column" padding={1} flexGrow={1}>
           <Show when={view() === "policies"}>
-            <Box
-              flexDirection="row"
-              padding={1}
-              backgroundColor={palette.bgSecondary}
-            >
+            <Box flexDirection="row" padding={1} backgroundColor={palette.bgSecondary}>
               <Box flexGrow={1}>
                 <Text bold>Total Policies</Text>
                 <Text fontSize={2}>{policies().length}</Text>
@@ -319,13 +303,13 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
               <Box flexGrow={1}>
                 <Text bold>Active</Text>
                 <Text fontSize={2} color={palette.success}>
-                  {policies().filter((p) => p.active).length}
+                  {policies().filter(p => p.active).length}
                 </Text>
               </Box>
               <Box flexGrow={1}>
                 <Text bold>Auto-Approve</Text>
                 <Text fontSize={2} color={palette.accent}>
-                  {policies().filter((p) => p.autoApprove).length}
+                  {policies().filter(p => p.autoApprove).length}
                 </Text>
               </Box>
             </Box>
@@ -392,9 +376,7 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
                     <Button onClick={createPolicy}>Create</Button>
                   </Box>
                   <Box flexGrow={1}>
-                    <Button onClick={() => setShowCreateModal(false)}>
-                      Cancel
-                    </Button>
+                    <Button onClick={() => setShowCreateModal(false)}>Cancel</Button>
                   </Box>
                 </Box>
               </Box>
@@ -415,38 +397,23 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
                   <Box
                     flexDirection="row"
                     padding={0.5}
-                    backgroundColor={
-                      index() === selectedIndex()
-                        ? palette.bgSelected
-                        : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                     onClick={() => setSelectedIndex(index())}
                   >
                     <Text width={30}>{policy.name}</Text>
-                    <Text width={20}>
-                      {getActionTypeLabel(policy.actionType)}
-                    </Text>
-                    <Text width={20}>
-                      {getApprovalActionLabel(policy.action)}
-                    </Text>
-                    <Text
-                      width={15}
-                      color={policy.active ? palette.success : palette.dim}
-                    >
+                    <Text width={20}>{getActionTypeLabel(policy.actionType)}</Text>
+                    <Text width={20}>{getApprovalActionLabel(policy.action)}</Text>
+                    <Text width={15} color={policy.active ? palette.success : palette.dim}>
                       {policy.active ? "Active" : "Inactive"}
                     </Text>
-                    <Text width={15}>
-                      {policy.autoApprove ? "Auto" : "Manual"}
-                    </Text>
+                    <Text width={15}>{policy.autoApprove ? "Auto" : "Manual"}</Text>
                   </Box>
                 )}
               </For>
 
               <Show when={policies().length === 0}>
                 <Box padding={2} textAlign="center">
-                  <Text color={palette.dim}>
-                    No policies configured. Press [N] to create one.
-                  </Text>
+                  <Text color={palette.dim}>No policies configured. Press [N] to create one.</Text>
                 </Box>
               </Show>
             </Box>
@@ -457,45 +424,33 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
               marginTop={1}
               backgroundColor={palette.bgSecondary}
             >
-              <Text>Create: <Text bold>[N]</Text></Text>
+              <Text>
+                Create: <Text bold>[N]</Text>
+              </Text>
               <Box flexGrow={1} />
               <Text>
-                Edit: <Text bold>[E]</Text> Delete: <Text bold>[D]</Text>{" "}
-                Toggle: <Text bold>[A]</Text>
+                Edit: <Text bold>[E]</Text> Delete: <Text bold>[D]</Text> Toggle:{" "}
+                <Text bold>[A]</Text>
               </Text>
             </Box>
           </Show>
 
           <Show when={view() === "requests"}>
-            <Box
-              flexDirection="row"
-              padding={1}
-              backgroundColor={palette.bgSecondary}
-            >
+            <Box flexDirection="row" padding={1} backgroundColor={palette.bgSecondary}>
               <Box flexGrow={1}>
                 <Text bold>Pending Requests</Text>
-                <Text fontSize={2}>
-                  {requests().filter((r) => r.status === "pending").length}
-                </Text>
+                <Text fontSize={2}>{requests().filter(r => r.status === "pending").length}</Text>
               </Box>
               <Box flexGrow={1}>
                 <Text bold>Approved Today</Text>
                 <Text fontSize={2} color={palette.success}>
-                  {
-                    requests().filter(
-                      (r) => r.status === "approved"
-                    ).length
-                  }
+                  {requests().filter(r => r.status === "approved").length}
                 </Text>
               </Box>
               <Box flexGrow={1}>
                 <Text bold>Denied Today</Text>
                 <Text fontSize={2} color={palette.error}>
-                  {
-                    requests().filter(
-                      (r) => r.status === "denied"
-                    ).length
-                  }
+                  {requests().filter(r => r.status === "denied").length}
                 </Text>
               </Box>
             </Box>
@@ -515,22 +470,13 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
                   <Box
                     flexDirection="row"
                     padding={0.5}
-                    backgroundColor={
-                      index() === selectedIndex()
-                        ? palette.bgSelected
-                        : undefined
-                    }
+                    backgroundColor={index() === selectedIndex() ? palette.bgSelected : undefined}
                     onClick={() => setSelectedIndex(index())}
                   >
                     <Text width={25}>{request.agentName}</Text>
-                    <Text width={20}>
-                      {getActionTypeLabel(request.actionType)}
-                    </Text>
+                    <Text width={20}>{getActionTypeLabel(request.actionType)}</Text>
                     <Text width={20}>{request.tool}</Text>
-                    <Text
-                      width={15}
-                      color={getRequestStatusColor(request.status)}
-                    >
+                    <Text width={15} color={getRequestStatusColor(request.status)}>
                       {getRequestStatusLabel(request.status)}
                     </Text>
                     <Text width={20}>{request.timestamp}</Text>
@@ -559,9 +505,7 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
 
               <Show when={requests().length === 0}>
                 <Box padding={2} textAlign="center">
-                  <Text color={palette.dim}>
-                    No pending requests.
-                  </Text>
+                  <Text color={palette.dim}>No pending requests.</Text>
                 </Box>
               </Show>
             </Box>
@@ -572,9 +516,13 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
               marginTop={1}
               backgroundColor={palette.bgSecondary}
             >
-              <Text>Review: <Text bold>[R]</Text></Text>
+              <Text>
+                Review: <Text bold>[R]</Text>
+              </Text>
               <Box flexGrow={1} />
-              <Text>Approve: <Text bold>✓</Text> Deny: <Text bold>✗</Text></Text>
+              <Text>
+                Approve: <Text bold>✓</Text> Deny: <Text bold>✗</Text>
+              </Text>
             </Box>
           </Show>
         </Box>
@@ -585,7 +533,8 @@ export default function PolicyApprovals(props: PolicyApprovalsProps) {
 
 const Box: any = (props: any) => props.children;
 const Text: any = (props: any) => {
-  const content = typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
+  const content =
+    typeof props.children === "string" ? props.children : props.children?.join?.("") || "";
   return <span style={props}>{content}</span>;
 };
 const TextInput: any = (props: any) => (

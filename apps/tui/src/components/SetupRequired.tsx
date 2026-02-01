@@ -1,7 +1,11 @@
 import { createSignal, createEffect, onMount } from "solid-js";
 import { Effect } from "effect";
 import { useEffectService, AppRuntime } from "../lib/hooks";
-import { ProviderService, Provider as ProviderType, Model as ModelType } from "../services/provider-service";
+import {
+  ProviderService,
+  Provider as ProviderType,
+  Model as ModelType,
+} from "../services/provider-service";
 import { saveConfig } from "../services/config";
 
 interface SetupRequiredProps {
@@ -29,15 +33,17 @@ export default function SetupRequired(props: SetupRequiredProps) {
     AppRuntime.runFork(
       service.fetchProviders.pipe(
         Effect.tap(providers => Effect.sync(() => setProviders(providers))),
-        Effect.catchAll(err => Effect.sync(() => {
-          setFetchError(err.message || "Failed to connect to runtime");
-          setProviders([
-            { id: "openai", name: "OpenAI", requires_api_key: true },
-            { id: "anthropic", name: "Anthropic", requires_api_key: true },
-            { id: "google", name: "Google AI", requires_api_key: true },
-            { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
-          ]);
-        }))
+        Effect.catchAll(err =>
+          Effect.sync(() => {
+            setFetchError(err.message || "Failed to connect to runtime");
+            setProviders([
+              { id: "openai", name: "OpenAI", requires_api_key: true },
+              { id: "anthropic", name: "Anthropic", requires_api_key: true },
+              { id: "google", name: "Google AI", requires_api_key: true },
+              { id: "ollama", name: "Ollama (Local)", requires_api_key: false },
+            ]);
+          })
+        )
       )
     );
   });
@@ -157,35 +163,40 @@ export default function SetupRequired(props: SetupRequiredProps) {
               <text fg="gray">Selected: {selectedProvider()?.name}</text>
             </box>
 
-              <box marginTop={1}>
-                <text fg="gray">Model:</text>
-                <box flexDirection="column">
-                  {models().length > 0 ? (
-                    models().map(m => {
-                      const priceInfo = m.input_price_1m && m.output_price_1m
+            <box marginTop={1}>
+              <text fg="gray">Model:</text>
+              <box flexDirection="column">
+                {models().length > 0 ? (
+                  models().map(m => {
+                    const priceInfo =
+                      m.input_price_1m && m.output_price_1m
                         ? ` $${m.input_price_1m}/$${m.output_price_1m} per 1M tokens`
                         : "";
-                      const ctxInfo = m.context_window ? ` ${m.context_window}k ctx` : "";
-                      const toolsInfo = m.supports_tools ? " tools" : "";
+                    const ctxInfo = m.context_window ? ` ${m.context_window}k ctx` : "";
+                    const toolsInfo = m.supports_tools ? " tools" : "";
 
-                      return (
-                        <box
-                          borderStyle="single"
-                          borderColor={modelName() === m.id ? "cyan" : "gray"}
-                          padding={1}
-                        >
-                          <text fg={modelName() === m.id ? "cyan" : "white"}>{m.name}</text>
-                          {priceInfo && (
-                            <text fg="gray">{priceInfo}{ctxInfo}{toolsInfo}</text>
-                          )}
-                        </box>
-                      );
-                    })
-                  ) : (
-                    <text fg="gray">No models available</text>
-                  )}
-                </box>
+                    return (
+                      <box
+                        borderStyle="single"
+                        borderColor={modelName() === m.id ? "cyan" : "gray"}
+                        padding={1}
+                      >
+                        <text fg={modelName() === m.id ? "cyan" : "white"}>{m.name}</text>
+                        {priceInfo && (
+                          <text fg="gray">
+                            {priceInfo}
+                            {ctxInfo}
+                            {toolsInfo}
+                          </text>
+                        )}
+                      </box>
+                    );
+                  })
+                ) : (
+                  <text fg="gray">No models available</text>
+                )}
               </box>
+            </box>
 
             <box marginTop={1}>
               <text fg="gray">

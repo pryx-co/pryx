@@ -44,7 +44,7 @@ export default function McpAddServer(props: McpAddServerProps) {
     try {
       const result = await mcpService().validateUrl(url(), transport());
       setValidation(result);
-      
+
       if (!result.valid) {
         setError(result.errors.join(", ") || "Validation failed");
         setStep("input");
@@ -72,7 +72,7 @@ export default function McpAddServer(props: McpAddServerProps) {
         url: url(),
         transport: transport(),
       });
-      
+
       setSuccess("✓ Server added successfully");
       setTimeout(() => {
         props.onAdded();
@@ -141,20 +141,23 @@ export default function McpAddServer(props: McpAddServerProps) {
 
   const renderInput = () => (
     <box flexDirection="column" flexGrow={1}>
-      <text fg={palette.accent} marginBottom={1}>Add Custom MCP Server</text>
+      <text fg={palette.accent} marginBottom={1}>
+        Add Custom MCP Server
+      </text>
 
       <box flexDirection="column" marginBottom={1}>
         <text fg={palette.dim}>Transport:</text>
         <box flexDirection="row" gap={2} marginTop={1}>
           <For each={transports}>
-            {(t) => (
+            {t => (
               <box
                 borderStyle="single"
                 borderColor={transport() === t ? palette.accent : palette.border}
                 padding={{ left: 1, right: 1 }}
               >
                 <text fg={transport() === t ? palette.accent : palette.dim}>
-                  {transport() === t ? "● " : "○ "}{t}
+                  {transport() === t ? "● " : "○ "}
+                  {t}
                 </text>
               </box>
             )}
@@ -219,7 +222,9 @@ export default function McpAddServer(props: McpAddServerProps) {
 
     return (
       <box flexDirection="column" flexGrow={1}>
-        <text fg={palette.accent} marginBottom={1}>Confirm Add Server</text>
+        <text fg={palette.accent} marginBottom={1}>
+          Confirm Add Server
+        </text>
 
         <box flexDirection="column" gap={1}>
           <box flexDirection="row">
@@ -239,9 +244,7 @@ export default function McpAddServer(props: McpAddServerProps) {
 
           <box flexDirection="row">
             <text fg={palette.dim}>Security Rating: </text>
-            <text fg={ratingColors[val.securityRating] || palette.dim}>
-              [{val.securityRating}]
-            </text>
+            <text fg={ratingColors[val.securityRating] || palette.dim}>[{val.securityRating}]</text>
           </box>
 
           <Show when={val.warnings.length > 0}>
@@ -249,9 +252,7 @@ export default function McpAddServer(props: McpAddServerProps) {
               <text fg={palette.warning}>⚠ Warnings:</text>
               <box flexDirection="column" marginLeft={2} marginTop={1}>
                 <For each={val.warnings}>
-                  {(warning) => (
-                    <text fg={palette.warning}>• {warning}</text>
-                  )}
+                  {warning => <text fg={palette.warning}>• {warning}</text>}
                 </For>
               </box>
             </box>
