@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"pryx-core/internal/agentbus"
+	"pryx-core/internal/auth"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/config"
 	"pryx-core/internal/keychain"
@@ -54,6 +55,8 @@ type Server struct {
 	spawnTool    SpawnTool
 	ragMemory    *memory.RAGManager
 	store        *store.Store
+	pkceParams   map[string]*auth.PKCEParams // Temporary storage for PKCE during OAuth flow
+	mu           sync.Mutex                  // Protects pkceParams
 
 	httpMu     sync.Mutex
 	httpServer *http.Server
@@ -65,6 +68,7 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(corsMiddleware(cfg))
+	r.Use(DefaultRateLimiter().Middleware)
 
 	p := policy.NewEngine(nil)
 
@@ -173,6 +177,12 @@ func (s *Server) routes() {
 	s.router.Post("/skills/uninstall", s.handleSkillsUninstall)
 	s.router.Get("/api/v1/providers", s.handleProvidersList)
 	s.router.Get("/api/v1/providers/{id}/models", s.handleProviderModels)
+	s.router.Get("/api/v1/providers/{id}/key", s.handleProviderKeyStatus)
+	s.router.Post("/api/v1/providers/{id}/key", s.handleProviderKeySet)
+	s.router.Delete("/api/v1/providers/{id}/key", s.handleProviderKeyDelete)
+	s.router.Get("/api/v1/cloud/status", s.handleCloudStatus)
+	s.router.Post("/api/v1/cloud/login/start", s.handleCloudLoginStart)
+	s.router.Post("/api/v1/cloud/login/poll", s.handleCloudLoginPoll)
 	s.router.Get("/api/v1/models", s.handleModelsList)
 	s.router.Get("/api/v1/agents", s.handleAgentsList)
 	s.router.Get("/api/v1/agents/{id}", s.handleAgentGet)

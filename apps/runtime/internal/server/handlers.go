@@ -1,11 +1,15 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"pryx-core/internal/auth"
 	"pryx-core/internal/memory"
 	"pryx-core/internal/skills"
 	"pryx-core/internal/validation"
@@ -15,8 +19,167 @@ import (
 
 // handleHealth returns a simple health check response.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	activeProvider := strings.TrimSpace(s.cfg.ModelProvider)
+	configuredProviders := []string{}
+	cloudLoggedIn := false
+	if s.keychain != nil {
+		if token, err := s.keychain.Get("cloud_access_token"); err == nil && strings.TrimSpace(token) != "" {
+			cloudLoggedIn = true
+		}
+	}
+
+	switch activeProvider {
+	case "":
+	case "ollama":
+		if strings.TrimSpace(s.cfg.OllamaEndpoint) != "" {
+			configuredProviders = append(configuredProviders, "ollama")
+		}
+	default:
+		if s.keychain != nil {
+			if key, err := s.keychain.GetProviderKey(activeProvider); err == nil && strings.TrimSpace(key) != "" {
+				configuredProviders = append(configuredProviders, activeProvider)
+			}
+			if activeProvider == "google" {
+				if token, err := s.keychain.Get("oauth_google_access"); err == nil && strings.TrimSpace(token) != "" {
+					configuredProviders = append(configuredProviders, activeProvider)
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"status":          "ok",
+		"providers":       configuredProviders,
+		"cloud_logged_in": cloudLoggedIn,
+	})
+}
+
+func (s *Server) handleCloudStatus(w http.ResponseWriter, r *http.Request) {
+	if s.keychain == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "keychain not available"})
+		return
+	}
+
+	token, err := s.keychain.Get("cloud_access_token")
+	if err != nil {
+		token = ""
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"logged_in": strings.TrimSpace(token) != "",
+	})
+}
+
+func (s *Server) handleCloudLoginStart(w http.ResponseWriter, r *http.Request) {
+	apiUrl := strings.TrimSpace(s.cfg.CloudAPIUrl)
+	if apiUrl == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "missing cloud api url"})
+		return
+	}
+
+	// Use PKCE-enabled device flow for enhanced security (RFC 7636)
+	res, pkce, err := auth.StartDeviceFlowWithPKCE(apiUrl)
+	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error()})
+		return
+	}
+
+	// Store PKCE parameters temporarily (they'll be used during polling)
+	// In production, store in session or encrypted cookie
+	s.mu.Lock()
+	if s.pkceParams == nil {
+		s.pkceParams = make(map[string]*auth.PKCEParams)
+	}
+	s.pkceParams[res.DeviceCode] = pkce
+	s.mu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+type cloudLoginPollRequest struct {
+	DeviceCode string `json:"device_code"`
+	Interval   int    `json:"interval"`
+	ExpiresIn  int    `json:"expires_in"`
+}
+
+func (s *Server) handleCloudLoginPoll(w http.ResponseWriter, r *http.Request) {
+	if s.keychain == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "keychain not available"})
+		return
+	}
+
+	apiUrl := strings.TrimSpace(s.cfg.CloudAPIUrl)
+	if apiUrl == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "missing cloud api url"})
+		return
+	}
+
+	req := cloudLoginPollRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid json body"})
+		return
+	}
+	deviceCode := strings.TrimSpace(req.DeviceCode)
+	if deviceCode == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "missing device_code"})
+		return
+	}
+
+	timeoutSeconds := req.ExpiresIn
+	if timeoutSeconds <= 0 || timeoutSeconds > 1800 {
+		timeoutSeconds = 600
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), time.Duration(timeoutSeconds)*time.Second)
+	defer cancel()
+
+	// Retrieve PKCE parameters for this device code
+	s.mu.Lock()
+	pkce := s.pkceParams[deviceCode]
+	// Clean up PKCE params after use
+	delete(s.pkceParams, deviceCode)
+	s.mu.Unlock()
+
+	var token *auth.TokenResponse
+	var err error
+
+	if pkce != nil {
+		// Use PKCE-enabled polling
+		token, err = auth.PollForTokenWithPKCE(ctx, apiUrl, deviceCode, req.Interval, pkce.CodeVerifier)
+	} else {
+		// Fallback to legacy polling (for backwards compatibility)
+		token, err = auth.PollForTokenWithContext(ctx, apiUrl, deviceCode, req.Interval)
+	}
+
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			w.WriteHeader(http.StatusRequestTimeout)
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "login timed out"})
+			return
+		}
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": err.Error()})
+		return
+	}
+
+	if err := s.keychain.Set("cloud_access_token", token.AccessToken); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "failed to store token"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 }
 
 // handleMCPTools returns the list of available MCP tools.
@@ -25,12 +188,12 @@ func (s *Server) handleMCPTools(w http.ResponseWriter, r *http.Request) {
 	tools, err := s.mcp.ListToolsFlat(r.Context(), refresh)
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": err.Error(),
 		})
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"tools": tools,
 	})
 }
@@ -47,7 +210,7 @@ func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 	req := mcpCallRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": "invalid json body",
 		})
 		return
@@ -57,7 +220,7 @@ func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 
 	if err := validator.ValidateSessionID(req.SessionID); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": err.Error(),
 		})
 		return
@@ -65,7 +228,7 @@ func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 
 	if err := validator.ValidateToolName(req.Tool); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": err.Error(),
 		})
 		return
@@ -77,7 +240,7 @@ func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 
 	if err := validator.ValidateMap("arguments", req.Arguments); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": err.Error(),
 		})
 		return
@@ -86,7 +249,7 @@ func (s *Server) handleMCPCall(w http.ResponseWriter, r *http.Request) {
 	res, err := s.mcp.CallTool(r.Context(), strings.TrimSpace(req.SessionID), req.Tool, req.Arguments)
 	if err != nil {
 		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error": err.Error(),
 		})
 		return
@@ -486,6 +649,101 @@ func (s *Server) handleProviderModels(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{"error": "provider not found"})
 	}
+}
+
+func (s *Server) handleProviderKeyStatus(w http.ResponseWriter, r *http.Request) {
+	providerID := strings.TrimSpace(chi.URLParam(r, "id"))
+
+	validator := validation.NewValidator()
+	if err := validator.ValidateID("id", providerID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	if s.keychain == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "keychain not available"})
+		return
+	}
+
+	_, err := s.keychain.GetProviderKey(providerID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"provider_id": providerID,
+		"configured":  err == nil,
+	})
+}
+
+func (s *Server) handleProviderKeySet(w http.ResponseWriter, r *http.Request) {
+	providerID := strings.TrimSpace(chi.URLParam(r, "id"))
+
+	validator := validation.NewValidator()
+	if err := validator.ValidateID("id", providerID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	if s.keychain == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "keychain not available"})
+		return
+	}
+
+	var req struct {
+		APIKey string `json:"api_key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	key := strings.TrimSpace(req.APIKey)
+	if err := validator.ValidateRequired("api_key", key); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	if err := s.keychain.SetProviderKey(providerID, key); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to store key"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"ok":          true,
+		"provider_id": providerID,
+	})
+}
+
+func (s *Server) handleProviderKeyDelete(w http.ResponseWriter, r *http.Request) {
+	providerID := strings.TrimSpace(chi.URLParam(r, "id"))
+
+	validator := validation.NewValidator()
+	if err := validator.ValidateID("id", providerID); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	if s.keychain == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(map[string]string{"error": "keychain not available"})
+		return
+	}
+
+	if err := s.keychain.DeleteProviderKey(providerID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to delete key"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // handleModelsList returns the list of all available LLM models.
