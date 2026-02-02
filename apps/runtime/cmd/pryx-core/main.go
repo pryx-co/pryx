@@ -11,10 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	// 	"pryx-core/internal/auth"
-
 	"pryx-core/internal/agent"
 	"pryx-core/internal/agent/spawn"
+	"pryx-core/internal/auth"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/channels"
 	channelsSlack "pryx-core/internal/channels/slack"
@@ -59,6 +58,8 @@ func main() {
 			os.Exit(runChannel(os.Args[2:]))
 		case "session":
 			os.Exit(runSession(os.Args[2:]))
+		case "login":
+			os.Exit(runLogin())
 		case "help", "-h", "--help":
 			usage()
 			return
@@ -432,3 +433,53 @@ func runDoctor() int {
 // 	fmt.Println("\nSuccessfully logged in!")
 // 	return 0
 // }
+
+func runLogin() int {
+	cfg := config.Load()
+	kc := keychain.New("pryx")
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	fmt.Println("Attempting to log in to Pryx Cloud...")
+
+	// Use PKCE-enabled device flow for enhanced security (RFC 7636)
+	res, pkce, err := auth.StartDeviceFlowWithPKCE(cfg.CloudAPIUrl)
+	if err != nil {
+		log.Printf("\nLogin failed: %v", err)
+		return 1
+	}
+
+	fmt.Printf("\nVerification URL: %s\n", res.VerificationURI)
+	fmt.Printf("User Code: %s\n", res.UserCode)
+	fmt.Println("Please open the URL above and enter the code to authorize this device.")
+	fmt.Println("Waiting for authorization...")
+
+	tokenCh := make(chan *auth.TokenResponse, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		// Use PKCE verifier when polling for token
+		token, err := auth.PollForTokenWithPKCE(ctx, cfg.CloudAPIUrl, res.DeviceCode, res.Interval, pkce.CodeVerifier)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		tokenCh <- token
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Printf("\nLogin cancelled")
+		return 1
+	case err := <-errCh:
+		log.Printf("\nLogin failed: %v", err)
+		return 1
+	case token := <-tokenCh:
+		if err := kc.Set("cloud_access_token", token.AccessToken); err != nil {
+			log.Printf("\nFailed to store token: %v", err)
+			return 1
+		}
+	}
+
+	fmt.Println("\nSuccessfully logged in!")
+	return 0
+}
