@@ -10,7 +10,7 @@
 
 > **Sovereign AI agent with local-first control center**
 
-Pryx is a second-generation AI agent platform that combines the power of local-first control with the polish of a modern desktop application. Replace fragile CLI + config-file assistants with a first-class UI, secure permission gating, and transparent observability—without sacrificing data sovereignty.
+Pryx is a second-generation AI autonomous agent platform that combines the power of local-first control with the polish of a multiple access application. Replace fragile CLI + config-file assistants with a first-class UI, secure permission gating, and transparent observability—without sacrificing data sovereignty.
 
 ---
 
@@ -526,7 +526,7 @@ make check
 - **[Architecture](docs/architecture/)** - Technical architecture and design
 - **[API Reference](docs/api/)** - Runtime HTTP API documentation
 - **[Security](docs/security/)** - Security audit and best practices
-- **[Testing](docs/TESTING.md)** - Test strategy and coverage
+- **[Testing](docs/testing/TESTING.md)** - Test strategy and coverage
 - **[Build System](BUILD_SYSTEM.md)** - Build and tooling guide
 
 ---
@@ -586,4 +586,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 **Made with ❤️ by the Pryx Team**
 
 *Take control of your AI. Be sovereign.*
-

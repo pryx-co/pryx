@@ -76,7 +76,7 @@ ok     	pryx-core/e2e	5.560s
 ## What Was Delivered
 
 ### 1. ✅ Testing Strategy Document
-**File**: `apps/runtime/E2E_TEST_MATRIX.md`
+**File**: `apps/runtime/docs/testing/E2E_TEST_MATRIX.md`
 - Comprehensive E2E and Integration test strategy for all CLI features
 - Based on Moltbot and opencode testing patterns
 - Defined test organization, priorities, and success criteria
