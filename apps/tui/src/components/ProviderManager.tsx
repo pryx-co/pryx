@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid-js";
+import { createSignal, createEffect, For, Show, onMount } from "solid-js";
 import { useKeyboard } from "@opentui/solid";
 import { useEffectService, AppRuntime } from "../lib/hooks";
 import {
@@ -52,6 +52,7 @@ export default function ProviderManager(props: ProviderManagerProps) {
         Effect.tap(providers =>
           Effect.sync(() => {
             setProviders(providers);
+            migrateLegacyProviderKeys();
             loadConfiguredProviders();
           })
         ),
@@ -75,71 +76,136 @@ export default function ProviderManager(props: ProviderManagerProps) {
   });
 
   const loadConfiguredProviders = () => {
+    const service = providerService();
+    if (!service) return;
+
     const cfg = loadConfig();
-    const configured: ConfiguredProvider[] = [];
-    const providerKeys: Record<string, string> = {
-      openai: "openai_key",
-      anthropic: "anthropic_key",
-      google: "google_key",
-    };
+    AppRuntime.runFork(
+      Effect.gen(function* () {
+        const configured: ConfiguredProvider[] = [];
 
-    providers().forEach(p => {
-      const keyField = providerKeys[p.id];
-      const hasKey = keyField ? !!cfg[keyField] : false;
-      const isOllama = p.id === "ollama";
-      const isActive = cfg.model_provider === p.id;
+        for (const p of providers()) {
+          const isOllama = p.id === "ollama";
+          const isActive = cfg.model_provider === p.id;
 
-      if (hasKey || isOllama) {
-        configured.push({
-          id: p.id,
-          name: p.name,
-          status: "connected",
-          keyStatus: hasKey ? "configured" : "local",
-          isActive,
-        });
-      }
-    });
+          let configuredKey = false;
+          if (!isOllama && p.requires_api_key) {
+            configuredKey = yield* service.getProviderKeyStatus(p.id);
+          }
 
-    setConfiguredProviders(configured);
+          if (configuredKey || isOllama) {
+            configured.push({
+              id: p.id,
+              name: p.name,
+              status: "connected",
+              keyStatus: isOllama ? "local" : "keychain",
+              isActive,
+            });
+          }
+        }
+
+        yield* Effect.sync(() => setConfiguredProviders(configured));
+      }).pipe(Effect.catchAll(() => Effect.sync(() => setConfiguredProviders([]))))
+    );
   };
 
-  const handleAddProvider = async () => {
+  const migrateLegacyProviderKeys = () => {
+    const service = providerService();
+    if (!service) return;
+
+    AppRuntime.runFork(
+      Effect.gen(function* () {
+        const cfg = loadConfig();
+        const entries: Array<[string, string | undefined]> = [
+          ["openai", cfg.openai_key],
+          ["anthropic", cfg.anthropic_key],
+          ["google", cfg.google_key],
+        ];
+
+        let migrated = false;
+        const newCfg: AppConfig = { ...cfg };
+
+        for (const [providerId, key] of entries) {
+          const trimmed = (key ?? "").trim();
+          if (!trimmed) continue;
+          yield* service.setProviderKey(providerId, trimmed);
+          migrated = true;
+        }
+
+        if (!migrated) return;
+
+        delete newCfg.openai_key;
+        delete newCfg.anthropic_key;
+        delete newCfg.google_key;
+        saveConfig(newCfg);
+        yield* Effect.sync(() => setConfig(newCfg));
+      }).pipe(
+        Effect.catchAll(() =>
+          Effect.sync(() => {
+            setError("Failed to migrate API keys to keychain");
+          })
+        )
+      )
+    );
+  };
+
+  const handleAddProvider = () => {
     if (!selectedProvider()) return;
+    const service = providerService();
+    if (!service) return;
 
     const provider = selectedProvider()!;
-    const keyFieldMap: Record<string, string> = {
-      openai: "openai_key",
-      anthropic: "anthropic_key",
-      google: "google_key",
-    };
+    const key = apiKey().trim();
+
+    if (provider.requires_api_key && provider.id !== "ollama" && !key) {
+      setError("API key is required");
+      return;
+    }
 
     const updates: AppConfig = {
       model_provider: provider.id,
       model_name: selectedModel() || undefined,
     };
 
-    const keyField = keyFieldMap[provider.id];
-    if (keyField && apiKey().trim()) {
-      updates[keyField] = apiKey().trim();
+    if (provider.id === "ollama") {
+      updates.ollama_endpoint = key || "http://localhost:11434";
     }
 
-    if (provider.id === "ollama" && apiKey().trim()) {
-      updates.ollama_endpoint = apiKey().trim();
-    }
+    setLoading(true);
+    setError("");
 
-    try {
-      saveConfig({ ...config(), ...updates });
-      setConfig({ ...config(), ...updates });
-      setSuccess(`✓ ${provider.name} added successfully`);
-      setTimeout(() => {
-        setSuccess("");
-        setViewMode("list");
-        loadConfiguredProviders();
-        resetAddForm();
-      }, 1500);
-    } catch (e) {
-      setError("Failed to save configuration");
-    }
+    AppRuntime.runFork(
+      Effect.gen(function* () {
+        if (provider.requires_api_key && provider.id !== "ollama") {
+          yield* service.setProviderKey(provider.id, key);
+        }
+
+        const nextCfg = { ...config(), ...updates };
+        saveConfig(nextCfg);
+
+        yield* Effect.sync(() => {
+          setConfig(nextCfg);
+          setSuccess(`✓ ${provider.name} added successfully`);
+        });
+      }).pipe(
+        Effect.tap(() =>
+          Effect.sync(() => {
+            setTimeout(() => {
+              setSuccess("");
+              setViewMode("list");
+              loadConfiguredProviders();
+              resetAddForm();
+            }, 1500);
+          })
+        ),
+        Effect.catchAll(() =>
+          Effect.sync(() => {
+            setError("Failed to save provider configuration");
+          })
+        ),
+        Effect.tap(() => Effect.sync(() => setLoading(false)))
+      )
+    );
   };
 
   const handleSetActive = (providerId: string) => {
@@ -156,18 +222,10 @@ export default function ProviderManager(props: ProviderManagerProps) {
   };
 
   const handleDeleteProvider = (providerId: string) => {
-    const keyFieldMap: Record<string, string> = {
-      openai: "openai_key",
-      anthropic: "anthropic_key",
-      google: "google_key",
-    };
+    const service = providerService();
+    if (!service) return;
 
-    const keyField = keyFieldMap[providerId];
     const updates: AppConfig = {};
-
-    if (keyField) {
-      updates[keyField] = undefined;
-    }
 
     if (config().model_provider === providerId) {
       updates.model_provider = undefined;
@@ -186,9 +244,18 @@ export default function ProviderManager(props: ProviderManagerProps) {
       saveConfig(newConfig);
       setConfig(newConfig);
       setViewMode("list");
-      loadConfiguredProviders();
-      setSuccess(`✓ Provider removed`);
-      setTimeout(() => setSuccess(""), 2000);
+      AppRuntime.runFork(
+        service.deleteProviderKey(providerId).pipe(
+          Effect.catchAll(() => Effect.sync(() => void 0)),
+          Effect.tap(() =>
+            Effect.sync(() => {
+              loadConfiguredProviders();
+              setSuccess(`✓ Provider removed`);
+              setTimeout(() => setSuccess(""), 2000);
+            })
+          )
+        )
+      );
     } catch (e) {
       setError("Failed to remove provider");
     }
@@ -200,24 +267,34 @@ export default function ProviderManager(props: ProviderManagerProps) {
 
     await new Promise(resolve => setTimeout(resolve, 1500));
 
+    const service = providerService();
     const provider = providers().find(p => p.id === providerId);
     if (!provider) {
       setTestResult({ success: false, message: "Provider not found" });
     } else if (provider.id === "ollama") {
       setTestResult({ success: true, message: "Local Ollama connection ready" });
     } else {
-      const keyFieldMap: Record<string, string> = {
-        openai: "openai_key",
-        anthropic: "anthropic_key",
-        google: "google_key",
-      };
-      const keyField = keyFieldMap[providerId];
-      const hasKey = keyField ? !!config()[keyField] : false;
-
-      if (hasKey) {
-        setTestResult({ success: true, message: `Connected to ${provider.name}` });
+      if (!service) {
+        setTestResult({ success: false, message: "Runtime not available" });
       } else {
-        setTestResult({ success: false, message: "API key not configured" });
+        AppRuntime.runFork(
+          service.getProviderKeyStatus(providerId).pipe(
+            Effect.tap(configured =>
+              Effect.sync(() => {
+                if (configured) {
+                  setTestResult({ success: true, message: `Configured for ${provider.name}` });
+                } else {
+                  setTestResult({ success: false, message: "API key not configured" });
+                }
+              })
+            ),
+            Effect.catchAll(() =>
+              Effect.sync(() =>
+                setTestResult({ success: false, message: "Failed to test provider" })
+              )
+            )
+          )
+        );
       }
     }
 
