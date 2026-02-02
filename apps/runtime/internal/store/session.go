@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -60,4 +61,47 @@ func (s *Store) ListSessions() ([]*Session, error) {
 		sessions = append(sessions, sess)
 	}
 	return sessions, nil
+}
+
+func (s *Store) EnsureSession(id string, title string) (*Session, error) {
+	if id == "" {
+		return nil, sql.ErrNoRows
+	}
+	if title == "" {
+		title = "Session"
+	}
+
+	now := time.Now().UTC()
+	_, err := s.DB.Exec(
+		`INSERT OR IGNORE INTO sessions (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+		id,
+		title,
+		now,
+		now,
+	)
+	if err != nil {
+		return nil, err
+	}
+	_, _ = s.DB.Exec(`UPDATE sessions SET updated_at = ? WHERE id = ?`, now, id)
+
+	return s.GetSession(id)
+}
+
+func (s *Store) DeleteSession(id string) error {
+	if id == "" {
+		return sql.ErrNoRows
+	}
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM messages WHERE session_id = ?`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM sessions WHERE id = ?`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

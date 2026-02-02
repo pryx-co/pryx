@@ -23,6 +23,12 @@ type Store struct {
 	maxMessages int
 }
 
+func NewFromDB(db *sql.DB) *Store {
+	s := &Store{DB: db}
+	s.maxMessages = s.loadMaxMessages()
+	return s
+}
+
 // New creates a new Store with the given database path
 func New(dbPath string) (*Store, error) {
 	db, err := sql.Open("sqlite3", dbPath)

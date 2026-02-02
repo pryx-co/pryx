@@ -155,6 +155,126 @@ func TestWebSocketConnection(t *testing.T) {
 	assert.NotNil(t, ws)
 }
 
+func TestWebSocketSessionsList(t *testing.T) {
+	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	s, _ := store.New(":memory:")
+	defer s.Close()
+	kc := keychain.New("test")
+
+	sess, err := s.CreateSession("Test Session")
+	require.NoError(t, err)
+	_, err = s.AddMessage(sess.ID, store.RoleUser, "hello")
+	require.NoError(t, err)
+
+	srv := server.New(cfg, s.DB, kc)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	go srv.Serve(listener)
+	time.Sleep(10 * time.Millisecond)
+
+	wsURL := "ws://" + listener.Addr().String() + "/ws"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ws, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{})
+	require.NoError(t, err)
+	defer ws.Close(websocket.StatusNormalClosure, "")
+
+	req := map[string]any{"event": "sessions.list", "payload": map[string]any{}}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
+	require.NoError(t, ws.Write(ctx, websocket.MessageText, reqBytes))
+
+	readCtx, readCancel := context.WithTimeout(ctx, time.Second)
+	defer readCancel()
+
+	found := false
+	for i := 0; i < 10; i++ {
+		_, data, err := ws.Read(readCtx)
+		require.NoError(t, err)
+
+		var evt map[string]any
+		require.NoError(t, json.Unmarshal(data, &evt))
+		if evt["event"] != "sessions.list" {
+			continue
+		}
+
+		payload, _ := evt["payload"].(map[string]any)
+		sessions, _ := payload["sessions"].([]any)
+		require.NotEmpty(t, sessions)
+		found = true
+		break
+	}
+	require.True(t, found)
+}
+
+func TestWebSocketSessionResume(t *testing.T) {
+	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	s, _ := store.New(":memory:")
+	defer s.Close()
+	kc := keychain.New("test")
+
+	sess, err := s.CreateSession("Test Session")
+	require.NoError(t, err)
+	_, err = s.AddMessage(sess.ID, store.RoleUser, "hello")
+	require.NoError(t, err)
+
+	srv := server.New(cfg, s.DB, kc)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	go srv.Serve(listener)
+	time.Sleep(10 * time.Millisecond)
+
+	wsURL := "ws://" + listener.Addr().String() + "/ws"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ws, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{})
+	require.NoError(t, err)
+	defer ws.Close(websocket.StatusNormalClosure, "")
+
+	req := map[string]any{
+		"event": "session.resume",
+		"payload": map[string]any{
+			"session_id": sess.ID,
+		},
+	}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
+	require.NoError(t, ws.Write(ctx, websocket.MessageText, reqBytes))
+
+	readCtx, readCancel := context.WithTimeout(ctx, time.Second)
+	defer readCancel()
+
+	found := false
+	for i := 0; i < 10; i++ {
+		_, data, err := ws.Read(readCtx)
+		require.NoError(t, err)
+
+		var evt map[string]any
+		require.NoError(t, json.Unmarshal(data, &evt))
+		if evt["event"] != "session.resume" {
+			continue
+		}
+
+		require.Equal(t, sess.ID, evt["session_id"])
+		payload, _ := evt["payload"].(map[string]any)
+		sessionObj, _ := payload["session"].(map[string]any)
+		require.Equal(t, sess.ID, sessionObj["id"])
+		messages, _ := payload["messages"].([]any)
+		require.NotEmpty(t, messages)
+		found = true
+		break
+	}
+	require.True(t, found)
+}
+
 // TestWebSocketEventSubscription tests event subscription via WebSocket
 func TestWebSocketEventSubscription(t *testing.T) {
 	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}

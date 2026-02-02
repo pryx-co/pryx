@@ -21,6 +21,7 @@ import (
 	"pryx-core/internal/models"
 	"pryx-core/internal/policy"
 	"pryx-core/internal/skills"
+	"pryx-core/internal/store"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -52,6 +53,7 @@ type Server struct {
 	catalog      *models.Catalog
 	spawnTool    SpawnTool
 	ragMemory    *memory.RAGManager
+	store        *store.Store
 
 	httpMu     sync.Mutex
 	httpServer *http.Server
@@ -73,6 +75,7 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 		router:   r,
 		bus:      bus.New(),
 	}
+	s.store = store.NewFromDB(db)
 
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

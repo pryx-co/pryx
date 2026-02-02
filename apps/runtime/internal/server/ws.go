@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/time/rate"
-	"nhooyr.io/websocket"
 	"pryx-core/internal/bus"
 	"pryx-core/internal/validation"
+
+	"golang.org/x/time/rate"
+	"nhooyr.io/websocket"
 )
 
 const (
@@ -164,6 +165,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	ctx := r.Context()
+	var writeMu sync.Mutex
+	sendJSON := func(v any) error {
+		bytes, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		return c.Write(ctx, websocket.MessageText, bytes)
+	}
 
 	s.bus.Publish(bus.NewEvent(bus.EventTraceEvent, sessionFilter, map[string]interface{}{
 		"kind":        "ws.connected",
@@ -218,11 +229,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		for evt := range eventCh {
-			bytes, err := json.Marshal(evt)
-			if err != nil {
-				continue
-			}
-			if err := c.Write(ctx, websocket.MessageText, bytes); err != nil {
+			if err := sendJSON(evt); err != nil {
 				return
 			}
 		}
@@ -275,6 +282,114 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch eventType {
+		case "sessions.list":
+			if s.store == nil {
+				_ = sendJSON(map[string]any{
+					"event":   "sessions.list",
+					"payload": map[string]any{"sessions": []any{}},
+				})
+				continue
+			}
+			sessions, err := s.store.ListSessions()
+			if err != nil {
+				_ = sendJSON(map[string]any{
+					"event": "error",
+					"payload": map[string]any{
+						"kind":  "sessions.list_failed",
+						"error": err.Error(),
+					},
+				})
+				continue
+			}
+
+			resp := make([]map[string]any, 0, len(sessions))
+			for _, sess := range sessions {
+				resp = append(resp, map[string]any{
+					"id":        sess.ID,
+					"title":     sess.Title,
+					"createdAt": sess.CreatedAt.UTC().Format(time.RFC3339),
+					"updatedAt": sess.UpdatedAt.UTC().Format(time.RFC3339),
+				})
+			}
+
+			_ = sendJSON(map[string]any{
+				"event":   "sessions.list",
+				"payload": map[string]any{"sessions": resp},
+			})
+		case "session.resume":
+			var sessionID string
+			if in.Payload != nil {
+				if raw, ok := in.Payload["session_id"]; ok {
+					sessionID, _ = raw.(string)
+				}
+			}
+			sessionID = strings.TrimSpace(sessionID)
+			if err := validator.ValidateSessionID(sessionID); err != nil {
+				_ = sendJSON(map[string]any{
+					"event": "error",
+					"payload": map[string]any{
+						"kind":  "session.resume_invalid",
+						"error": err.Error(),
+					},
+				})
+				continue
+			}
+			if s.store == nil {
+				_ = sendJSON(map[string]any{
+					"event": "error",
+					"payload": map[string]any{
+						"kind":  "session.resume_store_unavailable",
+						"error": "store not available",
+					},
+				})
+				continue
+			}
+			sess, err := s.store.GetSession(sessionID)
+			if err != nil {
+				_ = sendJSON(map[string]any{
+					"event": "error",
+					"payload": map[string]any{
+						"kind":       "session.resume_not_found",
+						"session_id": sessionID,
+					},
+				})
+				continue
+			}
+			msgs, err := s.store.GetMessages(sessionID)
+			if err != nil {
+				_ = sendJSON(map[string]any{
+					"event": "error",
+					"payload": map[string]any{
+						"kind":       "session.resume_messages_failed",
+						"session_id": sessionID,
+						"error":      err.Error(),
+					},
+				})
+				continue
+			}
+			mresp := make([]map[string]any, 0, len(msgs))
+			for _, m := range msgs {
+				mresp = append(mresp, map[string]any{
+					"id":        m.ID,
+					"sessionId": m.SessionID,
+					"role":      m.Role,
+					"content":   m.Content,
+					"createdAt": m.CreatedAt.UTC().Format(time.RFC3339),
+				})
+			}
+			_ = sendJSON(map[string]any{
+				"event":      "session.resume",
+				"session_id": sessionID,
+				"payload": map[string]any{
+					"session": map[string]any{
+						"id":        sess.ID,
+						"title":     sess.Title,
+						"createdAt": sess.CreatedAt.UTC().Format(time.RFC3339),
+						"updatedAt": sess.UpdatedAt.UTC().Format(time.RFC3339),
+					},
+					"messages": mresp,
+				},
+			})
 		case "approval.resolve":
 			approvalID := strings.TrimSpace(in.ApprovalID)
 			if err := validator.ValidateID("approval_id", approvalID); err == nil {
