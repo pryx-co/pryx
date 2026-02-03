@@ -153,18 +153,12 @@ func checkMCP(ctx context.Context, kc *keychain.Keychain) Check {
 }
 
 func checkChannels() Check {
-	workspace, _ := os.Getwd()
-	home, _ := os.UserHomeDir()
-	paths := []string{
-		filepath.Join(workspace, ".pryx", "channels.json"),
-		filepath.Join(home, ".pryx", "channels.json"),
-	}
-	for _, p := range paths {
-		if _, err := os.Stat(p); err == nil {
-			return Check{Name: "channels", Status: StatusOK, Detail: p}
-		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return Check{Name: "channels", Status: StatusWarn, Detail: err.Error(), Suggestion: "check channel config permissions"}
-		}
+	pryxDir := filepath.Dir(config.DefaultPath())
+	path := filepath.Join(pryxDir, "channels.json")
+	if _, err := os.Stat(path); err == nil {
+		return Check{Name: "channels", Status: StatusOK, Detail: path}
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Check{Name: "channels", Status: StatusWarn, Detail: err.Error(), Suggestion: "check channel config permissions"}
 	}
 	return Check{Name: "channels", Status: StatusWarn, Detail: "no channel configuration found", Suggestion: "create .pryx/channels.json to enable channels"}
 }

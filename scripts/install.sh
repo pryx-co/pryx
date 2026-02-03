@@ -11,20 +11,21 @@ set -eEuo pipefail
 RED=$(tput setaf 1 2>/dev/null || printf '\033[0;31m')
 GREEN=$(tput setaf 2 2>/dev/null || printf '\033[0;32m')
 YELLOW=$(tput setaf 3 2>/dev/null || printf '\033[0;33m')
+BLUE=$(tput setaf 4 2>/dev/null || printf '\033[0;34m')
 NC=$(tput sgr0 2>/dev/null || printf '\033[0m')
 
+log()   { echo -e "${GREEN}[pryx]${NC} $1"; }
+warn()  { echo -e "${YELLOW}[pryx]${NC} $1"; }
+error() { echo -e "${RED}[pryx]${NC} $1" >&2; exit 1; }
+
 # Configuration
-VERSION="${PRYX_VERSION:-0.1.0-dev}"
-DOWNLOAD_BASE="https://github.com/pryx-core/releases"
+VERSION="${PRYX_VERSION:-latest}"
+DOWNLOAD_BASE="https://github.com/pryx-dev/pryx/releases"
 INSTALL_DIR="${PRYX_INSTALL_DIR:-${HOME}/.pryx/bin}"
 
 # Platform detection
 OS_TYPE="$(uname -s)"
 ARCH_TYPE="$(uname -m)"
-
-echo -e "${GREEN}Pryx One-Liner Installer${NC}"
-echo -e "${GREEN}Platform: ${OS_TYPE} (${ARCH_TYPE})${NC}"
-echo ""
 
 usage() {
     echo "Usage: curl -fsSL https://get.pryx.ai/install.sh | bash -s -- [options]"
@@ -35,6 +36,7 @@ usage() {
     echo "  --no-path                Skip PATH modification"
     echo "  --no-onboard             Skip onboarding message"
     echo "  --dry-run                Print actions without making changes"
+    echo "  --no-prompt              Non-interactive mode"
     echo "  --help                   Show this help"
     echo ""
     echo "Environment variables:"
@@ -43,6 +45,7 @@ usage() {
     echo "  PRYX_NO_MODIFY_PATH=1"
     echo "  PRYX_NO_ONBOARD=1"
     echo "  PRYX_DRY_RUN=1"
+    echo "  PRYX_NO_PROMPT=1"
 }
 
 parse_args() {
@@ -68,63 +71,138 @@ parse_args() {
                 PRYX_DRY_RUN=1
                 shift
                 ;;
+            --no-prompt)
+                PRYX_NO_PROMPT=1
+                shift
+                ;;
             --help|-h)
                 usage
                 exit 0
                 ;;
             *)
-                echo -e "${RED}Error: Unknown option $1${NC}"
-                exit 1
+                error "Unknown option: $1"
                 ;;
         esac
     done
 }
 
-# Function to download pryx-core
-download_pryx_core() {
-    local binary_name="pryx-core"
-    
-    # Add platform suffix if needed
-    if [ "$OS_TYPE" = "Darwin" ]; then
-        if [ "$ARCH_TYPE" = "arm64" ]; then
-            binary_name="${binary_name}-darwin-arm64"
-        elif [ "$ARCH_TYPE" = "x86_64" ]; then
-            binary_name="${binary_name}-darwin-amd64"
-        fi
-    elif [ "$OS_TYPE" = "Linux" ]; then
-        if [ "$ARCH_TYPE" = "x86_64" ]; then
-            binary_name="${binary_name}-linux-amd64"
-        elif [ "$ARCH_TYPE" = "aarch64" ]; then
-            binary_name="${binary_name}-linux-aarch64"
-        fi
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        error "Missing required command: $1"
     fi
-    
-    local download_url="${DOWNLOAD_BASE}/v${VERSION}/${binary_name}"
-    
-    echo -e "${YELLOW}Downloading ${binary_name}...${NC}"
-    
-    if [[ "$PRYX_DRY_RUN" == "1" ]]; then
-        echo "dry-run: mkdir -p \"$INSTALL_DIR\""
-        echo "dry-run: download ${download_url}"
-        return 0
+}
+
+detect_platform() {
+    local os arch
+    os="$(uname -s)"
+    arch="$(uname -m)"
+
+    case "$os" in
+        Darwin) os="darwin" ;;
+        Linux) os="linux" ;;
+        *) error "Unsupported OS: $os" ;;
+    esac
+
+    case "$arch" in
+        x86_64|amd64) arch="amd64" ;;
+        arm64|aarch64) arch="arm64" ;;
+        *) error "Unsupported architecture: $arch" ;;
+    esac
+
+    echo "${os}-${arch}"
+}
+
+get_install_dir() {
+    if [[ -n "${PRYX_INSTALL_DIR:-}" ]]; then
+        echo "$PRYX_INSTALL_DIR"
+    elif [[ -w "/usr/local/bin" ]]; then
+        echo "/usr/local/bin"
+    else
+        echo "$HOME/.pryx/bin"
+    fi
+}
+
+get_latest_version() {
+    if [[ -n "${PRYX_VERSION:-}" ]]; then
+        echo "$PRYX_VERSION"
+        return
     fi
 
-    mkdir -p "$INSTALL_DIR"
-    
-    # Download binary
-    if command -v curl &> /dev/null; then
-        curl -fsSL --progress-bar -o "$INSTALL_DIR/pryx-core" "$download_url"
-    elif command -v wget &> /dev/null; then
-        wget --progress=bar:force -O "$INSTALL_DIR/pryx-core" "$download_url"
-    else
-        echo -e "${RED}Error: Neither curl nor wget found. Please install curl.${NC}"
-        exit 1
+    curl -fsSL "https://api.github.com/repos/pryx-dev/pryx/releases/latest" \
+        | grep '"tag_name"' \
+        | sed -E 's/.*"v?([^"]+)".*/\1/' \
+        | head -1
+}
+
+download_pryx_core() {
+    local platform version install_dir download_url tmp_dir
+
+    require_command curl
+    require_command tar
+
+    platform="$(detect_platform)"
+    version="${PRYX_VERSION:-$(get_latest_version)}"
+    install_dir="$(get_install_dir)"
+    download_url="${DOWNLOAD_BASE}/download/v${version}/pryx-${platform}.tar.gz"
+
+    log "Installing Pryx v${version} for ${platform}..."
+    log "Install directory: ${install_dir}"
+
+    if [[ -n "${PRYX_INSTALL_DIR:-}" ]]; then
+        if [[ -d "$install_dir" && ! -w "$install_dir" ]]; then
+            error "Install directory is not writable: ${install_dir}"
+        fi
+        if [[ ! -d "$install_dir" && ! -w "$(dirname "$install_dir")" ]]; then
+            error "Install directory is not writable: ${install_dir}"
+        fi
     fi
-    
-    # Make executable
-    chmod +x "$INSTALL_DIR/pryx-core"
-    
-    echo -e "${GREEN}Downloaded to: $INSTALL_DIR/pryx-core${NC}"
+
+    if [[ -d "$install_dir" && ! -w "$install_dir" ]]; then
+        warn "Install directory not writable: ${install_dir}"
+        install_dir="$HOME/.pryx/bin"
+        warn "Falling back to ${install_dir}"
+    fi
+
+    if [[ ! -d "$install_dir" && ! -w "$(dirname "$install_dir")" ]]; then
+        error "Install directory is not writable: ${install_dir}"
+    fi
+
+    if [[ "${PRYX_DRY_RUN:-}" == "1" ]]; then
+        echo "dry-run: mkdir -p \"$install_dir\""
+        echo "dry-run: download ${download_url}"
+        echo "dry-run: extract to temp dir"
+        echo "dry-run: install binaries to ${install_dir}"
+        if [[ "${PRYX_NO_MODIFY_PATH:-}" != "1" ]]; then
+            echo "dry-run: update PATH in shell rc"
+        fi
+        exit 0
+    fi
+
+    mkdir -p "$install_dir"
+
+    tmp_dir="$(mktemp -d)"
+    trap "rm -rf $tmp_dir" EXIT
+
+    log "Downloading from ${download_url}..."
+    if ! curl -fsSL "$download_url" -o "$tmp_dir/pryx.tar.gz"; then
+        error "Failed to download Pryx. Check your internet connection."
+    fi
+
+    log "Extracting..."
+    tar -xzf "$tmp_dir/pryx.tar.gz" -C "$tmp_dir"
+
+    log "Installing binaries..."
+    install -m 755 "$tmp_dir/pryx" "$install_dir/pryx" 2>/dev/null || \
+        cp "$tmp_dir/pryx" "$install_dir/pryx" && chmod +x "$install_dir/pryx"
+
+    if [[ -f "$tmp_dir/pryx-core" ]]; then
+        install -m 755 "$tmp_dir/pryx-core" "$install_dir/pryx-core" 2>/dev/null || \
+            cp "$tmp_dir/pryx-core" "$install_dir/pryx-core" && chmod +x "$install_dir/pryx-core"
+    fi
+
+    INSTALL_DIR="$install_dir"
+
+    log "✓ Pryx installed successfully!"
 }
 
 # Function to install to PATH
@@ -149,16 +227,15 @@ install_to_path() {
     # Create/update config if not already there
     if [ -f "$shell_config" ]; then
         if ! grep -q "pryx" "$shell_config"; then
-            echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$shell_config"
+            echo "export PATH=\"$install_path:\$PATH\"" >> "$shell_config"
             echo -e "${GREEN}Added to $shell_config${NC}"
         fi
     else
-        echo "export PATH=\"\$PATH:$INSTALL_DIR\"" > "$shell_config"
+        echo "export PATH=\"$install_path:\$PATH\"" > "$shell_config"
         echo -e "${GREEN}Created $shell_config${NC}"
     fi
     
-    # Add to current session
-    export PATH="$PATH:$INSTALL_DIR"
+    export PATH="$install_path:$PATH"
     echo -e "${GREEN}PATH updated: $PATH${NC}"
 }
 
@@ -167,37 +244,46 @@ verify_installation() {
     echo ""
     echo -e "${GREEN}=== Verifying Installation ===${NC}"
     
-    # Check if binary exists
-    if [ -f "$INSTALL_DIR/pryx-core" ]; then
-        echo -e "${GREEN}✓ Binary found at: $INSTALL_DIR/pryx-core${NC}"
+    if [ -f "$INSTALL_DIR/pryx" ]; then
+        echo -e "${GREEN}✓ Binary found at: $INSTALL_DIR/pryx${NC}"
     else
-        echo -e "${RED}✗ Binary not found${NC}"
+        echo -e "${RED}✗ Binary not found: pryx${NC}"
         return 1
     fi
     
-    # Check if binary is executable
-    if [ -x "$INSTALL_DIR/pryx-core" ]; then
+    if [ -x "$INSTALL_DIR/pryx" ]; then
         echo -e "${GREEN}✓ Binary is executable${NC}"
     else
         echo -e "${RED}✗ Binary is not executable${NC}"
         return 1
     fi
     
-    # Check if in PATH
+    if [ -f "$INSTALL_DIR/pryx-core" ]; then
+        echo -e "${GREEN}✓ Binary found at: $INSTALL_DIR/pryx-core${NC}"
+    else
+        echo -e "${RED}✗ Binary not found: pryx-core${NC}"
+        return 1
+    fi
+    
+    if [ -x "$INSTALL_DIR/pryx-core" ]; then
+        echo -e "${GREEN}✓ Binary is executable${NC}"
+    else
+        echo -e "${RED}✗ Binary is not executable${NC}"
+        return 1
+    fi
+
+    if command -v pryx &> /dev/null; then
+        echo -e "${GREEN}✓ pryx command found in PATH${NC}"
+    else
+        echo -e "${YELLOW}⚠ pryx command not in PATH${NC}"
+    fi
+    
     if command -v pryx-core &> /dev/null; then
         echo -e "${GREEN}✓ pryx-core command found in PATH${NC}"
     else
         echo -e "${YELLOW}⚠ pryx-core command not in PATH${NC}"
     fi
-    
-    # Check version
-    if "$INSTALL_DIR/pryx-core" version &> /dev/null; then
-        VERSION_OUTPUT="$($INSTALL_DIR/pryx-core version 2>&1 || true)"
-        echo -e "${GREEN}✓ Version: $VERSION_OUTPUT${NC}"
-    else
-        echo -e "${YELLOW}⚠ Could not determine version${NC}"
-    fi
-    
+
     echo -e "${GREEN}=== Verification Complete ===${NC}"
     return 0
 }
@@ -206,27 +292,25 @@ verify_installation() {
 main() {
     parse_args "$@"
     echo -e "${GREEN}Pryx One-Liner Installer${NC}"
+    echo -e "${GREEN}Platform: ${OS_TYPE} (${ARCH_TYPE})${NC}"
     echo -e "${GREEN}Version: $VERSION${NC}"
+    echo "Sovereign AI agent with local-first control center"
     echo ""
-    
-    # Download and install
     download_pryx_core
-    
-    if [[ "$PRYX_DRY_RUN" == "1" ]]; then
+    if [[ "${PRYX_DRY_RUN:-}" == "1" ]]; then
         echo "dry-run: update PATH for ${INSTALL_DIR}"
         exit 0
     fi
 
     install_to_path "$INSTALL_DIR"
     
-    # Verify installation
     if verify_installation; then
         echo ""
         echo -e "${GREEN}Installation successful!${NC}"
         echo ""
         if [[ "${PRYX_NO_ONBOARD:-}" != "1" ]]; then
             echo -e "${YELLOW}To get started, run:${NC}"
-            echo -e "${GREEN}  pryx-core${NC}"
+            echo -e "${GREEN}  pryx${NC}"
         fi
         echo ""
         if [[ "${PRYX_NO_ONBOARD:-}" != "1" ]]; then
@@ -242,3 +326,5 @@ main() {
         exit 1
     fi
 }
+
+main "$@"

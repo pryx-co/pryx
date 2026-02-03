@@ -258,7 +258,7 @@ main() {
     echo " |_|   |_|   \__, /_/\_\  "
     echo "             |___/        "
     echo -e "${NC}"
-    echo "Sovereign AI agent control center"
+    echo "Sovereign AI agent with local-first control center"
     echo ""
     
     install_pryx

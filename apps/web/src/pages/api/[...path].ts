@@ -249,7 +249,24 @@ app.get('/update/manifest', async (c) => {
 app.get('/', (c) => c.json({ name: 'Pryx Cloud API', status: 'operational', engine: 'hono' }));
 
 // --- Astro Integration ---
-export const ALL: APIRoute = ({ request, locals }) => {
-    const runtime = (locals as any).runtime;
-    return app.fetch(request, runtime?.env);
+export const ALL: APIRoute = async (ctx) => {
+    // Direct access to platform bindings
+    const platform = (ctx as any).platform;
+    const env = platform?.env || {};
+
+    console.log('API bindings check:', {
+        hasPlatform: !!platform,
+        hasEnv: !!env,
+        deviceCodes: !!env.DEVICE_CODES,
+        tokens: !!env.TOKENS,
+        sessions: !!env.SESSIONS
+    });
+
+    // Pass bindings through execution context for Hono
+    const executionCtx = {
+        ...ctx,
+        env: env
+    };
+
+    return app.fetch(ctx.request, env, executionCtx);
 };

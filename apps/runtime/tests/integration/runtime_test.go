@@ -38,6 +38,15 @@ func newTestKeychain(t testEnv) *keychain.Keychain {
 	return keychain.New("test")
 }
 
+const testWebSocketRateLimitPerMinute = 10000
+
+func newWebSocketTestConfig() *config.Config {
+	return &config.Config{
+		ListenAddr:                  "127.0.0.1:0",
+		WebSocketRateLimitPerMinute: testWebSocketRateLimitPerMinute,
+	}
+}
+
 // TestRuntimeStartup tests the complete runtime startup sequence
 func TestRuntimeStartup(t *testing.T) {
 	// Create temporary directory for test data
@@ -258,7 +267,7 @@ func TestProviderKeyEndpoints(t *testing.T) {
 
 // TestWebSocketConnection tests WebSocket upgrade and basic communication
 func TestWebSocketConnection(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -342,7 +351,7 @@ func TestCloudLoginEndpoints_Validation(t *testing.T) {
 }
 
 func TestWebSocketSessionsList(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -398,7 +407,7 @@ func TestWebSocketSessionsList(t *testing.T) {
 }
 
 func TestWebSocketSessionResume(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -463,7 +472,7 @@ func TestWebSocketSessionResume(t *testing.T) {
 
 // TestWebSocketEventSubscription tests event subscription via WebSocket
 func TestWebSocketEventSubscription(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -694,7 +703,7 @@ func TestChatSessionList(t *testing.T) {
 // TestWebSocketChatSend tests sending chat messages via WebSocket
 // Chat validation and event publishing tested - message storage requires agent runtime
 func TestWebSocketChatSend(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -742,7 +751,7 @@ func TestWebSocketChatSend(t *testing.T) {
 // TestWebSocketChatValidation tests chat message validation via WebSocket
 // Validates that invalid content is rejected by validation layer
 func TestWebSocketChatValidation(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -845,7 +854,7 @@ func TestWebSocketChatValidation(t *testing.T) {
 // TestWebSocketMultiMessageChat tests multi-message chat conversations
 // Verifies multiple messages can be sent without errors
 func TestWebSocketMultiMessageChat(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -904,7 +913,7 @@ func TestWebSocketMultiMessageChat(t *testing.T) {
 // TestWebSocketChatWithoutSession tests chat.send without session_id
 // Server handles gracefully - may create implicit session
 func TestWebSocketChatWithoutSession(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)
@@ -948,7 +957,7 @@ func TestWebSocketChatWithoutSession(t *testing.T) {
 // TestWebSocketChatMessageFormat tests various chat message formats
 // Verifies different content types are accepted without errors
 func TestWebSocketChatMessageFormat(t *testing.T) {
-	cfg := &config.Config{ListenAddr: "127.0.0.1:0"}
+	cfg := newWebSocketTestConfig()
 	s, _ := store.New(":memory:")
 	defer s.Close()
 	kc := newTestKeychain(t)

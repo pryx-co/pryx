@@ -105,14 +105,26 @@ func TestHealthURL(t *testing.T) {
 func TestCheckChannelsNotFound(t *testing.T) {
 	// Set workspace to a temporary directory with no channel config
 	oldWd, _ := os.Getwd()
+	oldHome := os.Getenv("HOME")
+	oldUserProfile := os.Getenv("USERPROFILE")
 	tmpDir, err := os.MkdirTemp("", "pryx_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
+	if err := os.Setenv("HOME", tmpDir); err != nil {
+		t.Fatalf("Failed to set HOME: %v", err)
+	}
+	if err := os.Setenv("USERPROFILE", tmpDir); err != nil {
+		t.Fatalf("Failed to set USERPROFILE: %v", err)
+	}
 
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
+	defer func() {
+		_ = os.Setenv("HOME", oldHome)
+		_ = os.Setenv("USERPROFILE", oldUserProfile)
+	}()
 
 	check := checkChannels()
 
