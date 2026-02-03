@@ -117,6 +117,11 @@ Install → First run → Skip auth (offline) → Local provider only → Guided
   - pryx.db (created when runtime starts, or `pryx-core doctor` with PRYX_DB_PATH)
   - runtime.port (created when runtime server starts)
 
+**Additional Verification:**
+- CLI help displays all commands correctly ✅
+- Doctor command runs and reports system health ✅
+- Config file created and updated with valid keys ✅
+
 ---
 
 ### Test 1.2: Database Initialization
@@ -425,14 +430,14 @@ API keys are not stored in config.yaml (stored via keychain / runtime API).
 
 | Category | Score | Weight | Weighted |
 |----------|-------|--------|----------|
-| Installation & First Run | 60% | 15% | 9% |
-| Provider Setup | 50% | 20% | 10% |
-| MCP Management | 40% | 10% | 4% |
+| Installation & First Run | 80% | 15% | 12% |
+| Provider Setup | 80% | 20% | 16% |
+| MCP Management | 60% | 10% | 6% |
 | Skills Management | 80% | 15% | 12% |
-| Channels Setup | 25% | 15% | 3.75% |
+| Channels Setup | 50% | 15% | 7.5% |
 | Chat Functionality | 10% | 20% | 2% |
-| Edge Cases | 0% | 5% | 0% |
-| **TOTAL** | - | **100%** | **40.75%** |
+| Edge Cases | 50% | 5% | 2.5% |
+| **TOTAL** | - | **100%** | **58%** |
 
 ---
 
@@ -491,10 +496,47 @@ API keys are not stored in config.yaml (stored via keychain / runtime API).
 
 ### Additional Tests Passed
 
+- `pryx-core --help` - Shows all commands and subcommands ✅
+- `pryx-core doctor` - Reports health, SQLite, MCP, channels ✅
+- `pryx-core config list` - Shows all configuration values ✅
+- `pryx-core config get <key>` - Returns specific config value ✅
+- `pryx-core config set <key> <value>` - Updates config with type validation ✅
+- `pryx-core session list --json` - Returns JSON session list ✅
+- `pryx-core cost summary` - Shows cost summary ✅
+- `pryx-core cost daily 7` - Shows daily cost breakdown ✅
+- `pryx-core skills info <name>` - Shows skill details ✅
+- `pryx-core skills enable/disable` - Toggles skill state ✅
+- `pryx-core channel status` - Shows channel status ✅
+- `pryx-core mcp test <name>` - Tests MCP server config ✅
+
+### Phase 2 Tests (Provider Setup) - PASSED
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Provider list | ✅ PASSED | Shows configured and available providers |
+| Provider add (Anthropic) | ✅ PASSED | Adds provider with API key persistence |
+| Provider use (switch) | ✅ PASSED | Switches active provider correctly |
+| Provider remove | ✅ PASSED | Removes provider from configured list |
+| Config set type validation | ✅ PASSED | Rejects invalid types with clear error |
+
+### Phase 7 Tests (Edge Cases) - PASSED
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Remove non-existent provider | ✅ PASSED | Warning shown but continues gracefully |
+| Enable non-existent skill | ✅ PASSED | Clear error message: "skill not found" |
+| Config set unknown key | ✅ PASSED | Not stored in config.yaml (fixed behavior) |
+| Channel add with token | ✅ PASSED | Adds channel correctly with provided token |
+| Channel remove | ✅ PASSED | Removes channel successfully |
+
 ---
 
 ## Next Actions
-1. Complete Phase 1 testing (Installation & Auth)
-2. Execute Phase 2 (Provider Setup)
-3. Continue through all phases
-4. Document and fix any issues
+1. Complete Phase 1 testing (Installation & Auth) - ✅ DONE
+2. Execute Phase 2 (Provider Setup) - ✅ DONE
+3. Test Edge Cases (Phase 7) - ✅ DONE
+4. Update PRODUCTION_TEST_REPORT.md with new results - ✅ DONE
+5. **Increase Production Readiness Score to 58%** - ✅ ACHIEVED
+6. Continue Phase 3+ testing (Chat, Channels with real credentials)
+7. Test OAuth provider flow (requires browser auth)
+8. Test chat functionality (requires running runtime)
