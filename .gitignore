@@ -5,9 +5,11 @@
 /apps/runtime/bin/
 # TUI Binaries
 /apps/tui/pryx-tui
-/apps/tui/.188e9d9fffd775db-00000000.bun-build
+/apps/tui/.*.bun-build
 /apps/tui/dist/
 /apps/tui/node_modules/
+/apps/tui/test-results/
+/apps/tui/playwright-report/
 
 # Dependency lockfiles are committed by default.
 # Uncomment to ignore them (not recommended):
