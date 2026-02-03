@@ -2,13 +2,16 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestPartialEnvironment(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
 	// Set only one environment variable
-	os.Setenv("PRYX_LISTEN_ADDR", "localhost:9000")
-	defer os.Unsetenv("PRYX_LISTEN_ADDR")
+	t.Setenv("PRYX_LISTEN_ADDR", "localhost:9000")
 
 	// Clear the other
 	os.Unsetenv("PRYX_DB_PATH")
@@ -20,7 +23,8 @@ func TestPartialEnvironment(t *testing.T) {
 	}
 
 	// DatabasePath should still have default
-	if config.DatabasePath != "pryx.db" {
-		t.Errorf("Expected DatabasePath 'pryx.db', got '%s'", config.DatabasePath)
+	expected := filepath.Join(home, ".pryx", "pryx.db")
+	if config.DatabasePath != expected {
+		t.Errorf("Expected DatabasePath '%s', got '%s'", expected, config.DatabasePath)
 	}
 }

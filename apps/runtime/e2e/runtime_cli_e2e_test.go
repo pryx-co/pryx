@@ -5,9 +5,11 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 	"time"
 
 	"nhooyr.io/websocket"
+	"pryx-core/internal/config"
 )
 
 func waitForFile(path string, timeout time.Duration) error {
@@ -27,6 +30,68 @@ func waitForFile(path string, timeout time.Duration) error {
 		time.Sleep(50 * time.Millisecond)
 	}
 	return fmt.Errorf("timeout waiting for file: %s", path)
+}
+
+func writeModelsCache(t *testing.T, home string, providers map[string]map[string]any) {
+	t.Helper()
+
+	cacheFile := filepath.Join(home, ".pryx", "cache", "models.json")
+	if err := os.MkdirAll(filepath.Dir(cacheFile), 0o755); err != nil {
+		t.Fatalf("mkdir models cache dir: %v", err)
+	}
+
+	now := time.Now().Format(time.RFC3339Nano)
+	payload := map[string]any{
+		"models":     map[string]any{},
+		"providers":  providers,
+		"fetched_at": now,
+		"cached_at":  now,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal models cache: %v", err)
+	}
+	if err := os.WriteFile(cacheFile, data, 0o644); err != nil {
+		t.Fatalf("write models cache: %v", err)
+	}
+}
+
+func readKeychainFile(t *testing.T, path string) map[string]string {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read keychain file: %v", err)
+	}
+	var m map[string]string
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("parse keychain file: %v", err)
+	}
+	return m
+}
+
+func runPryxCoreWithEnvInput(t *testing.T, home string, extraEnv map[string]string, input string, args ...string) (string, int) {
+	t.Helper()
+
+	bin := buildPryxCore(t)
+	cmd := exec.Command(bin, args...)
+	cmd.Stdin = strings.NewReader(input)
+	if extraEnv == nil {
+		extraEnv = map[string]string{}
+	}
+	cmd.Env = makeEnv(home, extraEnv)
+
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		return string(out), 0
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return string(out), exitErr.ExitCode()
+	}
+	t.Fatalf("run pryx-core failed: %v\n%s", err, string(out))
+	return "", 1
 }
 
 func TestCLI_SkillsListJSON_IncludesBundledSkills(t *testing.T) {
@@ -130,6 +195,192 @@ func TestCLI_Config_SetThenGet(t *testing.T) {
 	}
 	if strings.TrimSpace(out) != ":12345" {
 		t.Fatalf("expected listen_addr to be updated, got: %q", strings.TrimSpace(out))
+	}
+}
+
+func TestCLI_Login_Success_WithPKCE(t *testing.T) {
+	home := t.TempDir()
+	keychainPath := filepath.Join(home, ".pryx", "keychain.json")
+
+	deviceCode := "device-123"
+
+	cloud := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/device/code":
+			var req map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&req)
+
+			challenge, _ := req["code_challenge"].(string)
+			method, _ := req["code_challenge_method"].(string)
+			if challenge == "" || method != "S256" {
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": "missing pkce params"})
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"device_code":      deviceCode,
+				"user_code":        "USER-CODE",
+				"verification_uri": "https://example.com/verify",
+				"expires_in":       600,
+				"interval":         1,
+			})
+		case "/auth/device/token":
+			var req map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			if req["device_code"] != deviceCode || strings.TrimSpace(req["code_verifier"]) == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid token request"})
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "token-123",
+				"expires_in":   3600,
+				"token_type":   "bearer",
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer cloud.Close()
+
+	out, code := runPryxCoreWithEnv(t, home, map[string]string{
+		"PRYX_CLOUD_API_URL": cloud.URL,
+		"PRYX_KEYCHAIN_FILE": keychainPath,
+	}, "login")
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d\n%s", code, out)
+	}
+	if !strings.Contains(out, "Verification URL:") || !strings.Contains(out, "User Code:") {
+		t.Fatalf("expected login prompt output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Successfully logged in") {
+		t.Fatalf("expected success output, got:\n%s", out)
+	}
+
+	kc := readKeychainFile(t, keychainPath)
+	if got := kc["pryx:cloud_access_token"]; got != "token-123" {
+		t.Fatalf("expected keychain to store access token, got %q", got)
+	}
+}
+
+func TestCLI_Provider_AddUseRemove_UsesKeychain(t *testing.T) {
+	home := t.TempDir()
+	keychainPath := filepath.Join(home, ".pryx", "keychain.json")
+	t.Setenv("HOME", home)
+	cfg := config.Load()
+	if err := cfg.Save(filepath.Join(home, ".pryx", "config.yaml")); err != nil {
+		t.Fatalf("write config.yaml: %v", err)
+	}
+	writeModelsCache(t, home, map[string]map[string]any{
+		"openai": {
+			"name": "OpenAI",
+			"env":  []string{"OPENAI_API_KEY"},
+			"doc":  "https://example.com/openai",
+		},
+		"ollama": {
+			"name": "Ollama",
+			"env":  []string{},
+			"doc":  "https://example.com/ollama",
+		},
+	})
+
+	extraEnv := map[string]string{
+		"PRYX_KEYCHAIN_FILE": keychainPath,
+	}
+
+	out, code := runPryxCoreWithEnvInput(t, home, extraEnv, "sk-test\n", "provider", "add", "openai")
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d\n%s", code, out)
+	}
+
+	kc := readKeychainFile(t, keychainPath)
+	if got := kc["pryx:provider:openai"]; got != "sk-test" {
+		t.Fatalf("expected keychain to store provider key, got %q", got)
+	}
+
+	out, code = runPryxCoreWithEnv(t, home, extraEnv, "provider", "use", "openai")
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d\n%s", code, out)
+	}
+
+	cfgPath := filepath.Join(home, ".pryx", "config.yaml")
+	cfgBytes, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("read config.yaml: %v", err)
+	}
+	cfgText := string(cfgBytes)
+	if strings.Contains(cfgText, "sk-test") {
+		t.Fatalf("expected config.yaml to not contain API key, got:\n%s", cfgText)
+	}
+	if !strings.Contains(cfgText, "model_provider: openai") {
+		t.Fatalf("expected config.yaml to set model_provider, got:\n%s", cfgText)
+	}
+
+	out, code = runPryxCoreWithEnv(t, home, extraEnv, "provider", "list")
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d\n%s", code, out)
+	}
+	if !strings.Contains(out, "OpenAI") || !strings.Contains(strings.ToLower(out), "keychain") {
+		t.Fatalf("expected provider list output to mention OpenAI and keychain, got:\n%s", out)
+	}
+
+	out, code = runPryxCoreWithEnv(t, home, extraEnv, "provider", "remove", "openai")
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d\n%s", code, out)
+	}
+
+	kc = readKeychainFile(t, keychainPath)
+	if _, ok := kc["pryx:provider:openai"]; ok {
+		t.Fatalf("expected provider key to be removed from keychain")
+	}
+}
+
+func TestCLI_Provider_UseFailsWhenNotConfigured(t *testing.T) {
+	home := t.TempDir()
+	keychainPath := filepath.Join(home, ".pryx", "keychain.json")
+	writeModelsCache(t, home, map[string]map[string]any{
+		"openai": {
+			"name": "OpenAI",
+			"env":  []string{"OPENAI_API_KEY"},
+			"doc":  "https://example.com/openai",
+		},
+	})
+
+	out, code := runPryxCoreWithEnv(t, home, map[string]string{
+		"PRYX_KEYCHAIN_FILE": keychainPath,
+	}, "provider", "use", "openai")
+	if code == 0 {
+		t.Fatalf("expected non-zero exit code for unconfigured provider, got 0\n%s", out)
+	}
+	if !strings.Contains(strings.ToLower(out), "not configured") {
+		t.Fatalf("expected output to mention not configured, got:\n%s", out)
+	}
+}
+
+func TestCLI_Provider_SetKeyRejectsEmptyKey(t *testing.T) {
+	home := t.TempDir()
+	keychainPath := filepath.Join(home, ".pryx", "keychain.json")
+	writeModelsCache(t, home, map[string]map[string]any{
+		"openai": {
+			"name": "OpenAI",
+			"env":  []string{"OPENAI_API_KEY"},
+			"doc":  "https://example.com/openai",
+		},
+	})
+
+	out, code := runPryxCoreWithEnvInput(t, home, map[string]string{
+		"PRYX_KEYCHAIN_FILE": keychainPath,
+	}, "\n", "provider", "set-key", "openai")
+	if code == 0 {
+		t.Fatalf("expected non-zero exit code for empty key, got 0\n%s", out)
+	}
+	if !strings.Contains(strings.ToLower(out), "cannot be empty") {
+		t.Fatalf("expected output to mention empty key, got:\n%s", out)
 	}
 }
 

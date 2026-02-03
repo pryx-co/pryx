@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -49,18 +50,50 @@ func buildPryxCore(t *testing.T) string {
 	return pryxCorePath
 }
 
+func makeEnv(home string, extraEnv map[string]string) []string {
+	skip := map[string]struct{}{
+		"HOME":         {},
+		"PRYX_DB_PATH": {},
+	}
+	for k := range extraEnv {
+		skip[k] = struct{}{}
+	}
+
+	var env []string
+	for _, kv := range os.Environ() {
+		key := strings.SplitN(kv, "=", 2)[0]
+		if _, ok := skip[key]; ok {
+			continue
+		}
+		env = append(env, kv)
+	}
+
+	env = append(env,
+		"HOME="+home,
+		"PRYX_DB_PATH="+filepath.Join(home, "pryx.db"),
+	)
+
+	keys := make([]string, 0, len(extraEnv))
+	for k := range extraEnv {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		env = append(env, k+"="+extraEnv[k])
+	}
+
+	return env
+}
+
 func runPryxCoreWithEnv(t *testing.T, home string, extraEnv map[string]string, args ...string) (string, int) {
 	t.Helper()
 
 	bin := buildPryxCore(t)
 	cmd := exec.Command(bin, args...)
-	cmd.Env = append(os.Environ(),
-		"HOME="+home,
-		"PRYX_DB_PATH="+filepath.Join(home, "pryx.db"),
-	)
-	for k, v := range extraEnv {
-		cmd.Env = append(cmd.Env, k+"="+v)
+	if extraEnv == nil {
+		extraEnv = map[string]string{}
 	}
+	cmd.Env = makeEnv(home, extraEnv)
 
 	out, err := cmd.CombinedOutput()
 	if err == nil {

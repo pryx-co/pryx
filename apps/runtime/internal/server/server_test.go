@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -354,6 +355,194 @@ func TestCorsMiddleware(t *testing.T) {
 	assert.Equal(t, "https://example.com", rec.Header().Get("Access-Control-Allow-Origin"))
 	assert.Equal(t, "true", rec.Header().Get("Access-Control-Allow-Credentials"))
 	assert.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), "GET")
+}
+
+func TestHandleCloudLogin_HappyPath(t *testing.T) {
+	var mu sync.Mutex
+	var codeChallengeMethod string
+	var codeChallenge string
+	var verifier string
+	deviceCode := "device-123"
+
+	cloud := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/device/code":
+			var req map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			mu.Lock()
+			codeChallengeMethod = req["code_challenge_method"]
+			codeChallenge = req["code_challenge"]
+			mu.Unlock()
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"device_code":               deviceCode,
+				"user_code":                 "USER-CODE",
+				"verification_uri":          "https://example.com/verify",
+				"expires_in":                60,
+				"interval":                  1,
+				"verification_uri_complete": "https://example.com/verify?code=USER-CODE",
+			})
+		case "/auth/device/token":
+			var req map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			mu.Lock()
+			verifier = req["code_verifier"]
+			mu.Unlock()
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "token-abc",
+				"expires_in":   3600,
+				"token_type":   "bearer",
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer cloud.Close()
+
+	cfg := &config.Config{ListenAddr: ":0", CloudAPIUrl: cloud.URL}
+	s, _ := store.New(":memory:")
+	defer s.Close()
+	kc := newTestKeychain(t)
+
+	server := New(cfg, s.DB, kc)
+
+	{
+		req := httptest.NewRequest("POST", "/api/v1/cloud/login/start", nil)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		assert.Equal(t, deviceCode, body["device_code"])
+	}
+
+	{
+		req := httptest.NewRequest(
+			"POST",
+			"/api/v1/cloud/login/poll",
+			strings.NewReader(`{"device_code":"device-123","interval":1,"expires_in":5}`),
+		)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		assert.Equal(t, true, body["ok"])
+	}
+
+	stored, err := kc.Get("cloud_access_token")
+	require.NoError(t, err)
+	assert.Equal(t, "token-abc", stored)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, "S256", codeChallengeMethod)
+	assert.NotEmpty(t, codeChallenge)
+	assert.NotEmpty(t, verifier)
+}
+
+func TestHandleCloudLogin_RetryAfterTimeoutKeepsPKCE(t *testing.T) {
+	var mu sync.Mutex
+	var verifiers []string
+	allowToken := false
+	deviceCode := "device-999"
+
+	cloud := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/auth/device/code":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"device_code":      deviceCode,
+				"user_code":        "USER-CODE",
+				"verification_uri": "https://example.com/verify",
+				"expires_in":       60,
+				"interval":         1,
+			})
+		case "/auth/device/token":
+			var req map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			mu.Lock()
+			verifiers = append(verifiers, req["code_verifier"])
+			shouldAllow := allowToken
+			mu.Unlock()
+
+			if !shouldAllow {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{"error": "authorization_pending"})
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "token-final",
+				"expires_in":   3600,
+				"token_type":   "bearer",
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer cloud.Close()
+
+	cfg := &config.Config{ListenAddr: ":0", CloudAPIUrl: cloud.URL}
+	s, _ := store.New(":memory:")
+	defer s.Close()
+	kc := newTestKeychain(t)
+	server := New(cfg, s.DB, kc)
+
+	{
+		req := httptest.NewRequest("POST", "/api/v1/cloud/login/start", nil)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+	}
+
+	{
+		req := httptest.NewRequest(
+			"POST",
+			"/api/v1/cloud/login/poll",
+			strings.NewReader(`{"device_code":"device-999","interval":1,"expires_in":1}`),
+		)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusRequestTimeout, rec.Code)
+	}
+
+	mu.Lock()
+	allowToken = true
+	mu.Unlock()
+
+	{
+		req := httptest.NewRequest(
+			"POST",
+			"/api/v1/cloud/login/poll",
+			strings.NewReader(`{"device_code":"device-999","interval":1,"expires_in":5}`),
+		)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code)
+
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		assert.Equal(t, true, body["ok"])
+	}
+
+	stored, err := kc.Get("cloud_access_token")
+	require.NoError(t, err)
+	assert.Equal(t, "token-final", stored)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.GreaterOrEqual(t, len(verifiers), 2)
+	assert.NotEmpty(t, verifiers[0])
+	assert.NotEmpty(t, verifiers[len(verifiers)-1])
+	assert.Equal(t, verifiers[0], verifiers[len(verifiers)-1])
 }
 
 func TestHandleProviderKey_RoundTrip(t *testing.T) {

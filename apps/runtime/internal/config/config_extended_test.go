@@ -10,12 +10,16 @@ import (
 )
 
 func TestDefaultPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
 	path := DefaultPath()
 	assert.Contains(t, path, ".pryx")
 	assert.Contains(t, path, "config.yaml")
 }
 
 func TestLoadDefaults(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
 	// Clear environment
 	os.Unsetenv("PRYX_LISTEN_ADDR")
 	os.Unsetenv("PRYX_DB_PATH")
@@ -29,6 +33,8 @@ func TestLoadDefaults(t *testing.T) {
 }
 
 func TestLoadFromEnvironment(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
 	// Set environment variables
 	os.Setenv("PRYX_LISTEN_ADDR", "127.0.0.1:8080")
 	os.Setenv("PRYX_DB_PATH", "/custom/path.db")
@@ -48,6 +54,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 }
 
 func TestLoadFromEnvironment_Partial(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
 	// Set only one variable
 	os.Setenv("PRYX_LISTEN_ADDR", ":9000")
 	defer os.Unsetenv("PRYX_LISTEN_ADDR")
@@ -59,7 +68,7 @@ func TestLoadFromEnvironment_Partial(t *testing.T) {
 	cfg := Load()
 
 	assert.Equal(t, ":9000", cfg.ListenAddr)
-	assert.Equal(t, "pryx.db", cfg.DatabasePath)             // Default
+	assert.Equal(t, filepath.Join(home, ".pryx", "pryx.db"), cfg.DatabasePath)
 	assert.Equal(t, "https://pryx.dev/api", cfg.CloudAPIUrl) // Default
 }
 
@@ -225,6 +234,11 @@ func TestGetEnv(t *testing.T) {
 }
 
 func BenchmarkLoad(b *testing.B) {
+	tmpDir, err := os.MkdirTemp("", "pryx_home_bench_*")
+	require.NoError(b, err)
+	b.Cleanup(func() { _ = os.RemoveAll(tmpDir) })
+	os.Setenv("HOME", tmpDir)
+
 	os.Unsetenv("PRYX_LISTEN_ADDR")
 	os.Unsetenv("PRYX_DB_PATH")
 	os.Unsetenv("PRYX_CLOUD_API_URL")
