@@ -454,6 +454,43 @@ API keys are not stored in config.yaml (stored via keychain / runtime API).
 - OAuth provider flow
 - Edge cases (network, invalid credentials, etc.)
 
+## Additional Verification Results (2026-02-03 Evening)
+
+### Bug Fix Verification
+
+| Bug | Fix Status | Test Result |
+|-----|------------|-------------|
+| Provider add persistence | ✅ VERIFIED | OpenAI provider added successfully, persists to ConfiguredProviders list |
+| Config set arbitrary keys | ✅ VERIFIED | `test_key` correctly NOT stored in config.yaml |
+| Config set known provider keys | ✅ VERIFIED | `openai_key` correctly stored in keychain only, not in config |
+| Skills enable/disable | ✅ VERIFIED | Skills persist to skills.yaml correctly |
+
+### Commands Verified
+
+```bash
+# Provider add - fixes persistence when no API key entered
+./apps/runtime/pryx-core provider add openai
+# ✅ Provider appears in list as configured
+
+# Config set - fixes arbitrary key storage
+./apps/runtime/pryx-core config set test_key test_value
+# ✅ test_key NOT in config.yaml (correct behavior)
+
+# Config set - known provider keys still work
+./apps/runtime/pryx-core config set openai_key sk-test-key-123
+# ✅ openai_key stored in keychain only (secure)
+
+# Skills enable persists
+./apps/runtime/pryx-core skills enable weather
+# ✅ enabled_skills: {weather: true} in skills.yaml
+
+# Channel test shows missing token error
+./apps/runtime/pryx-core channel test test-bot
+# ✅ "Token not configured" error shown with helpful guidance
+```
+
+### Additional Tests Passed
+
 ---
 
 ## Next Actions
