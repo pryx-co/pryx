@@ -2,7 +2,7 @@
   "name": "@pryx/vault",
   "version": "0.1.0",
   "description": "Pryx Vault - Secure credential encryption with Argon2id + AES-256-GCM",
-  "type": "module",
+  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

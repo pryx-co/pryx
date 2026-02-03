@@ -2,7 +2,7 @@
   "name": "@pryx/mcp",
   "version": "0.1.0",
   "description": "Pryx MCP (Model Context Protocol) Configuration and Management",
-  "type": "module",
+  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

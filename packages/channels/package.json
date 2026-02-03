@@ -2,7 +2,7 @@
   "name": "@pryx/channels",
   "version": "0.1.0",
   "description": "Pryx Channel Configuration and Management",
-  "type": "module",
+  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
