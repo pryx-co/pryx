@@ -25,3 +25,18 @@ id = "d7c2e95e549842ce83ab6d9a4848fa95"
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "580c90f74ca941ea91a460afc63d9474"
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 0.1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
