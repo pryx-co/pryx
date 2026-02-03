@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import DeviceCard from './DeviceCard';
+import DeviceCard from './DeviceCard.tsx';
 
 interface Device {
     id: string;

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import SkillCard, { type SkillProps } from './SkillCard';
+import SkillCard, { type SkillProps } from './SkillCard.tsx';
 
 export default function SkillList() {
     const [skills, setSkills] = useState<SkillProps[]>([]);

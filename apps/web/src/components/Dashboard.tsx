@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import DeviceList from './dashboard/DeviceList';
+import DeviceList from './dashboard/DeviceList.tsx';
 
 interface TraceEvent {
     id: string;
@@ -124,7 +124,7 @@ export default function Dashboard() {
                     padding: '1rem',
                     backgroundColor: '#111'
                 }}>
-                    <svg width={timelineWidth} height={Math.max(events.length * 24 + 20, 100)}>
+                    <svg width={timelineWidth} height={Math.max(events.length * 24 + 20, 100)} role="img" aria-label="Event timeline visualization">
                         {events.map((event, i) => {
                             const start = Math.max(0, (event.startTime - (now - timeWindow)) / timeWindow);
                             const end = event.endTime
@@ -134,15 +134,22 @@ export default function Dashboard() {
                             const width = Math.max(4, (end - start) * timelineWidth);
 
                             return (
-                                <g key={event.id} onClick={() => setSelectedEvent(event)}>
-                                    <rect
-                                        x={x}
-                                        y={i * 24 + 4}
-                                        width={width}
-                                        height={18}
-                                        rx={4}
-                                        fill={getEventColor(event)}
-                                        style={{ cursor: 'pointer' }}
+                                <g key={event.id}>
+                                    <button
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${x}px`,
+                                            top: `${i * 24 + 4}px`,
+                                            width: `${width}px`,
+                                            height: '18px',
+                                            backgroundColor: getEventColor(event),
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer'
+                                        }}
+                                        type="button"
+                                        onClick={() => setSelectedEvent(event)}
+                                        aria-label={`View details for ${event.name}`}
                                     />
                                     <text
                                         x={x + 4}
