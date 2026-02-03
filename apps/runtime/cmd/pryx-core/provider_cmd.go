@@ -220,6 +220,20 @@ func isProviderConfigured(name string, cfg *config.Config, kc *keychain.Keychain
 		}
 	}
 
+	// Check if provider was explicitly added via 'provider add' command
+	if isProviderInList(cfg.ConfiguredProviders, name) {
+		return true
+	}
+
+	return false
+}
+
+func isProviderInList(list []string, name string) bool {
+	for _, item := range list {
+		if item == name {
+			return true
+		}
+	}
 	return false
 }
 
@@ -357,12 +371,21 @@ func providerAdd(name string, cfg *config.Config, path string, kc *keychain.Keyc
 		fmt.Println("✓ API key stored securely in keychain")
 	}
 
+	// Add to configured providers list (tracks providers added even without API keys)
+	if !isProviderInList(cfg.ConfiguredProviders, name) {
+		cfg.ConfiguredProviders = append(cfg.ConfiguredProviders, name)
+	}
+
 	// Set as active if no provider is currently active
 	if cfg.ModelProvider == "" {
 		cfg.ModelProvider = name
-		if err := cfg.Save(path); err != nil {
-			fmt.Printf("Warning: Could not save config: %v\n", err)
-		} else {
+	}
+
+	// Save config
+	if err := cfg.Save(path); err != nil {
+		fmt.Printf("Warning: Could not save config: %v\n", err)
+	} else {
+		if cfg.ModelProvider == name {
 			fmt.Printf("✓ Set as active provider\n")
 		}
 	}

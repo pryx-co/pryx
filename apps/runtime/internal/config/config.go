@@ -5,6 +5,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -36,6 +37,9 @@ type Config struct {
 	ModelName string `yaml:"model_name"`
 	// OllamaEndpoint is the URL of the Ollama server (when using Ollama provider).
 	OllamaEndpoint string `yaml:"ollama_endpoint"`
+	// ConfiguredProviders is the list of providers that have been explicitly configured.
+	// This tracks providers added via 'provider add' even without API keys (e.g., Ollama).
+	ConfiguredProviders []string `yaml:"configured_providers"`
 
 	// Channels
 	// TelegramToken is the bot token for Telegram integration.
@@ -97,19 +101,28 @@ var ProviderKeyNames = map[string]string{
 // DefaultPath returns the default configuration file path.
 // The config is stored in ~/.pryx/config.yaml.
 func DefaultPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".pryx", "config.yaml")
+	return filepath.Join(defaultPryxDir(), "config.yaml")
+}
+
+func defaultPryxDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil || strings.TrimSpace(home) == "" {
+		return ".pryx"
+	}
+	return filepath.Join(home, ".pryx")
 }
 
 // Load loads configuration from the default file and environment variables.
 // Environment variables take precedence over file configuration.
 // Returns a Config with default values if no configuration file exists.
 func Load() *Config {
+	pryxDir := defaultPryxDir()
+
 	cfg := &Config{
 		ListenAddr:                  ":0", // Use :0 for dynamic port allocation
-		DatabasePath:                "pryx.db",
-		SkillsPath:                  "skills",
-		CachePath:                   "cache",
+		DatabasePath:                filepath.Join(pryxDir, "pryx.db"),
+		SkillsPath:                  filepath.Join(pryxDir, "skills"),
+		CachePath:                   filepath.Join(pryxDir, "cache"),
 		CloudAPIUrl:                 "https://pryx.dev/api",
 		ModelProvider:               "ollama",
 		ModelName:                   "llama3",
@@ -155,6 +168,14 @@ func Load() *Config {
 	}
 	if v := os.Getenv("PRYX_SLACK_ENABLED"); v != "" {
 		cfg.SlackEnabled = true
+	}
+
+	_ = os.MkdirAll(pryxDir, 0o755)
+	if strings.TrimSpace(cfg.SkillsPath) != "" {
+		_ = os.MkdirAll(cfg.SkillsPath, 0o755)
+	}
+	if strings.TrimSpace(cfg.CachePath) != "" {
+		_ = os.MkdirAll(cfg.CachePath, 0o755)
 	}
 
 	return cfg

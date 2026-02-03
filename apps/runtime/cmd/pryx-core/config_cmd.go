@@ -56,7 +56,7 @@ func runConfig(args []string) int {
 				fmt.Printf("Error storing key in keychain: %v\n", err)
 				return 1
 			}
-			fmt.Printf("Stored API key for provider '%s' in keychain\n", provider)
+			fmt.Printf("Stored API key for provider %s in keychain\n", provider)
 			return 0
 		}
 
@@ -142,17 +142,27 @@ func setConfigValue(cfg *config.Config, key, value string) error {
 
 func isProviderKeyField(key string) bool {
 	key = strings.ToLower(key)
-	return strings.HasSuffix(key, "_key") ||
-		key == "openai_key" ||
-		key == "anthropic_key" ||
-		key == "glm_key" ||
-		key == "openrouter_key" ||
-		key == "together_key" ||
-		key == "groq_key" ||
-		key == "xai_key" ||
-		key == "mistral_key" ||
-		key == "cohere_key" ||
-		key == "google_key"
+	// Only match specific known provider API key fields
+	// Do NOT match arbitrary keys ending in "_key"
+	knownProviderKeys := []string{
+		"openai_key",
+		"anthropic_key",
+		"glm_key",
+		"openrouter_key",
+		"together_key",
+		"groq_key",
+		"xai_key",
+		"mistral_key",
+		"cohere_key",
+		"google_key",
+		"gemini_key",
+	}
+	for _, providerKey := range knownProviderKeys {
+		if key == providerKey {
+			return true
+		}
+	}
+	return false
 }
 
 func extractProviderFromKeyField(key string) string {
