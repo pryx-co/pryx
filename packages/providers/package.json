@@ -2,7 +2,7 @@
   "name": "@pryx/providers",
   "version": "0.1.0",
   "description": "Pryx AI Provider Configuration and Management",
-  "type": "module",
+  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
