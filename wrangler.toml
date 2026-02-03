@@ -5,3 +5,10 @@ main = "./apps/web/dist/_worker.js"
 
 [vars]
 ENVIRONMENT = "production"
+
+# Custom domain routing for fullstack web app
+# Note: Subdomains (*.pryx.dev) must be configured via Cloudflare Dashboard
+# or by adding individual route entries for each subdomain
+[[routes]]
+pattern = "pryx.dev"
+custom_domain = true
