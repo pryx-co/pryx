@@ -1,19 +1,19 @@
-name = "pryx-api"
+name = "pryx"
 compatibility_date = "2025-08-15"
 compatibility_flags = ["nodejs_compat"]
-main = "./apps/web/worker.ts"
+main = "./worker.ts"
+account_id = "a37da71c38a2f7ab732057d87d5d0f6e"
 
 [vars]
 ENVIRONMENT = "production"
 
-# Custom domain routing for fullstack web app
-# Note: Subdomains (*.pryx.dev) must be configured via Cloudflare Dashboard
-# or by adding individual route entries for each subdomain
+# Custom domain routing - ALL under pryx.dev
+# pryx.dev/* → served by worker (API routes + static fallback)
 [[routes]]
 pattern = "pryx.dev"
 custom_domain = true
 
-# KV Namespaces for auth and session storage
+# KV Namespaces for auth and session storage (SHARED)
 [[kv_namespaces]]
 binding = "DEVICE_CODES"
 id = "1e85f99a90fc487ea99e10753f7abd72"
