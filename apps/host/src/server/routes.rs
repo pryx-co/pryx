@@ -2,9 +2,9 @@ use super::auth::auth_middleware;
 use super::handlers::{
     audit_list_handler, channel_create_handler, channel_delete_handler, channel_get_handler,
     channel_test_handler, channel_update_handler, channels_list_handler, config_handler,
-    cost_summary_handler, health_handler, mcp_create_handler, mcp_delete_handler, mcp_list_handler,
-    models_handler, policy_create_handler, policy_delete_handler, policy_get_handler,
-    policy_list_handler, policy_update_handler, providers_handler, skills_handler,
+    cost_summary_handler, health_handler, mcp_create_handler, mcp_delete_handler, mcp_get_handler,
+    mcp_list_handler, mcp_update_handler, models_handler, policy_create_handler, policy_delete_handler,
+    policy_get_handler, policy_list_handler, policy_update_handler, providers_handler, skills_handler,
 };
 use super::websocket::handle_socket;
 use crate::server::ServerConfig;
@@ -12,32 +12,75 @@ use axum::{
     http::{header, StatusCode},
     middleware,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{get, post},
     Router,
 };
 use std::path::PathBuf;
 use tower_http::services::ServeDir;
 
-async fn static_files_handler(uri: axum::http::Uri) -> axum::response::Response {
+async fn static_files_handler(
+    uri: axum::http::Uri,
+    axum::extract::State(config): axum::extract::State<super::ServerConfig>,
+) -> axum::response::Response {
+    // Resolve canonical base directory at startup
+    let base_dir = match std::fs::canonicalize(&config.static_files_path) {
+        Ok(path) => path,
+        Err(e) => {
+            log::error!("Failed to resolve static files base directory: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Server configuration error").into_response();
+        }
+    };
+
     let path = uri.path().trim_start_matches('/');
 
-    if path.is_empty() || path == "index.html" {
-        let index_path = PathBuf::from("../../local-web/dist/index.html");
-        if let Ok(content) = tokio::fs::read(index_path).await {
-            return axum::response::Html(content).into_response();
-        }
+    // Sanitize path: remove leading '/' and reject ".." segments
+    let sanitized_path: PathBuf = path
+        .split('/')
+        .filter(|segment| !segment.is_empty() && *segment != "..")
+        .collect();
+
+    // Reject paths with ".." after the filter (edge case)
+    if path.contains("..") {
+        return (StatusCode::BAD_REQUEST, "Invalid path").into_response();
     }
 
-    let file_path = PathBuf::from("../../local-web/dist").join(path);
+    let target_path = if sanitized_path.components().next().is_none() || path.is_empty() || path == "index.html" {
+        base_dir.join("index.html")
+    } else {
+        base_dir.join(&sanitized_path)
+    };
 
-    if file_path.exists() && file_path.is_file() {
-        if let Ok(content) = tokio::fs::read(&file_path).await {
-            let mime_type = mime_guess::from_path(&file_path).first_or_octet_stream();
-            return ([("Content-Type", mime_type.as_ref())], content).into_response();
-        }
+    // Verify the resolved path is within the base directory
+    if !target_path.starts_with(&base_dir) {
+        return (StatusCode::FORBIDDEN, "Access denied").into_response();
     }
 
-    (StatusCode::NOT_FOUND, "File not found").into_response()
+    // Use async tokio fs operations
+    match tokio::fs::metadata(&target_path).await {
+        Ok(metadata) => {
+            if metadata.is_file() {
+                match tokio::fs::read(&target_path).await {
+                    Ok(content) => {
+                        let mime_type = mime_guess::from_path(&target_path).first_or_octet_stream();
+                        return ([("Content-Type", mime_type.as_ref())], content).into_response();
+                    }
+                    Err(e) => {
+                        log::error!("Failed to read static file: {}", e);
+                        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read file").into_response();
+                    }
+                }
+            } else {
+                return (StatusCode::NOT_FOUND, "File not found").into_response();
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return (StatusCode::NOT_FOUND, "File not found").into_response();
+        }
+        Err(e) => {
+            log::error!("Error checking static file: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Server error").into_response();
+        }
+    }
 }
 
 pub fn app_router(config: ServerConfig) -> Router {
@@ -61,7 +104,12 @@ pub fn app_router(config: ServerConfig) -> Router {
         .route("/channels/:id/test", post(channel_test_handler))
         // MCP
         .route("/mcp", get(mcp_list_handler).post(mcp_create_handler))
-        .route("/mcp/:id", delete(mcp_delete_handler))
+        .route(
+            "/mcp/:id",
+            get(mcp_get_handler)
+                .put(mcp_update_handler)
+                .delete(mcp_delete_handler),
+        )
         // Policies
         .route(
             "/policies",
@@ -98,8 +146,8 @@ async fn root_handler(
         "".to_string()
     };
 
-    let index_path = PathBuf::from("../../local-web/dist/index.html");
-    let content = if let Ok(c) = tokio::fs::read(index_path).await {
+    let index_path = config.static_files_path.join("index.html");
+    let content = if let Ok(c) = tokio::fs::read(&index_path).await {
         axum::response::Html(c).into_response()
     } else {
         let body = "<h1>Pryx Host</h1><p>Local web UI available at /</p>";

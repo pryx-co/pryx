@@ -278,7 +278,7 @@ func (m *Manager) CallTool(ctx context.Context, sessionID string, toolName strin
 			"result": res,
 		}))
 	}
-	return res, nil
+	return TruncateToolResult(res), nil
 }
 
 func (m *Manager) buildClient(name string, sc ServerConfig) (*Client, error) {

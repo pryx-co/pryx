@@ -1,5 +1,6 @@
 use serde_json::Value;
 use std::collections::HashMap;
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
@@ -102,12 +103,35 @@ impl SidecarProcess {
             *self.start_time.lock().expect("mutex poisoned") = Some(Instant::now());
         }
 
-        // Save admin token to file
+        // Save admin token to file with cross-platform support
         let token = self.admin_token.lock().expect("mutex poisoned").clone();
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        let token_path = PathBuf::from(home).join(".pryx/admin.token");
-        if let Err(e) = std::fs::write(&token_path, token) {
+        let token_path = if let Some(home) = dirs::home_dir() {
+            home.join(".pryx/admin.token")
+        } else {
+            PathBuf::from(".pryx/admin.token")
+        };
+
+        // Create .pryx directory if it doesn't exist
+        if let Some(parent) = token_path.parent() {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                log::error!("Failed to create .pryx directory: {}", e);
+            }
+        }
+
+        // Write token with secure permissions
+        if let Err(e) = std::fs::write(&token_path, &token) {
             log::error!("Failed to write admin token to {:?}: {}", token_path, e);
+        } else {
+            // Set secure permissions on Unix (0o600)
+            #[cfg(unix)]
+            {
+                if let Err(e) = std::fs::set_permissions(
+                    &token_path,
+                    PermissionsExt::from_mode(0o600),
+                ) {
+                    log::error!("Failed to set secure permissions on {:?}: {}", token_path, e);
+                }
+            }
         }
 
         match self.spawn_sidecar().await {
@@ -284,20 +308,46 @@ impl SidecarProcess {
             "params": params,
             "id": id
         });
-
         let json = serde_json::to_string(&req)?;
         let mut stdin_guard = self.stdin.lock().await;
         if let Some(stdin) = stdin_guard.as_mut() {
-            stdin.write_all(json.as_bytes()).await?;
-            stdin.write_all(b"\n").await?;
-            stdin.flush().await?;
+            if let Err(e) = stdin.write_all(json.as_bytes()).await {
+                let mut pending = self.pending_requests.lock().await;
+                pending.remove(&id);
+                return Err(anyhow::anyhow!("Failed to write to stdin: {}", e));
+            }
+            if let Err(e) = stdin.write_all(b"\n").await {
+                let mut pending = self.pending_requests.lock().await;
+                pending.remove(&id);
+                return Err(anyhow::anyhow!("Failed to write newline to stdin: {}", e));
+            }
+            if let Err(e) = stdin.flush().await {
+                let mut pending = self.pending_requests.lock().await;
+                pending.remove(&id);
+                return Err(anyhow::anyhow!("Failed to flush stdin: {}", e));
+            }
         } else {
+            let mut pending = self.pending_requests.lock().await;
+            pending.remove(&id);
             return Err(anyhow::anyhow!("Sidecar stdin not available"));
         }
 
         match tokio::time::timeout(Duration::from_secs(10), rx).await {
-            Ok(Ok(val)) => Ok(val),
-            Ok(Err(_)) => Err(anyhow::anyhow!("RPC response channel closed")),
+            Ok(Ok(val)) => {
+                // Check if the response contains a JSON-RPC error
+                if let Some(error) = val.get("error") {
+                    let error_code = error.get("code").and_then(|v| v.as_i64()).unwrap_or(-1);
+                    let error_message = error.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+                    let _error_data = error.get("data");
+                    return Err(anyhow::anyhow!("JSON-RPC error {}: {}", error_code, error_message));
+                }
+                Ok(val)
+            }
+            Ok(Err(_)) => {
+                let mut pending = self.pending_requests.lock().await;
+                pending.remove(&id);
+                Err(anyhow::anyhow!("RPC response channel closed"))
+            }
             Err(_) => {
                 let mut pending = self.pending_requests.lock().await;
                 pending.remove(&id);
