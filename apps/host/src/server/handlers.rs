@@ -61,6 +61,18 @@ pub async fn channel_test_handler(State(config): State<ServerConfig>, Path(id): 
     rpc_call(config, "admin.channels.test", serde_json::json!({ "id": id })).await
 }
 
+pub async fn channel_get_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
+    rpc_call(config, "admin.channels.get", serde_json::json!({ "id": id })).await
+}
+
+pub async fn channel_update_handler(State(config): State<ServerConfig>, Path(id): Path<String>, Json(body): Json<Value>) -> Response {
+    let mut params = body;
+    if let Some(obj) = params.as_object_mut() {
+        obj.insert("id".to_string(), Value::String(id));
+    }
+    rpc_call(config, "admin.channels.update", params).await
+}
+
 // --- MCP Handlers ---
 
 pub async fn mcp_list_handler(State(config): State<ServerConfig>) -> Response {

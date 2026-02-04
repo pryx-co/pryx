@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use axum::{
-    routing::{get, post, delete, put},
+    routing::{get, post, delete},
     Router,
     response::IntoResponse,
     http::{StatusCode, header},
@@ -11,6 +11,7 @@ use crate::server::ServerConfig;
 use super::handlers::{
     health_handler, skills_handler, config_handler, providers_handler, models_handler,
     channels_list_handler, channel_create_handler, channel_delete_handler, channel_test_handler,
+    channel_get_handler, channel_update_handler,
     mcp_list_handler, mcp_create_handler, mcp_delete_handler,
     policy_list_handler, policy_create_handler, policy_get_handler, policy_update_handler, policy_delete_handler,
     audit_list_handler, cost_summary_handler
@@ -49,7 +50,7 @@ pub fn app_router(config: ServerConfig) -> Router {
         .route("/models", get(models_handler))
         // Channels
         .route("/channels", get(channels_list_handler).post(channel_create_handler))
-        .route("/channels/:id", delete(channel_delete_handler))
+        .route("/channels/:id", get(channel_get_handler).put(channel_update_handler).delete(channel_delete_handler))
         .route("/channels/:id/test", post(channel_test_handler))
         // MCP
         .route("/mcp", get(mcp_list_handler).post(mcp_create_handler))
