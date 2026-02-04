@@ -1,7 +1,0 @@
-name = "pryx-web"
-compatibility_date = "2025-01-01"
-pages_build_output_dir = "./apps/web/dist"
-account_id = "a37da71c38a2f7ab732057d87d5d0f6e"
-
-[vars]
-ENVIRONMENT = "production"
