@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"pryx-core/internal/config"
+	"pryx-core/internal/keychain"
 	"pryx-core/internal/server"
 	"pryx-core/internal/store"
-	"pryx-core/internal/keychain"
-	"pryx-core/internal/config"
 )
 
 func TestRPCHandlers(t *testing.T) {

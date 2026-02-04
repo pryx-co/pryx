@@ -127,7 +127,7 @@ func installSystemd(sc ServiceConfig) int {
 	servicePath := "/etc/systemd/system/" + serviceName
 
 	tmpl, _ := template.New("systemd").Parse(systemdTemplate)
-	
+
 	// Write to temp file first then sudo mv
 	tmpFile := filepath.Join(os.TempDir(), serviceName)
 	f, err := os.Create(tmpFile)
@@ -135,7 +135,7 @@ func installSystemd(sc ServiceConfig) int {
 		log.Printf("Failed to create temp service file: %v", err)
 		return 1
 	}
-	
+
 	if err := tmpl.Execute(f, sc); err != nil {
 		f.Close()
 		log.Printf("Failed to generate service file: %v", err)
@@ -144,7 +144,7 @@ func installSystemd(sc ServiceConfig) int {
 	f.Close()
 
 	fmt.Println("Service file generated. Requires sudo to install to /etc/systemd/system/")
-	
+
 	// Move to system location
 	if err := exec.Command("sudo", "mv", tmpFile, servicePath).Run(); err != nil {
 		log.Printf("Failed to move service file (sudo required): %v", err)

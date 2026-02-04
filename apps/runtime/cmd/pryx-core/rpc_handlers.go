@@ -15,11 +15,11 @@ func setupAdminHandlers(srv *server.Server) *hostrpc.Registry {
 	// Health check
 	reg.Register("admin.health", func(method string, params map[string]interface{}) (interface{}, error) {
 		return map[string]interface{}{
-			"status":           "healthy",
-			"service":          "pryx-runtime",
-			"uptime":           "up",
-			"memory_enabled":   srv.Memory() != nil,
-			"channels_active":  len(srv.Channels().List()),
+			"status":          "healthy",
+			"service":         "pryx-runtime",
+			"uptime":          "up",
+			"memory_enabled":  srv.Memory() != nil,
+			"channels_active": len(srv.Channels().List()),
 		}, nil
 	})
 
@@ -28,7 +28,7 @@ func setupAdminHandlers(srv *server.Server) *hostrpc.Registry {
 		// Mock config export for now until we have a proper config export method
 		return map[string]string{
 			"model_provider": "openai",
-			"model_name":    "gpt-4",
+			"model_name":     "gpt-4",
 		}, nil
 	})
 
@@ -78,7 +78,7 @@ func setupAdminHandlers(srv *server.Server) *hostrpc.Registry {
 		if l, ok := params["limit"].(float64); ok {
 			limit = int(l)
 		}
-		
+
 		entries, err := srv.AuditRepo().Query(audit.QueryOptions{
 			Limit: limit,
 		})
@@ -104,7 +104,7 @@ func setupAdminHandlers(srv *server.Server) *hostrpc.Registry {
 func startRPCServer(ctx context.Context, srv *server.Server) {
 	registry := setupAdminHandlers(srv)
 	rpcServer := hostrpc.NewDefaultServer()
-	
+
 	go func() {
 		if err := rpcServer.Serve(registry); err != nil {
 			// RPC server stopped
