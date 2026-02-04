@@ -257,6 +257,14 @@ func (s *Server) routes() {
 	s.router.Post("/api/v1/tasks/{id}/disable", s.handleTaskDisable)
 	s.router.Get("/api/v1/tasks/{id}/runs", s.handleTaskRuns)
 	s.router.Post("/api/v1/tasks/validate", s.handleTaskValidate)
+
+	s.router.Get("/api/admin/stats", s.handleAdminStats)
+	s.router.Get("/api/admin/users", s.handleAdminUsers)
+	s.router.Get("/api/admin/devices", s.handleAdminDevices)
+	s.router.Get("/api/admin/costs", s.handleAdminCosts)
+	s.router.Get("/api/admin/health", s.handleAdminHealth)
+	s.router.Get("/api/admin/telemetry/config", s.handleAdminTelemetryConfig)
+	s.router.Put("/api/admin/telemetry/config", s.handleAdminTelemetryConfigUpdate)
 }
 
 // Bus returns the event bus instance.
