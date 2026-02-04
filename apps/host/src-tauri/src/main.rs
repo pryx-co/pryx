@@ -1,6 +1,6 @@
+use pryx_host::server::{start_server, ServerConfig};
 use pryx_host::sidecar::permissions::*;
 use pryx_host::sidecar::*;
-use pryx_host::server::{start_server, ServerConfig};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
@@ -81,14 +81,13 @@ async fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { api, .. } => {
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if let Err(e) = window.hide() {
                     log::error!("Failed to hide window on close request: {}", e);
                 }
                 api.prevent_close();
             }
-            _ => {}
         })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {

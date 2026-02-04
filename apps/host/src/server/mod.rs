@@ -1,17 +1,17 @@
+use crate::sidecar::SidecarProcess;
+use axum::Router;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use axum::Router;
 use thiserror::Error;
-use crate::sidecar::SidecarProcess;
 
-pub mod routes;
-pub mod handlers;
-pub mod websocket;
 pub mod auth;
+pub mod handlers;
+pub mod routes;
+pub mod websocket;
 
-pub use routes::app_router;
 pub use handlers::{health_handler, skills_handler};
+pub use routes::app_router;
 pub use websocket::handle_socket;
 
 #[derive(Error, Debug)]
@@ -46,15 +46,21 @@ impl Default for ServerConfig {
 pub async fn start_server(config: ServerConfig) -> Result<(), ServerError> {
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
         .parse()
-        .map_err(|e| ServerError::BindError(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)))?;
+        .map_err(|e| {
+            ServerError::BindError(std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
+        })?;
 
     let app: Router = routes::app_router(config.clone());
 
     log::info!("Starting HTTP server on http://{}", addr);
     log::info!("Serving static files from: {:?}", config.static_files_path);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.map_err(ServerError::BindError)?;
-    axum::serve(listener, app).await.map_err(|e| ServerError::BindError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(ServerError::BindError)?;
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| ServerError::BindError(std::io::Error::other(e)))?;
 
     Ok(())
 }

@@ -108,7 +108,12 @@ func NewProvider(cfg *config.Config, kc *keychain.Keychain) (*Provider, error) {
 
 	// Initialize OpenTelemetry
 	if err := p.init(context.Background()); err != nil {
-		return nil, fmt.Errorf("failed to initialize telemetry: %w", err)
+		log.Printf("Telemetry: initialization failed (will use noop): %v", err)
+		// Still return a valid provider, just with noop tracing
+		// This allows tests and callers to work even when network/auth fails
+		p.tracer = &noopTracer{}
+		setGlobalProvider(p)
+		return p, nil
 	}
 	setGlobalProvider(p)
 
@@ -424,6 +429,15 @@ func getVersion() string {
 // noopSpan is a no-op span for when telemetry is disabled
 type noopSpan struct {
 	embedded.Span
+}
+
+// noopTracer is a no-op tracer for when telemetry is disabled or init fails
+type noopTracer struct {
+	embedded.Tracer
+}
+
+func (t *noopTracer) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return ctx, &noopSpan{}
 }
 
 func (s *noopSpan) End(options ...trace.SpanEndOption)                  {}

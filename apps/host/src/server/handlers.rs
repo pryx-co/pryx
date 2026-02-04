@@ -1,11 +1,11 @@
+use crate::server::ServerConfig;
 use axum::{
-    Json,
-    response::{IntoResponse, Response},
+    extract::{Path, State},
     http::StatusCode,
-    extract::{State, Path},
+    response::{IntoResponse, Response},
+    Json,
 };
 use serde_json::Value;
-use crate::server::ServerConfig;
 
 // Helper to call RPC and handle response
 async fn rpc_call(config: ServerConfig, method: &str, params: Value) -> Response {
@@ -49,23 +49,54 @@ pub async fn channels_list_handler(State(config): State<ServerConfig>) -> Respon
     rpc_call(config, "admin.channels.list", Value::Null).await
 }
 
-pub async fn channel_create_handler(State(config): State<ServerConfig>, Json(body): Json<Value>) -> Response {
+pub async fn channel_create_handler(
+    State(config): State<ServerConfig>,
+    Json(body): Json<Value>,
+) -> Response {
     rpc_call(config, "admin.channels.create", body).await
 }
 
-pub async fn channel_delete_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
-    rpc_call(config, "admin.channels.delete", serde_json::json!({ "id": id })).await
+pub async fn channel_delete_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
+    rpc_call(
+        config,
+        "admin.channels.delete",
+        serde_json::json!({ "id": id }),
+    )
+    .await
 }
 
-pub async fn channel_test_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
-    rpc_call(config, "admin.channels.test", serde_json::json!({ "id": id })).await
+pub async fn channel_test_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
+    rpc_call(
+        config,
+        "admin.channels.test",
+        serde_json::json!({ "id": id }),
+    )
+    .await
 }
 
-pub async fn channel_get_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
-    rpc_call(config, "admin.channels.get", serde_json::json!({ "id": id })).await
+pub async fn channel_get_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
+    rpc_call(
+        config,
+        "admin.channels.get",
+        serde_json::json!({ "id": id }),
+    )
+    .await
 }
 
-pub async fn channel_update_handler(State(config): State<ServerConfig>, Path(id): Path<String>, Json(body): Json<Value>) -> Response {
+pub async fn channel_update_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
     let mut params = body;
     if let Some(obj) = params.as_object_mut() {
         obj.insert("id".to_string(), Value::String(id));
@@ -79,11 +110,17 @@ pub async fn mcp_list_handler(State(config): State<ServerConfig>) -> Response {
     rpc_call(config, "admin.mcp.list", Value::Null).await
 }
 
-pub async fn mcp_create_handler(State(config): State<ServerConfig>, Json(body): Json<Value>) -> Response {
+pub async fn mcp_create_handler(
+    State(config): State<ServerConfig>,
+    Json(body): Json<Value>,
+) -> Response {
     rpc_call(config, "admin.mcp.create", body).await
 }
 
-pub async fn mcp_delete_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
+pub async fn mcp_delete_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
     rpc_call(config, "admin.mcp.delete", serde_json::json!({ "id": id })).await
 }
 
@@ -93,15 +130,30 @@ pub async fn policy_list_handler(State(config): State<ServerConfig>) -> Response
     rpc_call(config, "admin.policies.list", Value::Null).await
 }
 
-pub async fn policy_create_handler(State(config): State<ServerConfig>, Json(body): Json<Value>) -> Response {
+pub async fn policy_create_handler(
+    State(config): State<ServerConfig>,
+    Json(body): Json<Value>,
+) -> Response {
     rpc_call(config, "admin.policies.create", body).await
 }
 
-pub async fn policy_get_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
-    rpc_call(config, "admin.policies.get", serde_json::json!({ "id": id })).await
+pub async fn policy_get_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
+    rpc_call(
+        config,
+        "admin.policies.get",
+        serde_json::json!({ "id": id }),
+    )
+    .await
 }
 
-pub async fn policy_update_handler(State(config): State<ServerConfig>, Path(id): Path<String>, Json(body): Json<Value>) -> Response {
+pub async fn policy_update_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
     let mut params = body;
     if let Some(obj) = params.as_object_mut() {
         obj.insert("id".to_string(), Value::String(id));
@@ -109,8 +161,16 @@ pub async fn policy_update_handler(State(config): State<ServerConfig>, Path(id):
     rpc_call(config, "admin.policies.update", params).await
 }
 
-pub async fn policy_delete_handler(State(config): State<ServerConfig>, Path(id): Path<String>) -> Response {
-    rpc_call(config, "admin.policies.delete", serde_json::json!({ "id": id })).await
+pub async fn policy_delete_handler(
+    State(config): State<ServerConfig>,
+    Path(id): Path<String>,
+) -> Response {
+    rpc_call(
+        config,
+        "admin.policies.delete",
+        serde_json::json!({ "id": id }),
+    )
+    .await
 }
 
 // --- Audit Handlers ---

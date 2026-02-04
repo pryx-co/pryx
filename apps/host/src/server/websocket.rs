@@ -1,7 +1,7 @@
 use axum::extract::ws::WebSocket;
 use futures::StreamExt;
-use tokio::sync::broadcast;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 
 pub struct WsState {
     pub tx: broadcast::Sender<String>,

@@ -1,23 +1,22 @@
-use std::path::PathBuf;
-use axum::{
-    routing::{get, post, delete},
-    Router,
-    response::IntoResponse,
-    http::{StatusCode, header},
-    middleware,
-};
-use tower_http::services::ServeDir;
-use crate::server::ServerConfig;
+use super::auth::auth_middleware;
 use super::handlers::{
-    health_handler, skills_handler, config_handler, providers_handler, models_handler,
-    channels_list_handler, channel_create_handler, channel_delete_handler, channel_test_handler,
-    channel_get_handler, channel_update_handler,
-    mcp_list_handler, mcp_create_handler, mcp_delete_handler,
-    policy_list_handler, policy_create_handler, policy_get_handler, policy_update_handler, policy_delete_handler,
-    audit_list_handler, cost_summary_handler
+    audit_list_handler, channel_create_handler, channel_delete_handler, channel_get_handler,
+    channel_test_handler, channel_update_handler, channels_list_handler, config_handler,
+    cost_summary_handler, health_handler, mcp_create_handler, mcp_delete_handler, mcp_list_handler,
+    models_handler, policy_create_handler, policy_delete_handler, policy_get_handler,
+    policy_list_handler, policy_update_handler, providers_handler, skills_handler,
 };
 use super::websocket::handle_socket;
-use super::auth::auth_middleware;
+use crate::server::ServerConfig;
+use axum::{
+    http::{header, StatusCode},
+    middleware,
+    response::IntoResponse,
+    routing::{delete, get, post},
+    Router,
+};
+use std::path::PathBuf;
+use tower_http::services::ServeDir;
 
 async fn static_files_handler(uri: axum::http::Uri) -> axum::response::Response {
     let path = uri.path().trim_start_matches('/');
@@ -49,15 +48,31 @@ pub fn app_router(config: ServerConfig) -> Router {
         .route("/providers", get(providers_handler))
         .route("/models", get(models_handler))
         // Channels
-        .route("/channels", get(channels_list_handler).post(channel_create_handler))
-        .route("/channels/:id", get(channel_get_handler).put(channel_update_handler).delete(channel_delete_handler))
+        .route(
+            "/channels",
+            get(channels_list_handler).post(channel_create_handler),
+        )
+        .route(
+            "/channels/:id",
+            get(channel_get_handler)
+                .put(channel_update_handler)
+                .delete(channel_delete_handler),
+        )
         .route("/channels/:id/test", post(channel_test_handler))
         // MCP
         .route("/mcp", get(mcp_list_handler).post(mcp_create_handler))
         .route("/mcp/:id", delete(mcp_delete_handler))
         // Policies
-        .route("/policies", get(policy_list_handler).post(policy_create_handler))
-        .route("/policies/:id", get(policy_get_handler).put(policy_update_handler).delete(policy_delete_handler))
+        .route(
+            "/policies",
+            get(policy_list_handler).post(policy_create_handler),
+        )
+        .route(
+            "/policies/:id",
+            get(policy_get_handler)
+                .put(policy_update_handler)
+                .delete(policy_delete_handler),
+        )
         // Audit & Cost
         .route("/audit/logs", get(audit_list_handler))
         .route("/cost/summary", get(cost_summary_handler))
@@ -74,7 +89,9 @@ pub fn app_router(config: ServerConfig) -> Router {
         .with_state(config)
 }
 
-async fn root_handler(axum::extract::State(config): axum::extract::State<ServerConfig>) -> axum::response::Response {
+async fn root_handler(
+    axum::extract::State(config): axum::extract::State<ServerConfig>,
+) -> axum::response::Response {
     let token = if let Some(sidecar) = config.sidecar {
         sidecar.admin_token.lock().expect("mutex poisoned").clone()
     } else {
@@ -92,8 +109,13 @@ async fn root_handler(axum::extract::State(config): axum::extract::State<ServerC
     // Set cookie
     let mut response = content.into_response();
     if !token.is_empty() {
-        let cookie = format!("pryx_admin_token={}; Path=/; HttpOnly; SameSite=Strict", token);
-        response.headers_mut().insert(header::SET_COOKIE, cookie.parse().unwrap());
+        let cookie = format!(
+            "pryx_admin_token={}; Path=/; HttpOnly; SameSite=Strict",
+            token
+        );
+        response
+            .headers_mut()
+            .insert(header::SET_COOKIE, cookie.parse().unwrap());
     }
     response
 }

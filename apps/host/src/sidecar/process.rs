@@ -1,4 +1,5 @@
 use serde_json::Value;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
@@ -10,8 +11,7 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
-use tokio::sync::{Mutex as AsyncMutex, oneshot};
-use std::collections::HashMap;
+use tokio::sync::{oneshot, Mutex as AsyncMutex};
 
 use crate::sidecar::config::*;
 use crate::sidecar::types::*;
@@ -382,7 +382,8 @@ impl SidecarProcess {
                                 if let Some(id) = val.get("id").and_then(|v| v.as_u64()) {
                                     let mut pending = process_clone.pending_requests.lock().await;
                                     if let Some(tx) = pending.remove(&id) {
-                                        let result = val.get("result").cloned().unwrap_or(Value::Null);
+                                        let result =
+                                            val.get("result").cloned().unwrap_or(Value::Null);
                                         let _ = tx.send(result);
                                     }
                                 }

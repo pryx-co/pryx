@@ -1,10 +1,10 @@
+use crate::server::ServerConfig;
 use axum::{
     body::Body,
     http::{Request, Response, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
-use crate::server::ServerConfig;
 
 pub async fn auth_middleware(
     request: Request<Body>,
