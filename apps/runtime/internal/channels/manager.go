@@ -51,6 +51,16 @@ func (m *ChannelManager) Get(id string) (Channel, bool) {
 	return c, ok
 }
 
+func (m *ChannelManager) List() []Channel {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	list := make([]Channel, 0, len(m.channels))
+	for _, c := range m.channels {
+		list = append(list, c)
+	}
+	return list
+}
+
 func (m *ChannelManager) Shutdown() {
 	m.cancel()
 	m.mu.Lock()

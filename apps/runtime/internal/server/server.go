@@ -12,9 +12,12 @@ import (
 	"time"
 
 	"pryx-core/internal/agentbus"
+	"pryx-core/internal/audit"
 	"pryx-core/internal/auth"
 	"pryx-core/internal/bus"
+	"pryx-core/internal/channels"
 	"pryx-core/internal/config"
+	"pryx-core/internal/cost"
 	"pryx-core/internal/keychain"
 	"pryx-core/internal/mcp"
 	"pryx-core/internal/mcp/discovery"
@@ -61,6 +64,9 @@ type Server struct {
 	spawnTool    SpawnTool
 	ragMemory    *memory.RAGManager
 	store        *store.Store
+	auditRepo    *audit.AuditRepository
+	costService  *cost.CostService
+	channels     *channels.ChannelManager
 	pkceParams   map[string]pkceEntry // Temporary storage for PKCE during OAuth flow
 	mu           sync.Mutex           // Protects pkceParams
 
@@ -73,6 +79,7 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(MetricsMiddleware)
 	r.Use(corsMiddleware(cfg))
 	r.Use(DefaultRateLimiter().Middleware)
 
@@ -86,6 +93,12 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 		bus:      bus.New(),
 	}
 	s.store = store.NewFromDB(db)
+	s.auditRepo = audit.NewAuditRepository(db)
+	
+	pricingMgr := cost.NewPricingManager()
+	costTracker := cost.NewCostTracker(s.auditRepo, pricingMgr)
+	costCalc := cost.NewCostCalculator(pricingMgr)
+	s.costService = cost.NewCostService(costTracker, costCalc, pricingMgr, s.store)
 
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -119,6 +132,8 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 		MaxConnections:     20,
 		ReconnectEnabled:   true,
 	})
+
+	s.channels = channels.NewManager(s.bus)
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -212,6 +227,19 @@ func (s *Server) routes() {
 	s.router.Get("/api/mesh/devices", s.handleMeshDevicesList)
 	s.router.Post("/api/mesh/devices/{id}/unpair", s.handleMeshDevicesUnpair)
 	s.router.Get("/api/mesh/events", s.handleMeshEventsList)
+
+	// Channel management endpoints
+	s.router.Get("/api/v1/channels", s.handleChannelsList)
+	s.router.Get("/api/v1/channels/{id}", s.handleChannelGet)
+	s.router.Post("/api/v1/channels", s.handleChannelCreate)
+	s.router.Put("/api/v1/channels/{id}", s.handleChannelUpdate)
+	s.router.Delete("/api/v1/channels/{id}", s.handleChannelDelete)
+	s.router.Post("/api/v1/channels/{id}/test", s.handleChannelTest)
+	s.router.Get("/api/v1/channels/{id}/health", s.handleChannelHealth)
+	s.router.Post("/api/v1/channels/{id}/connect", s.handleChannelConnect)
+	s.router.Post("/api/v1/channels/{id}/disconnect", s.handleChannelDisconnect)
+	s.router.Get("/api/v1/channels/{id}/activity", s.handleChannelActivity)
+	s.router.Get("/api/v1/channels/types", s.handleChannelTypes)
 }
 
 // Bus returns the event bus instance.
@@ -237,6 +265,21 @@ func (s *Server) Agents() *agentbus.Service {
 // Memory returns the RAG memory manager instance.
 func (s *Server) Memory() *memory.RAGManager {
 	return s.ragMemory
+}
+
+// Channels returns the channel manager instance.
+func (s *Server) Channels() *channels.ChannelManager {
+	return s.channels
+}
+
+// AuditRepo returns the audit repository instance.
+func (s *Server) AuditRepo() *audit.AuditRepository {
+	return s.auditRepo
+}
+
+// CostService returns the cost service instance.
+func (s *Server) CostService() *cost.CostService {
+	return s.costService
 }
 
 // Handler returns the HTTP handler for the server.
