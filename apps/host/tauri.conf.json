@@ -3,10 +3,10 @@
     "version": "1.0.0",
     "identifier": "com.pryx.app",
     "build": {
-        "beforeDevCommand": "",
-        "beforeBuildCommand": "",
-        "devUrl": "http://localhost:1420",
-        "frontendDist": "../dist"
+        "beforeDevCommand": "cd ../local-web && bun run dev",
+        "beforeBuildCommand": "cd ../local-web && bun run build",
+        "devUrl": "http://localhost:42424",
+        "frontendDist": "../local-web/dist"
     },
     "app": {
         "windows": [
