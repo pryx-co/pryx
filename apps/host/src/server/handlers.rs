@@ -127,12 +127,7 @@ pub async fn mcp_get_handler(
     State(config): State<ServerConfig>,
     Path(id): Path<String>,
 ) -> Response {
-    rpc_call(
-        config,
-        "admin.mcp.get",
-        serde_json::json!({ "id": id }),
-    )
-    .await
+    rpc_call(config, "admin.mcp.get", serde_json::json!({ "id": id })).await
 }
 
 pub async fn mcp_update_handler(

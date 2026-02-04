@@ -125,11 +125,14 @@ impl SidecarProcess {
             // Set secure permissions on Unix (0o600)
             #[cfg(unix)]
             {
-                if let Err(e) = std::fs::set_permissions(
-                    &token_path,
-                    PermissionsExt::from_mode(0o600),
-                ) {
-                    log::error!("Failed to set secure permissions on {:?}: {}", token_path, e);
+                if let Err(e) =
+                    std::fs::set_permissions(&token_path, PermissionsExt::from_mode(0o600))
+                {
+                    log::error!(
+                        "Failed to set secure permissions on {:?}: {}",
+                        token_path,
+                        e
+                    );
                 }
             }
         }
@@ -337,9 +340,16 @@ impl SidecarProcess {
                 // Check if the response contains a JSON-RPC error
                 if let Some(error) = val.get("error") {
                     let error_code = error.get("code").and_then(|v| v.as_i64()).unwrap_or(-1);
-                    let error_message = error.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+                    let error_message = error
+                        .get("message")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Unknown error");
                     let _error_data = error.get("data");
-                    return Err(anyhow::anyhow!("JSON-RPC error {}: {}", error_code, error_message));
+                    return Err(anyhow::anyhow!(
+                        "JSON-RPC error {}: {}",
+                        error_code,
+                        error_message
+                    ));
                 }
                 Ok(val)
             }

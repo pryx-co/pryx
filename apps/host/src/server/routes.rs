@@ -3,8 +3,9 @@ use super::handlers::{
     audit_list_handler, channel_create_handler, channel_delete_handler, channel_get_handler,
     channel_test_handler, channel_update_handler, channels_list_handler, config_handler,
     cost_summary_handler, health_handler, mcp_create_handler, mcp_delete_handler, mcp_get_handler,
-    mcp_list_handler, mcp_update_handler, models_handler, policy_create_handler, policy_delete_handler,
-    policy_get_handler, policy_list_handler, policy_update_handler, providers_handler, skills_handler,
+    mcp_list_handler, mcp_update_handler, models_handler, policy_create_handler,
+    policy_delete_handler, policy_get_handler, policy_list_handler, policy_update_handler,
+    providers_handler, skills_handler,
 };
 use super::websocket::handle_socket;
 use crate::server::ServerConfig;
@@ -27,7 +28,11 @@ async fn static_files_handler(
         Ok(path) => path,
         Err(e) => {
             log::error!("Failed to resolve static files base directory: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, "Server configuration error").into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Server configuration error",
+            )
+                .into_response();
         }
     };
 
@@ -44,7 +49,10 @@ async fn static_files_handler(
         return (StatusCode::BAD_REQUEST, "Invalid path").into_response();
     }
 
-    let target_path = if sanitized_path.components().next().is_none() || path.is_empty() || path == "index.html" {
+    let target_path = if sanitized_path.components().next().is_none()
+        || path.is_empty()
+        || path == "index.html"
+    {
         base_dir.join("index.html")
     } else {
         base_dir.join(&sanitized_path)
@@ -66,7 +74,8 @@ async fn static_files_handler(
                     }
                     Err(e) => {
                         log::error!("Failed to read static file: {}", e);
-                        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read file").into_response();
+                        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read file")
+                            .into_response();
                     }
                 }
             } else {
