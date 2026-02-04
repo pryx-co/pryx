@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 )
 
+// JSON-RPC 2.0 types
 type PermissionRequest struct {
 	Description string `json:"description"`
 	Intent      string `json:"intent,omitempty"`
@@ -39,6 +40,7 @@ type rpcError struct {
 	Message string `json:"message"`
 }
 
+// Client for sending requests to host
 type Client struct {
 	in     *bufio.Reader
 	out    io.Writer
@@ -103,4 +105,123 @@ func (c *Client) RequestPermission(req PermissionRequest) (bool, error) {
 		return false, err
 	}
 	return pr.Approved, nil
+}
+
+// Server for receiving requests from host (sidecar mode)
+type Server struct {
+	in     io.Reader
+	out    io.Writer
+	mu     sync.Mutex
+	nextID int64
+}
+
+func NewServer(in io.Reader, out io.Writer) *Server {
+	return &Server{
+		in:     in,
+		out:    out,
+		nextID: 1,
+	}
+}
+
+func NewDefaultServer() *Server {
+	return NewServer(os.Stdin, os.Stdout)
+}
+
+// Handler function type for RPC methods
+type Handler func(method string, params map[string]interface{}) (interface{}, error)
+
+// Registry of RPC method handlers
+type Registry struct {
+	handlers map[string]Handler
+	mu       sync.RWMutex
+}
+
+func NewRegistry() *Registry {
+	return &Registry{
+		handlers: make(map[string]Handler),
+	}
+}
+
+func (r *Registry) Register(method string, handler Handler) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.handlers[method] = handler
+}
+
+func (r *Registry) GetHandler(method string) (Handler, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	h, ok := r.handlers[method]
+	return h, ok
+}
+
+// Start the RPC server loop
+func (s *Server) Serve(registry *Registry) error {
+	scanner := bufio.NewScanner(s.in)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		var req rpcRequest
+		if err := json.Unmarshal(line, &req); err != nil {
+			s.sendResponse(req.ID, nil, &rpcError{
+				Code:    -32700,
+				Message: "Parse error",
+			})
+			continue
+		}
+
+		if req.JSONRPC != "2.0" {
+			s.sendResponse(req.ID, nil, &rpcError{
+				Code:    -32600,
+				Message: "Invalid Request",
+			})
+			continue
+		}
+
+		handler, ok := registry.GetHandler(req.Method)
+		if !ok {
+			s.sendResponse(req.ID, nil, &rpcError{
+				Code:    -32601,
+				Message: "Method not found",
+			})
+			continue
+		}
+
+		result, err := handler(req.Method, req.Params)
+		if err != nil {
+			s.sendResponse(req.ID, nil, &rpcError{
+				Code:    -32603,
+				Message: err.Error(),
+			})
+			continue
+		}
+
+		s.sendResponse(req.ID, result, nil)
+	}
+
+	return scanner.Err()
+}
+
+func (s *Server) sendResponse(id int64, result interface{}, err *rpcError) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var resultBytes json.RawMessage
+	if result != nil {
+		var errMarshal error
+		resultBytes, errMarshal = json.Marshal(result)
+		if errMarshal != nil {
+			resultBytes = json.RawMessage(`{"error": "marshal error"}`)
+		}
+	}
+
+	resp := rpcResponse{
+		JSONRPC: "2.0",
+		Result:  resultBytes,
+		Error:   err,
+		ID:      id,
+	}
+
+	b, _ := json.Marshal(resp)
+	fmt.Fprintf(s.out, "%s\n", b)
 }
