@@ -1,5 +1,6 @@
 use pryx_host::sidecar::permissions::*;
 use pryx_host::sidecar::*;
+use pryx_host::server::{start_server, ServerConfig};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_updater::UpdaterExt;
@@ -91,10 +92,45 @@ async fn main() {
         })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            app.manage(Arc::new(SidecarProcess::new(
+            // Create and start sidecar process (Go runtime)
+            let sidecar_state = Arc::new(SidecarProcess::new(
                 SidecarConfig::default(),
                 app.handle().clone(),
-            )));
+            ));
+
+            // Start sidecar in background
+            let sidecar_clone = sidecar_state.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = sidecar_clone.start().await {
+                    log::error!("Failed to start sidecar process: {:?}", e);
+                }
+            });
+
+            // Start sidecar monitor
+            let monitor_clone = sidecar_state.clone();
+            tauri::async_runtime::spawn(async move {
+                monitor_clone.monitor().await;
+            });
+
+            // Manage sidecar state
+            app.manage(sidecar_state);
+
+            // Start HTTP server on port 42424
+            let sidecar_rpc_clone = sidecar_state.clone();
+            let server_config = ServerConfig {
+                host: "127.0.0.1".to_string(),
+                port: 42424,
+                static_files_path: std::path::PathBuf::from("../local-web/dist"),
+                sidecar: Some(sidecar_rpc_clone),
+            };
+
+            let server_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = start_server(server_config).await {
+                    log::error!("Failed to start HTTP server: {}", e);
+                }
+            });
+
             // Deep Link Handler
             #[cfg(any(windows, target_os = "linux"))]
             {
