@@ -17,6 +17,15 @@ CREATE TABLE IF NOT EXISTS messages (
 	FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS users (
+	id TEXT PRIMARY KEY,
+	email TEXT UNIQUE,
+	name TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	last_seen DATETIME,
+	settings TEXT
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
 	id TEXT PRIMARY KEY,
 	timestamp DATETIME NOT NULL,
@@ -42,6 +51,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_session_id ON audit_log(session_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_audit_surface ON audit_log(surface);
 CREATE INDEX IF NOT EXISTS idx_audit_tool ON audit_log(tool);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);
 
 -- Memory entries table for RAG system
 CREATE TABLE IF NOT EXISTS memory_entries (
@@ -98,6 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_mesh_pairing_status ON mesh_pairing_sessions(stat
 CREATE TABLE IF NOT EXISTS mesh_devices (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    user_id TEXT,
     public_key TEXT NOT NULL,
     paired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME,
@@ -107,6 +120,7 @@ CREATE TABLE IF NOT EXISTS mesh_devices (
 
 CREATE INDEX IF NOT EXISTS idx_mesh_devices_active ON mesh_devices(is_active);
 CREATE INDEX IF NOT EXISTS idx_mesh_devices_paired ON mesh_devices(paired_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mesh_devices_user ON mesh_devices(user_id);
 
 -- Mesh sync events
 CREATE TABLE IF NOT EXISTS mesh_sync_events (
