@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  runtime:
+    build:
+      context: ./apps/runtime
+      dockerfile: Dockerfile
+    environment:
+      - PRYX_DATA_DIR=/pryx/data
+      - PRYX_CONFIG_DIR=/pryx/config
+      - PRYX_LOG_LEVEL=debug
+    volumes:
+      - ./data:/pryx/data
+      - ./config:/pryx/config
+      - ./logs:/pryx/logs
+    ports:
+      - "3000:3000"
+      - "4000:4000"  # Metrics endpoint if exposed
+    command: ["./pryx-core"]
+    restart: unless-stopped
+
+  tui:
+    build:
+      context: ./apps/tui
+    environment:
+      - PRYX_RUNTIME_URL=http://runtime:3000
+      - PRYX_WS_URL=ws://runtime:4000
+    depends_on:
+      - runtime
+    command: ["bun", "dev"]
+    volumes:
+      - ./apps/tui:/app
+    restart: unless-stopped
+
+  host:
+    build:
+      context: ./apps/host
+    environment:
+      - PRYX_RUNTIME_URL=http://runtime:3000
+      - PRYX_WS_URL=ws://runtime:4000
+    depends_on:
+      - runtime
+    command: ["cargo", "tauri", "dev"]
+    volumes:
+      - ./apps/local-web:/local-web
+      - ./data:/pryx/data
+    restart: unless-stopped
+
+volumes:
+  data:
+  config:
+  logs:

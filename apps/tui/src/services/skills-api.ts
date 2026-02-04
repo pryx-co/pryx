@@ -3,22 +3,22 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const getRuntimeHost = (): string => {
-  return process.env.PRYX_RUNTIME_HOST || "localhost";
+const getHostHost = (): string => {
+  return process.env.PRYX_HOST || "localhost";
 };
 
-const getDefaultRuntimePort = (): string => {
-  return process.env.PRYX_RUNTIME_PORT || "3000";
+const getDefaultHostPort = (): string => {
+  return process.env.PRYX_HOST_PORT || "42424";
 };
 
 export function getRuntimeHttpUrl(): string {
   if (process.env.PRYX_API_URL) return process.env.PRYX_API_URL;
-  const host = getRuntimeHost();
+  const host = getHostHost();
   try {
     const port = readFileSync(join(homedir(), ".pryx", "runtime.port"), "utf-8").trim();
     return `http://${host}:${port}`;
   } catch {
-    return `http://${host}:${getDefaultRuntimePort()}`;
+    return `http://${host}:${getDefaultHostPort()}`;
   }
 }
 
@@ -27,10 +27,10 @@ export function describeRuntimeConnectionFailure(): string | null {
   const portFile = join(homedir(), ".pryx", "runtime.port");
 
   if (!process.env.PRYX_API_URL && !existsSync(portFile)) {
-    return "Runtime not running. Start it with `pryx runtime` (or `make start-runtime`).";
+    return "Pryx host not running. Start it with `pryx` (desktop mode) or `pryx-core` (headless mode).";
   }
 
-  return `Runtime not reachable at ${url}. Start it with \`pryx runtime\` (or \`make start-runtime\`).`;
+  return `Pryx host not reachable at ${url}. Start it with \`pryx\` or \`pryx-core\`.`;
 }
 
 export interface Skill {
