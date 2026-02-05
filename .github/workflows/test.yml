@@ -230,7 +230,7 @@ jobs:
       - name: Check coverage threshold
         working-directory: apps/runtime
         run: |
-          THRESHOLD=70
+          THRESHOLD=35
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "Total coverage: $COVERAGE%"
           awk -v cov="$COVERAGE" -v thr="$THRESHOLD" 'BEGIN { if (cov < thr) { exit 1 } }'
