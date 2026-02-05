@@ -74,8 +74,7 @@ async fn static_files_handler(
                     }
                     Err(e) => {
                         log::error!("Failed to read static file: {}", e);
-                        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read file")
-                            .into_response()
+                        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to read file").into_response()
                     }
                 }
             } else {
