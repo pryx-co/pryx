@@ -181,6 +181,15 @@ func main() {
 	}
 	b := srv.Bus()
 
+	schedulerCtx, schedulerCancel := context.WithCancel(context.Background())
+	if err := srv.Scheduler().Start(schedulerCtx); err != nil {
+		log.Fatalf("Failed to start scheduler: %v", err)
+	}
+	defer func() {
+		schedulerCancel()
+		srv.Scheduler().Stop()
+	}()
+
 	// Wait for catalog to load after server starts and update it
 	go func() {
 		select {
@@ -307,6 +316,8 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
+	schedulerCancel()
+	srv.Scheduler().Stop()
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("Shutdown error: %v", err)
 	}

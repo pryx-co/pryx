@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +16,27 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
+)
+
+const eventTriggerPrefix = "event:"
+
+type triggerKind string
+
+const (
+	triggerKindCron  triggerKind = "cron"
+	triggerKindEvent triggerKind = "event"
+)
+
+var (
+	scheduleParser = cron.NewParser(
+		cron.Minute |
+			cron.Hour |
+			cron.Dom |
+			cron.Month |
+			cron.Dow |
+			cron.Descriptor,
+	)
+	eventNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:-]+$`)
 )
 
 // TaskType defines the type of scheduled task
@@ -82,25 +106,28 @@ type TaskExecutor interface {
 
 // Scheduler manages scheduled tasks and their execution
 type Scheduler struct {
-	db        *sql.DB
-	store     *store.Store
-	cron      *cron.Cron
-	executors map[TaskType]TaskExecutor
-	tasks     map[string]cron.EntryID
-	mu        sync.RWMutex
-	stopChan  chan struct{}
-	wg        sync.WaitGroup
+	db         *sql.DB
+	store      *store.Store
+	cron       *cron.Cron
+	executors  map[TaskType]TaskExecutor
+	tasks      map[string]cron.EntryID
+	eventTasks map[string]map[string]*ScheduledTask
+	mu         sync.RWMutex
+	stopChan   chan struct{}
+	wg         sync.WaitGroup
+	stopOnce   sync.Once
 }
 
 // New creates a new Scheduler instance
 func New(db *sql.DB) *Scheduler {
 	return &Scheduler{
-		db:        db,
-		store:     store.NewFromDB(db),
-		cron:      cron.New(cron.WithSeconds()),
-		executors: make(map[TaskType]TaskExecutor),
-		tasks:     make(map[string]cron.EntryID),
-		stopChan:  make(chan struct{}),
+		db:         db,
+		store:      store.NewFromDB(db),
+		cron:       cron.New(cron.WithParser(scheduleParser)),
+		executors:  make(map[TaskType]TaskExecutor),
+		tasks:      make(map[string]cron.EntryID),
+		eventTasks: make(map[string]map[string]*ScheduledTask),
+		stopChan:   make(chan struct{}),
 	}
 }
 
@@ -111,6 +138,8 @@ func (s *Scheduler) RegisterExecutor(taskType TaskType, executor TaskExecutor) {
 
 // Start begins the scheduler and loads all enabled tasks
 func (s *Scheduler) Start(ctx context.Context) error {
+	s.cron.Start()
+
 	s.wg.Add(1)
 	go s.run(ctx)
 
@@ -132,7 +161,9 @@ func (s *Scheduler) Start(ctx context.Context) error {
 
 // Stop gracefully shuts down the scheduler
 func (s *Scheduler) Stop() {
-	close(s.stopChan)
+	s.stopOnce.Do(func() {
+		close(s.stopChan)
+	})
 	s.cron.Stop()
 	s.wg.Wait()
 	log.Println("Scheduler stopped")
@@ -160,23 +191,66 @@ func (s *Scheduler) run(ctx context.Context) {
 
 // refreshTasks reloads tasks from the database
 func (s *Scheduler) refreshTasks() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	tasks, err := s.loadEnabledTasks()
 	if err != nil {
 		log.Printf("Failed to refresh tasks: %v", err)
 		return
 	}
 
+	activeIDs := make(map[string]struct{}, len(tasks))
+	for _, task := range tasks {
+		activeIDs[task.ID] = struct{}{}
+	}
+
+	knownIDs := s.knownTaskIDs()
+	for taskID := range knownIDs {
+		if _, exists := activeIDs[taskID]; !exists {
+			s.removeTask(taskID)
+		}
+	}
+
 	// Add new tasks
 	for _, task := range tasks {
-		if _, exists := s.tasks[task.ID]; !exists {
+		if !s.isTaskScheduled(task.ID) {
 			if err := s.scheduleTask(task); err != nil {
 				log.Printf("Failed to schedule task %s: %v", task.ID, err)
 			}
 		}
 	}
+}
+
+func (s *Scheduler) knownTaskIDs() map[string]struct{} {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	known := make(map[string]struct{}, len(s.tasks))
+	for taskID := range s.tasks {
+		known[taskID] = struct{}{}
+	}
+	for _, eventTaskByID := range s.eventTasks {
+		for taskID := range eventTaskByID {
+			known[taskID] = struct{}{}
+		}
+	}
+
+	return known
+}
+
+func (s *Scheduler) isTaskScheduled(taskID string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if _, exists := s.tasks[taskID]; exists {
+		return true
+	}
+
+	for _, eventTaskByID := range s.eventTasks {
+		if _, exists := eventTaskByID[taskID]; exists {
+			return true
+		}
+	}
+
+	return false
 }
 
 // loadEnabledTasks loads all enabled tasks from the database
@@ -196,15 +270,23 @@ func (s *Scheduler) loadEnabledTasks() ([]*ScheduledTask, error) {
 	var tasks []*ScheduledTask
 	for rows.Next() {
 		task := &ScheduledTask{}
+		var lastRunStatus sql.NullString
+		var lastRunError sql.NullString
 		err := rows.Scan(
 			&task.ID, &task.Name, &task.Description, &task.CronExpression,
 			&task.TaskType, &task.Payload, &task.Timezone, &task.Enabled,
-			&task.LastRunAt, &task.LastRunStatus, &task.LastRunError,
+			&task.LastRunAt, &lastRunStatus, &lastRunError,
 			&task.NextRunAt, &task.RunCount, &task.UserID,
 			&task.CreatedAt, &task.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if lastRunStatus.Valid {
+			task.LastRunStatus = lastRunStatus.String
+		}
+		if lastRunError.Valid {
+			task.LastRunError = lastRunError.String
 		}
 		tasks = append(tasks, task)
 	}
@@ -214,12 +296,22 @@ func (s *Scheduler) loadEnabledTasks() ([]*ScheduledTask, error) {
 
 // scheduleTask adds a task to the cron scheduler
 func (s *Scheduler) scheduleTask(task *ScheduledTask) error {
+	normalizedExpr, kind, eventName, err := normalizeTriggerExpression(task.CronExpression)
+	if err != nil {
+		return err
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	task.CronExpression = normalizedExpr
 
-	// Parse cron expression
-	if _, err := cron.ParseStandard(task.CronExpression); err != nil {
-		return fmt.Errorf("invalid cron expression: %w", err)
+	if kind == triggerKindEvent {
+		if _, exists := s.eventTasks[eventName]; !exists {
+			s.eventTasks[eventName] = make(map[string]*ScheduledTask)
+		}
+		s.eventTasks[eventName][task.ID] = task
+		log.Printf("Registered event task %s (%s) for event: %s", task.ID, task.Name, eventName)
+		return nil
 	}
 
 	// Create runner function
@@ -249,6 +341,16 @@ func (s *Scheduler) removeTask(taskID string) {
 		delete(s.tasks, taskID)
 		log.Printf("Removed task %s from scheduler", taskID)
 	}
+
+	for eventName, eventTaskByID := range s.eventTasks {
+		if _, exists := eventTaskByID[taskID]; exists {
+			delete(eventTaskByID, taskID)
+			if len(eventTaskByID) == 0 {
+				delete(s.eventTasks, eventName)
+			}
+			log.Printf("Removed event task %s from event scheduler", taskID)
+		}
+	}
 }
 
 // executeTask runs a single scheduled task
@@ -271,7 +373,9 @@ func (s *Scheduler) executeTask(task *ScheduledTask) {
 	}
 
 	// Get executor
+	s.mu.RLock()
 	executor, exists := s.executors[task.TaskType]
+	s.mu.RUnlock()
 	if !exists {
 		run.Status = RunStatusFailed
 		run.Error = fmt.Sprintf("no executor for task type: %s", task.TaskType)
@@ -326,6 +430,12 @@ func (s *Scheduler) saveRun(run *TaskRun) error {
 	_, err := s.db.Exec(`
 		INSERT INTO scheduled_task_runs (id, task_id, started_at, completed_at, status, error, output)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			started_at = excluded.started_at,
+			completed_at = excluded.completed_at,
+			status = excluded.status,
+			error = excluded.error,
+			output = excluded.output
 	`,
 		run.ID, run.TaskID, run.StartedAt, run.CompletedAt, run.Status, run.Error, run.Output,
 	)
@@ -334,16 +444,25 @@ func (s *Scheduler) saveRun(run *TaskRun) error {
 
 // getNextRunTime calculates the next run time from a cron expression
 func (s *Scheduler) getNextRunTime(cronExpr string) *time.Time {
-	schedule, err := cron.ParseStandard(cronExpr)
+	nextRuns, err := PreviewNextRuns(cronExpr, 1)
 	if err != nil {
 		return nil
 	}
-	next := schedule.Next(time.Now())
+	if len(nextRuns) == 0 {
+		return nil
+	}
+	next := nextRuns[0]
 	return &next
 }
 
 // CreateTask creates a new scheduled task
 func (s *Scheduler) CreateTask(task *ScheduledTask) error {
+	normalizedExpr, _, _, err := normalizeTriggerExpression(task.CronExpression)
+	if err != nil {
+		return err
+	}
+	task.CronExpression = normalizedExpr
+
 	if task.ID == "" {
 		task.ID = uuid.New().String()
 	}
@@ -357,7 +476,7 @@ func (s *Scheduler) CreateTask(task *ScheduledTask) error {
 	task.NextRunAt = nextRun
 
 	// Insert into database
-	_, err := s.db.Exec(`
+	_, err = s.db.Exec(`
 		INSERT INTO scheduled_tasks (
 			id, name, description, cron_expression, task_type, payload,
 			timezone, enabled, next_run_at, run_count, user_id, created_at, updated_at
@@ -384,6 +503,8 @@ func (s *Scheduler) CreateTask(task *ScheduledTask) error {
 // GetTask retrieves a task by ID
 func (s *Scheduler) GetTask(id string) (*ScheduledTask, error) {
 	task := &ScheduledTask{}
+	var lastRunStatus sql.NullString
+	var lastRunError sql.NullString
 	err := s.db.QueryRow(`
 		SELECT id, name, description, cron_expression, task_type, payload,
 		       timezone, enabled, last_run_at, last_run_status, last_run_error,
@@ -392,7 +513,7 @@ func (s *Scheduler) GetTask(id string) (*ScheduledTask, error) {
 	`, id).Scan(
 		&task.ID, &task.Name, &task.Description, &task.CronExpression,
 		&task.TaskType, &task.Payload, &task.Timezone, &task.Enabled,
-		&task.LastRunAt, &task.LastRunStatus, &task.LastRunError,
+		&task.LastRunAt, &lastRunStatus, &lastRunError,
 		&task.NextRunAt, &task.RunCount, &task.UserID,
 		&task.CreatedAt, &task.UpdatedAt,
 	)
@@ -401,6 +522,12 @@ func (s *Scheduler) GetTask(id string) (*ScheduledTask, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if lastRunStatus.Valid {
+		task.LastRunStatus = lastRunStatus.String
+	}
+	if lastRunError.Valid {
+		task.LastRunError = lastRunError.String
 	}
 	return task, nil
 }
@@ -432,15 +559,23 @@ func (s *Scheduler) ListTasks(userID string) ([]*ScheduledTask, error) {
 	var tasks []*ScheduledTask
 	for rows.Next() {
 		task := &ScheduledTask{}
+		var lastRunStatus sql.NullString
+		var lastRunError sql.NullString
 		err := rows.Scan(
 			&task.ID, &task.Name, &task.Description, &task.CronExpression,
 			&task.TaskType, &task.Payload, &task.Timezone, &task.Enabled,
-			&task.LastRunAt, &task.LastRunStatus, &task.LastRunError,
+			&task.LastRunAt, &lastRunStatus, &lastRunError,
 			&task.NextRunAt, &task.RunCount, &task.UserID,
 			&task.CreatedAt, &task.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if lastRunStatus.Valid {
+			task.LastRunStatus = lastRunStatus.String
+		}
+		if lastRunError.Valid {
+			task.LastRunError = lastRunError.String
 		}
 		tasks = append(tasks, task)
 	}
@@ -450,13 +585,19 @@ func (s *Scheduler) ListTasks(userID string) ([]*ScheduledTask, error) {
 
 // UpdateTask updates an existing task
 func (s *Scheduler) UpdateTask(task *ScheduledTask) error {
+	normalizedExpr, _, _, err := normalizeTriggerExpression(task.CronExpression)
+	if err != nil {
+		return err
+	}
+	task.CronExpression = normalizedExpr
+
 	task.UpdatedAt = time.Now()
 
 	// Recalculate next run
 	nextRun := s.getNextRunTime(task.CronExpression)
 	task.NextRunAt = nextRun
 
-	_, err := s.db.Exec(`
+	_, err = s.db.Exec(`
 		UPDATE scheduled_tasks
 		SET name = ?, description = ?, cron_expression = ?, task_type = ?,
 		    payload = ?, timezone = ?, enabled = ?, next_run_at = ?, updated_at = ?
@@ -555,8 +696,133 @@ func (s *Scheduler) GetTaskRuns(taskID string, limit int) ([]*TaskRun, error) {
 
 // ValidateCronExpression validates a cron expression
 func ValidateCronExpression(expr string) error {
-	_, err := cron.ParseStandard(expr)
+	_, _, _, err := normalizeTriggerExpression(expr)
 	return err
+}
+
+// TriggerEvent executes all event-based tasks for the given event name.
+func (s *Scheduler) TriggerEvent(eventName string) (int, error) {
+	eventName = strings.ToLower(strings.TrimSpace(eventName))
+	if eventName == "" {
+		return 0, fmt.Errorf("event name is required")
+	}
+
+	s.mu.RLock()
+	eventTaskByID := s.eventTasks[eventName]
+	tasks := make([]*ScheduledTask, 0, len(eventTaskByID))
+	for _, task := range eventTaskByID {
+		tasks = append(tasks, task)
+	}
+	s.mu.RUnlock()
+
+	for _, task := range tasks {
+		go s.executeTask(task)
+	}
+
+	return len(tasks), nil
+}
+
+// PreviewNextRuns returns next run timestamps for a schedule expression.
+func PreviewNextRuns(expr string, count int) ([]time.Time, error) {
+	if count <= 0 {
+		count = 1
+	}
+
+	normalizedExpr, kind, _, err := normalizeTriggerExpression(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	if kind == triggerKindEvent {
+		return []time.Time{}, nil
+	}
+
+	schedule, err := scheduleParser.Parse(normalizedExpr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid schedule expression: %w", err)
+	}
+
+	nextRuns := make([]time.Time, 0, count)
+	now := time.Now()
+	for i := 0; i < count; i++ {
+		next := schedule.Next(now)
+		nextRuns = append(nextRuns, next)
+		now = next
+	}
+
+	return nextRuns, nil
+}
+
+func normalizeTriggerExpression(expr string) (string, triggerKind, string, error) {
+	trimmedExpr := strings.TrimSpace(expr)
+	if trimmedExpr == "" {
+		return "", "", "", fmt.Errorf("schedule expression is required")
+	}
+
+	lowerExpr := strings.ToLower(trimmedExpr)
+
+	if strings.HasPrefix(lowerExpr, eventTriggerPrefix) {
+		eventName := strings.TrimSpace(trimmedExpr[len(eventTriggerPrefix):])
+		eventName = strings.ToLower(eventName)
+		if eventName == "" {
+			return "", "", "", fmt.Errorf("event trigger requires an event name")
+		}
+		if !eventNamePattern.MatchString(eventName) {
+			return "", "", "", fmt.Errorf("invalid event trigger name: %s", eventName)
+		}
+		return eventTriggerPrefix + eventName, triggerKindEvent, eventName, nil
+	}
+
+	if strings.HasPrefix(lowerExpr, "every ") {
+		duration, err := parseIntervalDuration(trimmedExpr[len("every "):])
+		if err != nil {
+			return "", "", "", err
+		}
+		return "@every " + duration.String(), triggerKindCron, "", nil
+	}
+
+	if _, err := scheduleParser.Parse(trimmedExpr); err != nil {
+		return "", "", "", fmt.Errorf("invalid schedule expression: %w", err)
+	}
+
+	return trimmedExpr, triggerKindCron, "", nil
+}
+
+func parseIntervalDuration(expr string) (time.Duration, error) {
+	trimmedExpr := strings.TrimSpace(strings.ToLower(expr))
+	if trimmedExpr == "" {
+		return 0, fmt.Errorf("interval value is required")
+	}
+
+	compactExpr := strings.ReplaceAll(trimmedExpr, " ", "")
+	if duration, err := time.ParseDuration(compactExpr); err == nil {
+		if duration < time.Second {
+			return 0, fmt.Errorf("interval must be at least 1s")
+		}
+		return duration, nil
+	}
+
+	parts := strings.Fields(trimmedExpr)
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid interval expression: %s", expr)
+	}
+
+	value, err := strconv.Atoi(parts[0])
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("invalid interval value: %s", parts[0])
+	}
+
+	unit := strings.TrimSuffix(parts[1], "s")
+	switch unit {
+	case "second":
+		return time.Duration(value) * time.Second, nil
+	case "minute":
+		return time.Duration(value) * time.Minute, nil
+	case "hour":
+		return time.Duration(value) * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("unsupported interval unit: %s", parts[1])
+	}
 }
 
 // ParseTaskPayload parses the payload JSON for a task

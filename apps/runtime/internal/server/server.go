@@ -141,6 +141,7 @@ func New(cfg *config.Config, db *sql.DB, kc *keychain.Keychain) *Server {
 
 	s.channels = channels.NewManager(s.bus)
 	s.scheduler = scheduler.New(db)
+	s.registerSchedulerExecutors()
 
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -257,6 +258,7 @@ func (s *Server) routes() {
 	s.router.Post("/api/v1/tasks/{id}/disable", s.handleTaskDisable)
 	s.router.Get("/api/v1/tasks/{id}/runs", s.handleTaskRuns)
 	s.router.Post("/api/v1/tasks/validate", s.handleTaskValidate)
+	s.router.Post("/api/v1/tasks/events/{event}/trigger", s.handleTaskEventTrigger)
 
 	s.router.Get("/api/admin/stats", s.handleAdminStats)
 	s.router.Get("/api/admin/users", s.handleAdminUsers)

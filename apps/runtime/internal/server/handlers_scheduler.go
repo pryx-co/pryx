@@ -10,7 +10,6 @@ import (
 	"pryx-core/internal/scheduler"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/robfig/cron/v3"
 )
 
 // Scheduled task request/response types
@@ -375,30 +374,44 @@ func (s *Server) handleTaskValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate next run times
-	schedule, err := cron.ParseStandard(req.CronExpression)
+	nextRuns, err := scheduler.PreviewNextRuns(req.CronExpression, 5)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"valid":   false,
 			"error":   err.Error(),
-			"message": "Invalid cron expression",
+			"message": "Invalid schedule expression",
 		})
 		return
 	}
 
-	now := time.Now()
 	next5 := make([]string, 0, 5)
-	for i := 0; i < 5; i++ {
-		next := schedule.Next(now)
+	for _, next := range nextRuns {
 		next5 = append(next5, next.Format(time.RFC3339))
-		now = next
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"valid":     true,
-		"message":   "Valid cron expression",
+		"message":   "Valid schedule expression",
 		"next_runs": next5,
+	})
+}
+
+// handleTaskEventTrigger triggers tasks for an event-based schedule.
+func (s *Server) handleTaskEventTrigger(w http.ResponseWriter, r *http.Request) {
+	eventName := chi.URLParam(r, "event")
+	triggered, err := s.scheduler.TriggerEvent(eventName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to trigger event tasks: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"event":       eventName,
+		"triggered":   triggered,
+		"message":     "Event tasks triggered",
+		"triggeredAt": time.Now().Format(time.RFC3339),
 	})
 }
