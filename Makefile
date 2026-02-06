@@ -398,8 +398,13 @@ install-tools: ## Install development tools
 	@echo "  Checking for pre-commit..."
 	@if ! command -v pre-commit >/dev/null 2>&1; then \
 		echo "    Installing pre-commit..."; \
-		pip install pre-commit || pip3 install pre-commit; \
-		echo "    $(GREEN)✓$(NC) pre-commit installed"; \
+		if command -v pip >/dev/null 2>&1 && pip install pre-commit; then \
+			echo "    $(GREEN)✓$(NC) pre-commit installed"; \
+		elif command -v pip3 >/dev/null 2>&1 && pip3 install pre-commit; then \
+			echo "    $(GREEN)✓$(NC) pre-commit installed"; \
+		else \
+			echo "    $(YELLOW)Warning:$(NC) failed to install pre-commit (pip/pip3 missing or install failed)"; \
+		fi; \
 	else \
 		echo "    $(GREEN)✓$(NC) pre-commit already installed"; \
 	fi
@@ -417,32 +422,86 @@ install-tools: ## Install development tools
 	fi
 	@echo "  Checking for golangci-lint..."
 	@if ! command -v golangci-lint >/dev/null 2>&1; then \
-		echo "    Installing golangci-lint..."; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin; \
-		echo "    $(GREEN)✓$(NC) golangci-lint installed"; \
+		if command -v go >/dev/null 2>&1; then \
+			echo "    Installing golangci-lint..."; \
+			curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin; \
+			echo "    $(GREEN)✓$(NC) golangci-lint installed"; \
+		else \
+			echo "    $(YELLOW)Warning:$(NC) go not found, skipping golangci-lint install"; \
+		fi; \
 	else \
 		echo "    $(GREEN)✓$(NC) golangci-lint already installed"; \
 	fi
 	@echo "  Checking for Tauri CLI..."
-	@if ! command -v tauri >/dev/null 2>&1; then \
+	@if ! command -v tauri >/dev/null 2>&1 && [ ! -x "$$HOME/.bun/bin/tauri" ]; then \
 		echo "    Installing Tauri CLI v2..."; \
-		cargo install tauri-cli --version "^2.0.0" || bun add -g @tauri-apps/cli@latest; \
-		echo "    $(GREEN)✓$(NC) Tauri CLI installed"; \
+		if command -v cargo >/dev/null 2>&1; then \
+			if cargo install tauri-cli --version "^2.0.0"; then \
+				echo "    $(GREEN)✓$(NC) Tauri CLI installed"; \
+			elif command -v bun >/dev/null 2>&1 && bun add -g @tauri-apps/cli@latest; then \
+				if command -v tauri >/dev/null 2>&1; then \
+					echo "    $(GREEN)✓$(NC) Tauri CLI installed"; \
+				elif [ -x "$$HOME/.bun/bin/tauri" ]; then \
+					echo "    $(YELLOW)Warning:$(NC) Tauri CLI installed at $$HOME/.bun/bin/tauri but not on PATH"; \
+					echo "    $(YELLOW)Warning:$(NC) add $$HOME/.bun/bin to PATH to avoid reinstall loops"; \
+				else \
+					echo "    $(YELLOW)Warning:$(NC) Tauri CLI install completed but binary not found"; \
+				fi; \
+			else \
+				echo "    $(YELLOW)Warning:$(NC) failed to install Tauri CLI"; \
+			fi; \
+		elif command -v bun >/dev/null 2>&1; then \
+			if bun add -g @tauri-apps/cli@latest; then \
+				if command -v tauri >/dev/null 2>&1; then \
+					echo "    $(GREEN)✓$(NC) Tauri CLI installed"; \
+				elif [ -x "$$HOME/.bun/bin/tauri" ]; then \
+					echo "    $(YELLOW)Warning:$(NC) Tauri CLI installed at $$HOME/.bun/bin/tauri but not on PATH"; \
+					echo "    $(YELLOW)Warning:$(NC) add $$HOME/.bun/bin to PATH to avoid reinstall loops"; \
+				else \
+					echo "    $(YELLOW)Warning:$(NC) Tauri CLI install completed but binary not found"; \
+				fi; \
+			else \
+				echo "    $(YELLOW)Warning:$(NC) bun add failed for Tauri CLI; restart your shell or install manually"; \
+			fi; \
+		else \
+			echo "    $(YELLOW)Warning:$(NC) neither cargo nor bun found, skipping Tauri CLI install"; \
+		fi; \
 	else \
 		echo "    $(GREEN)✓$(NC) Tauri CLI already installed"; \
 	fi
 	@echo "  Checking for Wrangler..."
-	@if ! command -v wrangler >/dev/null 2>&1; then \
+	@if ! command -v wrangler >/dev/null 2>&1 && [ ! -x "$$HOME/.bun/bin/wrangler" ]; then \
 		echo "    Installing Wrangler..."; \
-		bun add -g wrangler@latest; \
-		echo "    $(GREEN)✓$(NC) Wrangler installed"; \
+		if command -v bun >/dev/null 2>&1; then \
+			if bun add -g wrangler@latest; then \
+				if command -v wrangler >/dev/null 2>&1; then \
+					echo "    $(GREEN)✓$(NC) Wrangler installed"; \
+				elif [ -x "$$HOME/.bun/bin/wrangler" ]; then \
+					echo "    $(YELLOW)Warning:$(NC) Wrangler installed at $$HOME/.bun/bin/wrangler but not on PATH"; \
+					echo "    $(YELLOW)Warning:$(NC) add $$HOME/.bun/bin to PATH to avoid reinstall loops"; \
+				else \
+					echo "    $(YELLOW)Warning:$(NC) Wrangler install completed but binary not found"; \
+				fi; \
+			else \
+				echo "    $(YELLOW)Warning:$(NC) failed to install Wrangler with bun"; \
+			fi; \
+		else \
+			echo "    $(YELLOW)Warning:$(NC) bun not found, skipping Wrangler install"; \
+		fi; \
 	else \
 		echo "    $(GREEN)✓$(NC) Wrangler already installed"; \
 	fi
 	@echo "  Setting up pre-commit hooks..."
 	@if [ -f .pre-commit-config.yaml ]; then \
-		pre-commit install; \
-		echo "    $(GREEN)✓$(NC) pre-commit hooks installed"; \
+		if pre-commit --version >/dev/null 2>&1; then \
+			if pre-commit install; then \
+				echo "    $(GREEN)✓$(NC) pre-commit hooks installed"; \
+			else \
+				echo "    $(YELLOW)Warning:$(NC) failed to install pre-commit hooks, continuing"; \
+			fi; \
+		else \
+			echo "    $(YELLOW)Warning:$(NC) pre-commit is not usable in this environment, skipping hooks setup"; \
+		fi; \
 	else \
 		echo "    $(YELLOW)Warning: .pre-commit-config.yaml not found$(NC)"; \
 	fi
@@ -450,17 +509,29 @@ install-tools: ## Install development tools
 install-deps: ## Install all dependencies
 	@echo "$(BLUE)Installing dependencies...$(NC)"
 	@if [ -d "$(HOST_DIR)" ]; then \
-		echo "  Installing host dependencies..." && cd $(HOST_DIR) && cargo build; \
+		if command -v cargo >/dev/null 2>&1; then \
+			echo "  Installing host dependencies..." && cd $(HOST_DIR) && cargo build; \
+		else \
+			echo "  $(YELLOW)Warning:$(NC) cargo not found, skipping host dependencies"; \
+		fi; \
 	else \
 		echo "$(YELLOW)Warning: host directory not found, skipping$(NC)"; \
 	fi
 	@if [ -d "$(RUNTIME_DIR)" ]; then \
-		echo "  Installing runtime dependencies..." && cd $(RUNTIME_DIR) && go mod download && go mod tidy; \
+		if command -v go >/dev/null 2>&1; then \
+			echo "  Installing runtime dependencies..." && cd $(RUNTIME_DIR) && go mod download && go mod tidy; \
+		else \
+			echo "  $(YELLOW)Warning:$(NC) go not found, skipping runtime dependencies"; \
+		fi; \
 	else \
 		echo "$(YELLOW)Warning: runtime directory not found, skipping$(NC)"; \
 	fi
 	@if [ -d "$(TUI_DIR)" ]; then \
-		echo "  Installing TUI dependencies..." && cd $(TUI_DIR) && bun install --frozen-lockfile; \
+		if command -v bun >/dev/null 2>&1; then \
+			echo "  Installing TUI dependencies..." && cd $(TUI_DIR) && bun install --frozen-lockfile; \
+		else \
+			echo "  $(YELLOW)Warning:$(NC) bun not found, skipping TUI dependencies"; \
+		fi; \
 	else \
 		echo "$(YELLOW)Warning: tui directory not found, skipping$(NC)"; \
 	fi
