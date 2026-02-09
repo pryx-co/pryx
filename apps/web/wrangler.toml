@@ -13,7 +13,7 @@ directory = "./dist"
 
 # Secrets expected per environment (set via Wrangler secret management):
 # - ADMIN_API_KEY
-# - LOCALHOST_ADMIN_KEY
+# - LOCALHOST_ADMIN_KEY (non-production only)
 
 # D1 Database binding for admin persistence
 [[d1_databases]]

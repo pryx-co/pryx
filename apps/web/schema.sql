@@ -1,40 +1,38 @@
 -- Pryx D1 Database Schema
 -- Run with: wrangler d1 execute pryx-db --file=./schema.sql
 
--- Users table
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL,
-    last_active TEXT,
-    total_cost REAL DEFAULT 0,
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended'))
+    last_active TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
+    total_cost REAL NOT NULL DEFAULT 0
 );
 
--- Devices table
 CREATE TABLE IF NOT EXISTS devices (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    name TEXT,
-    platform TEXT,
-    version TEXT,
-    status TEXT DEFAULT 'offline',
-    is_paired INTEGER DEFAULT 0 CHECK (is_paired IN (0, 1)),
-    last_seen TEXT,
+    name TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    version TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'offline' CHECK (status IN ('online', 'offline', 'syncing')),
+    last_seen TEXT NOT NULL,
     ip_address TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    is_paired INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    device_id TEXT,
     created_at TEXT NOT NULL,
-    expires_at TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    last_seen TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL
 );
 
--- Admin actions audit log
 CREATE TABLE IF NOT EXISTS admin_actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     action_type TEXT NOT NULL,
@@ -46,9 +44,9 @@ CREATE TABLE IF NOT EXISTS admin_actions (
     created_at TEXT NOT NULL
 );
 
--- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active);
 CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id);
-CREATE INDEX IF NOT EXISTS idx_devices_is_paired ON devices(is_paired);
+CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices(last_seen);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON admin_actions(created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_device_id ON sessions(device_id);
 CREATE INDEX IF NOT EXISTS idx_admin_actions_target ON admin_actions(target_type, target_id);

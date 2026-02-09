@@ -30,16 +30,17 @@ wrangler secret put ADMIN_API_KEY --env staging
 wrangler secret put LOCALHOST_ADMIN_KEY --env staging
 
 wrangler secret put ADMIN_API_KEY --env production
-wrangler secret put LOCALHOST_ADMIN_KEY --env production
 ```
+
+`LOCALHOST_ADMIN_KEY` is intended for non-production environments only.
 
 ## 3) Deploy
 
 From `apps/web`:
 
 ```bash
-wrangler d1 migrations apply <DB_NAME> --env staging
-wrangler d1 migrations apply <DB_NAME> --env production
+wrangler d1 migrations apply pryx-db-staging --env staging
+wrangler d1 migrations apply pryx-db --env production
 
 wrangler deploy --env staging
 wrangler deploy --env production
