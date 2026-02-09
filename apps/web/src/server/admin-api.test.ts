@@ -272,6 +272,7 @@ function createEnv(overrides: Record<string, unknown> = {}) {
         ENVIRONMENT: 'production',
         ADMIN_API_KEY: 'admin-secret',
         LOCALHOST_ADMIN_KEY: 'localhost-secret',
+        ENABLE_UNSAFE_USER_LAYER: 'false',
         TELEMETRY: telemetryStore,
         DB: fakeDb,
         ...overrides,
@@ -299,12 +300,19 @@ describe('admin API RBAC', () => {
         expect(response.status).toBe(200);
     });
 
-    it('allows user layer on user-scoped endpoint and forbids global stats', async () => {
-        const usersResponse = await request('/users', 'user:user-1');
+    it('allows user layer only when explicitly enabled and forbids global stats', async () => {
+        const env = createEnv({ ENABLE_UNSAFE_USER_LAYER: 'true' });
+
+        const usersResponse = await request('/users', 'user:user-1', env);
         expect(usersResponse.status).toBe(200);
 
-        const statsResponse = await request('/stats', 'user:user-1');
+        const statsResponse = await request('/stats', 'user:user-1', env);
         expect(statsResponse.status).toBe(403);
+    });
+
+    it('rejects user layer tokens when unsafe user layer is disabled', async () => {
+        const response = await request('/users', 'user:user-1');
+        expect(response.status).toBe(401);
     });
 
     it('allows localhost layer without auth outside production', async () => {

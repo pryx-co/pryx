@@ -20,6 +20,7 @@ interface AuthEnv {
   ADMIN_API_KEY?: string;
   LOCALHOST_ADMIN_KEY?: string;
   ENVIRONMENT?: string;
+  ENABLE_UNSAFE_USER_LAYER?: string;
 }
 
 interface D1RunResult {
@@ -70,7 +71,12 @@ interface LayerContext {
  * - Bearer localhost or no header → Localhost layer
  */
 function isNonProduction(env: AuthEnv): boolean {
-  return env.ENVIRONMENT !== 'production';
+  const normalized = (env.ENVIRONMENT ?? '').toLowerCase();
+  return normalized === 'development' || normalized === 'staging' || normalized === 'test' || normalized === 'local';
+}
+
+function isUnsafeUserLayerEnabled(env: AuthEnv): boolean {
+  return (env.ENABLE_UNSAFE_USER_LAYER ?? '').toLowerCase() === 'true';
 }
 
 function extractLayer(authHeader: string | null, env: AuthEnv): LayerContext | null {
@@ -91,6 +97,12 @@ function extractLayer(authHeader: string | null, env: AuthEnv): LayerContext | n
   }
 
   if (token.startsWith('user:')) {
+    // TODO: Replace temporary user:<id> tokens with signed/session-backed user auth.
+    // Until then, keep this path disabled by default to avoid user impersonation.
+    if (!isUnsafeUserLayerEnabled(env)) {
+      return null;
+    }
+
     const userId = token.replace('user:', '').trim();
     if (!userId) return null;
     return { layer: 'user', userId, isLocalhost: false };
@@ -176,20 +188,32 @@ async function logAdminAction(c: any, actionType: string, targetType: string, ta
   if (!db) return;
 
   const layerContext = (c as any).get('layerContext') as LayerContext | null;
-  await db.prepare(`
-    INSERT INTO admin_actions (action_type, target_type, target_id, actor_layer, actor_id, payload_json, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `)
-    .bind(
+  try {
+    await db.prepare(`
+      INSERT INTO admin_actions (action_type, target_type, target_id, actor_layer, actor_id, payload_json, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+      .bind(
+        actionType,
+        targetType,
+        targetId,
+        layerContext?.layer ?? 'unknown',
+        layerContext?.userId ?? null,
+        JSON.stringify(payload),
+        getIsoNow(),
+      )
+      .run();
+  } catch (error) {
+    console.error('Failed to persist admin action audit log', {
       actionType,
       targetType,
       targetId,
-      layerContext?.layer ?? 'unknown',
-      layerContext?.userId ?? null,
-      JSON.stringify(payload),
-      getIsoNow(),
-    )
-    .run();
+      actorLayer: layerContext?.layer ?? 'unknown',
+      actorId: layerContext?.userId ?? null,
+      payload,
+      error,
+    });
+  }
 }
 
 // Admin API router
@@ -204,7 +228,7 @@ adminApi.use('/*', cors({
 
 // Middleware to resolve auth context once per request
 adminApi.use('/*', async (c, next) => {
-  const authHeader = c.req.header('Authorization');
+  const authHeader = c.req.header('Authorization') ?? null;
   const env = (c.env ?? {}) as AuthEnv;
   const layerContext = extractLayer(authHeader, env);
 
