@@ -1,9 +1,23 @@
+/**
+ * MCP Storage Module
+ *
+ * Handles persistence of MCP server configurations to the file system.
+ */
+
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname } from 'path';
 import { MCPRegistry } from './registry.js';
 import { MCPServersConfigSchema } from './types.js';
 
+/**
+ * Storage handler for MCP server configurations
+ */
 export class MCPStorage {
+  /**
+   * Loads the MCP registry from a file
+   * @param configPath - Path to the configuration file
+   * @returns The loaded MCP registry
+   */
   async load(configPath: string): Promise<MCPRegistry> {
     try {
       const data = await readFile(configPath, 'utf8');
@@ -23,6 +37,11 @@ export class MCPStorage {
     }
   }
 
+  /**
+   * Saves the MCP registry to a file
+   * @param configPath - Path to the configuration file
+   * @param registry - The MCP registry to save
+   */
   async save(configPath: string, registry: MCPRegistry): Promise<void> {
     const config = registry.toJSON();
     const data = JSON.stringify(config, null, 2);
@@ -31,6 +50,11 @@ export class MCPStorage {
     await writeFile(configPath, data, { mode: 0o600 });
   }
 
+  /**
+   * Checks if a configuration file exists
+   * @param configPath - Path to the configuration file
+   * @returns True if the file exists
+   */
   async exists(configPath: string): Promise<boolean> {
     try {
       await readFile(configPath);
@@ -41,6 +65,10 @@ export class MCPStorage {
   }
 }
 
+/**
+ * Creates a new MCPStorage instance
+ * @returns A new MCPStorage
+ */
 export function createStorage(): MCPStorage {
   return new MCPStorage();
 }

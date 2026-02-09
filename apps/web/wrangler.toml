@@ -1,7 +1,7 @@
 name = "pryx"
 compatibility_date = "2025-08-15"
 compatibility_flags = ["nodejs_compat"]
-main = "@astrojs/cloudflare/entrypoints/server"
+main = "./dist/_worker.js"
 account_id = "a37da71c38a2f7ab732057d87d5d0f6e"
 
 [vars]

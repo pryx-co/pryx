@@ -1,5 +1,14 @@
+/**
+ * MCP Server Discovery Module
+ *
+ * Provides functionality for discovering and searching curated MCP servers.
+ */
+
 import { MCPServerConfig } from './types.js';
 
+/**
+ * Interface representing a curated MCP server
+ */
 export interface CuratedServer {
   id: string;
   name: string;
@@ -26,12 +35,18 @@ export interface CuratedServer {
   };
 }
 
+/**
+ * Interface representing a curated server category
+ */
 export interface CuratedCategory {
   id: string;
   name: string;
   description: string;
 }
 
+/**
+ * Interface representing the curated servers database
+ */
 export interface CuratedServersDatabase {
   version: number;
   lastUpdated: string;
@@ -39,26 +54,42 @@ export interface CuratedServersDatabase {
   servers: CuratedServer[];
 }
 
+/**
+ * Interface for search filters
+ */
 export interface SearchFilters {
   category?: string;
   query?: string;
   author?: string;
 }
 
+/**
+ * Interface for validation results
+ */
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
 }
 
+/**
+ * Class for discovering and managing curated MCP servers
+ */
 export class MCPServerDiscovery {
   private _database: CuratedServersDatabase | null = null;
   private _databasePath: string;
 
+  /**
+   * Creates a new MCPServerDiscovery instance
+   * @param databasePath - Optional path to the database file
+   */
   constructor(databasePath?: string) {
     this._databasePath = databasePath || this._getDefaultDatabasePath();
   }
 
+  /**
+   * Loads the curated servers database
+   */
   async loadDatabase(): Promise<void> {
     try {
       const fs = await import('fs/promises');
@@ -69,6 +100,11 @@ export class MCPServerDiscovery {
     }
   }
 
+  /**
+   * Searches for curated servers based on filters
+   * @param filters - Search filters
+   * @returns Array of matching curated servers
+   */
   async search(filters: SearchFilters = {}): Promise<CuratedServer[]> {
     if (!this._database) {
       await this.loadDatabase();
@@ -98,6 +134,10 @@ export class MCPServerDiscovery {
     return results;
   }
 
+  /**
+   * Gets all categories
+   * @returns Array of categories
+   */
   getCategories(): CuratedCategory[] {
     if (!this._database) {
       throw new Error('Database not loaded. Call loadDatabase() first.');
@@ -105,6 +145,11 @@ export class MCPServerDiscovery {
     return this._database.categories;
   }
 
+  /**
+   * Gets a server by ID
+   * @param id - The server ID
+   * @returns The server or undefined
+   */
   getServerById(id: string): CuratedServer | undefined {
     if (!this._database) {
       throw new Error('Database not loaded. Call loadDatabase() first.');
@@ -112,6 +157,11 @@ export class MCPServerDiscovery {
     return this._database.servers.find(s => s.id === id);
   }
 
+  /**
+   * Gets servers by category
+   * @param categoryId - The category ID
+   * @returns Array of servers in the category
+   */
   getServersByCategory(categoryId: string): CuratedServer[] {
     if (!this._database) {
       throw new Error('Database not loaded. Call loadDatabase() first.');
@@ -119,6 +169,11 @@ export class MCPServerDiscovery {
     return this._database.servers.filter(s => s.category === categoryId);
   }
 
+  /**
+   * Validates a custom URL
+   * @param url - The URL to validate
+   * @returns Validation result
+   */
   async validateCustomUrl(url: string): Promise<ValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -152,6 +207,11 @@ export class MCPServerDiscovery {
     };
   }
 
+  /**
+   * Validates a server ID
+   * @param id - The server ID to validate
+   * @returns Validation result
+   */
   validateServerId(id: string): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -173,6 +233,12 @@ export class MCPServerDiscovery {
     };
   }
 
+  /**
+   * Converts a curated server to an MCP server config
+   * @param curated - The curated server
+   * @param customArgs - Optional custom arguments
+   * @returns The MCP server configuration
+   */
   toMCPServerConfig(curated: CuratedServer, customArgs?: string[]): MCPServerConfig {
     const transport = { ...curated.transport };
     
@@ -205,6 +271,10 @@ export class MCPServerDiscovery {
     };
   }
 
+  /**
+   * Gets statistics about the database
+   * @returns Database statistics
+   */
   getStats(): {
     totalServers: number;
     totalCategories: number;
@@ -227,12 +297,21 @@ export class MCPServerDiscovery {
     };
   }
 
+  /**
+   * Gets the default database path
+   * @returns The default database path
+   */
   private _getDefaultDatabasePath(): string {
     const path = require('path');
     return path.join(__dirname, '..', 'data', 'curated-servers.json');
   }
 }
 
+/**
+ * Creates a new MCPServerDiscovery instance
+ * @param databasePath - Optional path to the database file
+ * @returns A new MCPServerDiscovery
+ */
 export function createServerDiscovery(databasePath?: string): MCPServerDiscovery {
   return new MCPServerDiscovery(databasePath);
 }

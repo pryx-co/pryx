@@ -1,9 +1,24 @@
+/**
+ * Provider Storage Module
+ *
+ * Handles persistence of provider configurations to and from the file system,
+ * including JSON serialization and schema validation.
+ */
+
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname } from 'path';
 import { ProviderRegistry } from './registry.js';
 import { ProvidersConfigSchema } from './types.js';
 
+/**
+ * Manages loading and saving of provider configurations
+ */
 export class ProviderStorage {
+  /**
+   * Loads provider registry from a configuration file
+   * @param configPath - Path to the configuration file
+   * @returns ProviderRegistry instance loaded from file, or empty registry if file doesn't exist
+   */
   async load(configPath: string): Promise<ProviderRegistry> {
     try {
       const data = await readFile(configPath, 'utf8');
@@ -23,6 +38,11 @@ export class ProviderStorage {
     }
   }
 
+  /**
+   * Saves provider registry to a configuration file
+   * @param configPath - Path to the configuration file
+   * @param registry - ProviderRegistry instance to save
+   */
   async save(configPath: string, registry: ProviderRegistry): Promise<void> {
     const config = registry.toJSON();
     const data = JSON.stringify(config, null, 2);
@@ -31,6 +51,11 @@ export class ProviderStorage {
     await writeFile(configPath, data, { mode: 0o600 });
   }
 
+  /**
+   * Checks if a configuration file exists
+   * @param configPath - Path to the configuration file
+   * @returns True if the file exists, false otherwise
+   */
   async exists(configPath: string): Promise<boolean> {
     try {
       await readFile(configPath);
@@ -41,6 +66,10 @@ export class ProviderStorage {
   }
 }
 
+/**
+ * Creates a new ProviderStorage instance
+ * @returns A new ProviderStorage instance
+ */
 export function createStorage(): ProviderStorage {
   return new ProviderStorage();
 }
