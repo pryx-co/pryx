@@ -6,7 +6,6 @@
 
 # Build output
 dist/
-*.tsbuildinfo
 
 # Dependencies
 node_modules/
@@ -45,8 +44,9 @@ desktop.ini
 # Astro
 .astro/
 
-# TypeScript
+# TypeScript/Bun
 *.tsbuildinfo
+.bun/
 
 # Temporary files
 tmp/
