@@ -1,5 +1,15 @@
+/**
+ * Channels Types Module
+ *
+ * Defines Zod schemas, TypeScript types, and error classes for channel configurations.
+ * Supports Telegram, Discord, Slack, Email, WhatsApp, and Webhook integrations.
+ */
+
 import { z } from 'zod';
 
+/**
+ * Enum of supported channel types
+ */
 export const ChannelType = z.enum(['telegram', 'discord', 'slack', 'email', 'whatsapp', 'webhook']);
 
 export const RateLimitConfigSchema = z.object({
@@ -149,6 +159,9 @@ export type ChannelsConfig = z.infer<typeof ChannelsConfigSchema>;
 export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 export type ConnectionTestResult = z.infer<typeof ConnectionTestResultSchema>;
 
+/**
+ * Base error class for channel-related errors
+ */
 export class ChannelError extends Error {
   constructor(message: string) {
     super(message);
@@ -156,6 +169,9 @@ export class ChannelError extends Error {
   }
 }
 
+/**
+ * Error thrown when a channel is not found
+ */
 export class ChannelNotFoundError extends ChannelError {
   constructor(id: string) {
     super(`Channel not found: ${id}`);
@@ -163,6 +179,9 @@ export class ChannelNotFoundError extends ChannelError {
   }
 }
 
+/**
+ * Error thrown when channel validation fails
+ */
 export class ChannelValidationError extends ChannelError {
   constructor(public errors: string[]) {
     super(`Validation failed: ${errors.join(', ')}`);
@@ -170,6 +189,9 @@ export class ChannelValidationError extends ChannelError {
   }
 }
 
+/**
+ * Error thrown when attempting to create a channel that already exists
+ */
 export class ChannelAlreadyExistsError extends ChannelError {
   constructor(id: string) {
     super(`Channel already exists: ${id}`);
@@ -177,4 +199,7 @@ export class ChannelAlreadyExistsError extends ChannelError {
   }
 }
 
+/**
+ * Current version of the channels configuration schema
+ */
 export const CURRENT_VERSION = 1;
