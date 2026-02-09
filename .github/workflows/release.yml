@@ -24,12 +24,12 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [x86_64, blacksmith-2vcpu-ubuntu-2404-arm]
+        arch: [x86_64, ubuntu-latest-arm]
         include:
           - arch: x86_64
             target: x86_64-apple-darwin
             arch_name: intel
-          - arch: blacksmith-2vcpu-ubuntu-2404-arm
+          - arch: ubuntu-latest-arm
             target: aarch64-apple-darwin
             arch_name: silicon
     env:
@@ -134,7 +134,7 @@ jobs:
   # Build Linux (x64)
   build-linux:
     name: Build Linux
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         package: [deb, rpm, appimage]
@@ -356,7 +356,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs: [build-macos, build-linux, build-windows]
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
