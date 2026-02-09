@@ -24,12 +24,12 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        arch: [x86_64, arm64]
+        arch: [x86_64, blacksmith-4vcpu-ubuntu-2404-arm]
         include:
           - arch: x86_64
             target: x86_64-apple-darwin
             arch_name: intel
-          - arch: arm64
+          - arch: blacksmith-4vcpu-ubuntu-2404-arm
             target: aarch64-apple-darwin
             arch_name: silicon
     env:
@@ -134,7 +134,7 @@ jobs:
   # Build Linux (x64)
   build-linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         package: [deb, rpm, appimage]
@@ -267,7 +267,7 @@ jobs:
   # Build Windows (x64)
   build-windows:
     name: Build Windows
-    runs-on: windows-latest
+    runs-on: blacksmith-4vcpu-windows-2025
     env:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -356,7 +356,7 @@ jobs:
   create-release:
     name: Create GitHub Release
     needs: [build-macos, build-linux, build-windows]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
     steps:

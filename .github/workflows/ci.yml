@@ -18,7 +18,7 @@ jobs:
   # Lint job - runs first to fail fast
   lint:
     name: Lint All Components
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -56,7 +56,7 @@ jobs:
   # Test host (Rust)
   test-host:
     name: Test Host (Rust + Tauri)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -134,7 +134,7 @@ jobs:
   # Test runtime (Go)
   test-runtime:
     name: Test Runtime (Go)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -170,7 +170,7 @@ jobs:
   # Test TUI (TypeScript)
   test-tui:
     name: Test TUI (TypeScript)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -209,7 +209,7 @@ jobs:
   # Security audit
   security:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -247,7 +247,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: blacksmith-4vcpu-ubuntu-2404
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: windows-latest
