@@ -99,6 +99,14 @@ function ensureTelemetryAuthorization(c: any): Response | null {
     return null;
 }
 
+function parseTelemetryKeyTimestamp(keyName: string): number | null {
+    if (!keyName.startsWith('telemetry:')) return null;
+    const [, rawTs] = keyName.split(':', 3);
+    const parsed = Number(rawTs);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
+}
+
 // --- Middleware ---
 apiApp.use('*', async (c, next) => {
     const ip = c.req.header('CF-Connecting-IP') || 'unknown';
@@ -290,8 +298,18 @@ apiApp.get('/telemetry/query', async (c) => {
     const listed = await c.env.TELEMETRY.list({ prefix: 'telemetry:', limit: 1000 });
     const events: TelemetryEvent[] = [];
 
-    for (const key of listed.keys) {
-        const raw = await c.env.TELEMETRY.get(key.name);
+    const candidateKeys = (listed.keys as Array<{ name: string }>)
+        .map((key: { name: string }) => ({ keyName: key.name, timestamp: parseTelemetryKeyTimestamp(key.name) }))
+        .filter((entry: { keyName: string; timestamp: number | null }): entry is { keyName: string; timestamp: number } => entry.timestamp !== null)
+        .filter((entry: { keyName: string; timestamp: number }) => entry.timestamp >= start && entry.timestamp <= end)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+    for (const candidate of candidateKeys) {
+        if (events.length >= limit && !level && !category && !deviceId && !sessionId) {
+            break;
+        }
+
+        const raw = await c.env.TELEMETRY.get(candidate.keyName);
         if (!raw) continue;
 
         try {
@@ -306,6 +324,7 @@ apiApp.get('/telemetry/query', async (c) => {
 
             events.push(parsed);
         } catch {
+            continue;
         }
     }
 
