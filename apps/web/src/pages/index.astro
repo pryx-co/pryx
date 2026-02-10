@@ -2,134 +2,434 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Pryx Cloud | Sovereign AI Runtime">
+<Layout title="Pryx | Sovereign AI Agent Control Center">
 	<div class="page-shell">
+		<div class="noise" aria-hidden="true"></div>
 		<header class="top-nav">
 			<div class="brand">
-				<span class="brand-dot" aria-hidden="true"></span>
-				<span>Pryx</span>
+				<span class="brand-mark" aria-hidden="true">&gt;_</span>
+				<div>
+					<p class="brand-name">PRYX</p>
+					<p class="brand-sub">Sovereign AI Agent</p>
+				</div>
 			</div>
 			<nav aria-label="Primary">
-				<a href="/install">Install</a>
+				<a href="#install">Install</a>
 				<a href="/skills">Skills</a>
 				<a href="/dashboard">Dashboard</a>
-				<a href="/auth">Sign In</a>
+				<a href="/auth" class="nav-cta">Sign In</a>
 			</nav>
 		</header>
 
 		<main>
 			<section class="hero">
-				<p class="eyebrow">Pryx Cloud Platform</p>
-				<h1>Ship autonomous workflows with local-first control.</h1>
-				<p class="subtitle">
-					Connect channels, tools, and providers with explicit policy gates. Observe cost,
-					health, and device state from one secure control plane.
-				</p>
-				<div class="hero-actions">
-					<a class="primary" href="/install">Install Pryx</a>
-					<a class="secondary" href="/dashboard">Open Dashboard</a>
+				<div class="hero-copy">
+					<p class="eyebrow">Local-first control center</p>
+					<h1>Sovereign AI for teams that need speed and control.</h1>
+					<p class="subtitle">
+						Run autonomous workflows from CLI, TUI, local web, channels, and cloud-assisted
+						flows without giving up ownership of prompts, files, or secrets.
+					</p>
+					<div class="hero-actions">
+						<button class="primary" type="button" data-install-copy>
+							Copy Install Command
+						</button>
+						<a class="secondary" href="/auth">pryx cloud</a>
+					</div>
+					<p class="inline-command" id="install">
+						$ <span data-install-command>curl -fsSL https://get.pryx.ai/install.sh | bash</span>
+					</p>
+					<p class="install-note">Auto-selects one-liner by OS (macOS/Linux/Windows).</p>
+					<div class="proof-row">
+						<span>84+ providers</span>
+						<span>explicit approvals</span>
+						<span>PII-redacted telemetry</span>
+					</div>
+				</div>
+
+				<div class="hero-terminal" aria-label="Pryx terminal preview">
+					<div class="terminal-head">
+						<div class="dots" aria-hidden="true">
+							<span></span><span></span><span></span>
+						</div>
+						<p>pryx-agent-local -- bash</p>
+					</div>
+					<div class="terminal-body">
+						<p class="terminal-line is-hidden" data-terminal-line><span class="prompt">user@pryx:~$</span> pryx init</p>
+						<p class="terminal-line dim is-hidden" data-terminal-line>[info] local vault ready</p>
+						<p class="terminal-line dim is-hidden" data-terminal-line>[info] policy engine loaded</p>
+						<p class="terminal-line is-hidden" data-terminal-line><span class="prompt">user@pryx:~$</span> pryx run agent --task "triage incidents"</p>
+						<p class="terminal-line dim is-hidden" data-terminal-line>agent: analyzing telemetry stream...</p>
+						<div class="approval-box is-hidden" data-approval-box>
+							<p>approval required</p>
+							<p class="dim">action: network request to provider endpoint</p>
+							<p><span class="approve">allow?</span> [Y/n] <span class="terminal-cursor" aria-hidden="true"></span></p>
+						</div>
+					</div>
 				</div>
 			</section>
 
-			<section class="grid">
+			<section class="capabilities" aria-label="Core capabilities">
 				<article>
-					<h2>Runtime + API</h2>
-					<p>Device auth, telemetry ingest, and admin APIs designed for edge deployments.</p>
+					<h2>Unified Operator Surface</h2>
+					<p>
+						Move between CLI, TUI, local web, and cloud workflows while keeping one policy and
+						identity model.
+					</p>
 				</article>
 				<article>
-					<h2>Operator Console</h2>
-					<p>Track users, devices, sessions, and spend with role-aware controls.</p>
+					<h2>Observable by Default</h2>
+					<p>
+						Track sessions, cost, device state, and telemetry with human-readable traces for fast
+						incident review.
+					</p>
 				</article>
 				<article>
-					<h2>Sovereign Security</h2>
-					<p>PII-redacted telemetry, scoped access, and explicit approvals for sensitive actions.</p>
+					<h2>Safe Permission Gating</h2>
+					<p>
+						Sensitive actions stay behind explicit approval flows with scoped access and clear
+						audit context.
+					</p>
 				</article>
 			</section>
+
+			<section class="trust-protocol" aria-label="How trust works">
+				<div class="trust-copy">
+					<p class="eyebrow">Transparency protocol</p>
+					<h2>Built for high-agency teams.</h2>
+					<ul>
+						<li>
+							<strong>Local ownership:</strong> conversations, files, indices, and secrets stay on
+							your machine by default.
+						</li>
+						<li>
+							<strong>Thin cloud edge:</strong> cloud services handle auth handshakes and telemetry
+							ingestion without persisting conversations.
+						</li>
+						<li>
+							<strong>Action checkpoints:</strong> policy engine + human-in-the-loop approvals for
+							sensitive execution.
+						</li>
+					</ul>
+					<a href="/skills" class="link-inline">Explore skill management</a>
+				</div>
+
+				<div class="trust-diagram" aria-hidden="true">
+					<div>
+						<p class="node-label">input</p>
+						<p class="node-value">User Prompt</p>
+					</div>
+					<span class="arrow"></span>
+					<div class="active">
+						<p class="node-label">agent runtime</p>
+						<p class="node-value">Reasoning + Planning</p>
+					</div>
+					<span class="arrow"></span>
+					<div class="warn">
+						<p class="node-label">checkpoint</p>
+						<p class="node-value">Wait for Approval</p>
+					</div>
+					<span class="arrow"></span>
+					<div>
+						<p class="node-label">action</p>
+						<p class="node-value">Execute + Audit</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="stories" aria-label="User stories">
+				<h2>// USER_STORIES</h2>
+				<div class="story-grid">
+					<article>
+						<p class="story-type">RESEARCH</p>
+						<p>
+							"I process docs and logs locally, then publish structured summaries to my team runbook."
+						</p>
+						<p class="story-role">Platform Engineer</p>
+					</article>
+					<article>
+						<p class="story-type">OPERATIONS</p>
+						<p>
+							"Approval checkpoints let us automate aggressively without losing operator control on
+							high-risk actions."
+						</p>
+						<p class="story-role">DevOps Lead</p>
+					</article>
+					<article>
+						<p class="story-type">SECURITY</p>
+						<p>
+							"We keep telemetry useful while redacting sensitive payloads before persistence."
+						</p>
+						<p class="story-role">Security Engineer</p>
+					</article>
+				</div>
+			</section>
+
+			<section class="cta">
+				<h2>Ready to run autonomous workflows with local-first control?</h2>
+				<p>
+					Install in minutes, bring your provider stack, and keep approvals, audit trails, and
+					observability in one place.
+				</p>
+				<div class="hero-actions">
+					<button class="primary" type="button" data-install-copy>
+						Copy Install Command
+					</button>
+					<a class="secondary" href="/auth">Sign In to Pryx Cloud</a>
+				</div>
+			</section>
 		</main>
+
+		<footer>
+			<p>PRYX</p>
+			<div>
+				<a href="#install">Install</a>
+				<a href="/dashboard">Dashboard</a>
+				<a href="/auth">Sign In</a>
+			</div>
+		</footer>
 	</div>
 </Layout>
 
+<script>
+	const installCommands = {
+		mac: 'brew install irfndi/pryx/pryx',
+		linux: 'curl -fsSL https://get.pryx.ai/install.sh | bash',
+		windows: 'winget install pryx'
+	};
+
+	function detectPlatform() {
+		const platform = (navigator.platform || '').toLowerCase();
+		const userAgent = (navigator.userAgent || '').toLowerCase();
+
+		if (platform.includes('mac') || userAgent.includes('mac os')) return 'mac';
+		if (platform.includes('win') || userAgent.includes('windows')) return 'windows';
+		return 'linux';
+	}
+
+	function fallbackCopy(text) {
+		const textArea = document.createElement('textarea');
+		textArea.value = text;
+		textArea.setAttribute('readonly', 'true');
+		textArea.style.position = 'absolute';
+		textArea.style.left = '-9999px';
+		document.body.append(textArea);
+		textArea.select();
+		document.execCommand('copy');
+		textArea.remove();
+	}
+
+	async function copyText(text) {
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+			return;
+		}
+
+		fallbackCopy(text);
+	}
+
+	const platform = detectPlatform();
+	const selectedInstallCommand = installCommands[platform] || installCommands.linux;
+
+	document.querySelectorAll('[data-install-command]').forEach((el) => {
+		el.textContent = selectedInstallCommand;
+	});
+
+	document.querySelectorAll('[data-install-copy]').forEach((button) => {
+		const initialLabel = button.textContent;
+
+		button.addEventListener('click', async () => {
+			try {
+				await copyText(selectedInstallCommand);
+				button.textContent = 'Copied';
+				setTimeout(() => {
+					button.textContent = initialLabel;
+				}, 1500);
+			} catch {
+				button.textContent = 'Copy Failed';
+				setTimeout(() => {
+					button.textContent = initialLabel;
+				}, 1500);
+			}
+		});
+	});
+
+	const terminalLines = Array.from(document.querySelectorAll('[data-terminal-line]'));
+	const approvalBox = document.querySelector('[data-approval-box]');
+
+	if (terminalLines.length > 0 && approvalBox) {
+		const lineDelayMs = 760;
+		const revealDelayMs = 420;
+		const holdAfterApprovalMs = 1450;
+		const loopPauseMs = 550;
+		let lineIndex = 0;
+
+		const showSequence = () => {
+			if (lineIndex < terminalLines.length) {
+				terminalLines[lineIndex].classList.remove('is-hidden');
+				lineIndex += 1;
+				setTimeout(showSequence, lineDelayMs);
+				return;
+			}
+
+			approvalBox.classList.remove('is-hidden');
+			setTimeout(resetSequence, holdAfterApprovalMs);
+		};
+
+		const resetSequence = () => {
+			terminalLines.forEach((line) => line.classList.add('is-hidden'));
+			approvalBox.classList.add('is-hidden');
+			lineIndex = 0;
+			setTimeout(showSequence, loopPauseMs);
+		};
+
+		setTimeout(showSequence, revealDelayMs);
+	}
+</script>
+
 <style>
+	@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
 	:root {
-		--bg-1: #061217;
-		--bg-2: #0e1f28;
-		--card: rgba(8, 20, 28, 0.78);
-		--line: rgba(147, 197, 253, 0.24);
-		--text: #ecf4f2;
-		--muted: #9ec1bf;
-		--accent: #3dd8c5;
-		--accent-deep: #1aa793;
+		--bg-1: #060a14;
+		--bg-2: #0f1730;
+		--surface: rgba(14, 22, 43, 0.72);
+		--surface-strong: rgba(10, 16, 31, 0.92);
+		--line: rgba(104, 156, 255, 0.28);
+		--text: #eef3ff;
+		--muted: #aab8d8;
+		--accent: #3f7cff;
+		--accent-2: #2cc8a7;
+		--warn: #f9c74f;
+		--font-display: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+		--font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, monospace;
 	}
 
 	.page-shell {
 		min-height: 100vh;
 		padding: 2rem;
-		font-family: 'Space Grotesk', 'Trebuchet MS', 'Avenir Next', sans-serif;
+		font-family: var(--font-display);
 		background:
-			radial-gradient(circle at 12% 18%, rgba(61, 216, 197, 0.24), transparent 34%),
-			radial-gradient(circle at 82% 0%, rgba(250, 204, 21, 0.16), transparent 30%),
-			linear-gradient(165deg, var(--bg-1), var(--bg-2));
+			radial-gradient(circle at 8% -4%, rgba(63, 124, 255, 0.3), transparent 32%),
+			radial-gradient(circle at 90% 2%, rgba(44, 200, 167, 0.22), transparent 34%),
+			linear-gradient(168deg, var(--bg-1), var(--bg-2));
 		color: var(--text);
+		position: relative;
+		overflow: hidden;
+	}
+
+	.noise {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		opacity: 0.26;
+		background-image:
+			linear-gradient(rgba(111, 147, 226, 0.14) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(111, 147, 226, 0.14) 1px, transparent 1px);
+		background-size: 34px 34px;
+		mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
 	}
 
 	.top-nav {
+		position: sticky;
+		top: 0;
+		z-index: 10;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		max-width: 1100px;
 		margin: 0 auto;
-		padding-bottom: 1.4rem;
+		padding: 0.7rem 1rem;
+		border: 1px solid var(--line);
+		border-radius: 1rem;
+		background: rgba(9, 16, 30, 0.7);
+		backdrop-filter: blur(10px);
 	}
 
 	.brand {
 		display: flex;
 		align-items: center;
-		gap: 0.6rem;
-		font-size: 1.1rem;
-		font-weight: 700;
-		letter-spacing: 0.05em;
+		gap: 0.75rem;
 	}
 
-	.brand-dot {
-		width: 0.7rem;
-		height: 0.7rem;
-		border-radius: 999px;
-		background: linear-gradient(120deg, #3dd8c5, #facc15);
+	.brand-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 0.5rem;
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		color: #081021;
+		background: linear-gradient(130deg, var(--accent), var(--accent-2));
+	}
+
+	.brand-name,
+	.brand-sub {
+		margin: 0;
+	}
+
+	.brand-name {
+		font-weight: 700;
+		letter-spacing: 0.07em;
+	}
+
+	.brand-sub {
+		font-size: 0.72rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: var(--muted);
 	}
 
 	nav {
 		display: flex;
 		gap: 1rem;
-		font-size: 0.95rem;
+		align-items: center;
+		font-size: 0.9rem;
 	}
 
 	nav a {
 		color: var(--text);
-		opacity: 0.88;
+		opacity: 0.9;
 		text-decoration: none;
-		padding: 0.4rem 0.75rem;
+		padding: 0.45rem 0.8rem;
 		border-radius: 999px;
-		transition: background 0.2s ease, opacity 0.2s ease;
+		transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
 	}
 
 	nav a:hover {
 		opacity: 1;
-		background: rgba(61, 216, 197, 0.14);
+		background: rgba(63, 124, 255, 0.2);
+		transform: translateY(-1px);
+	}
+
+	.nav-cta {
+		border: 1px solid var(--line);
 	}
 
 	main {
 		max-width: 1100px;
-		margin: 0 auto;
+		margin: 1.2rem auto 0;
 		display: grid;
-		gap: 2rem;
+		gap: 1.35rem;
+		position: relative;
+		z-index: 1;
 	}
 
 	.hero {
-		padding: 2rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+		gap: 1.1rem;
+		padding: 1.15rem;
 		border: 1px solid var(--line);
 		border-radius: 1.2rem;
-		background: var(--card);
+		background: var(--surface);
 		backdrop-filter: blur(10px);
+	}
+
+	.hero-copy {
+		padding: 0.9rem;
 	}
 
 	.eyebrow {
@@ -137,89 +437,500 @@ import Layout from '../layouts/Layout.astro';
 		text-transform: uppercase;
 		letter-spacing: 0.09em;
 		font-size: 0.8rem;
-		color: #86efdd;
+		color: #95ccff;
 	}
 
 	h1 {
-		margin: 0.7rem 0 1rem;
-		font-size: clamp(2rem, 5.2vw, 3.8rem);
+		margin: 0.62rem 0 0.8rem;
+		font-size: clamp(2rem, 5.2vw, 3.5rem);
 		line-height: 1.05;
+		letter-spacing: -0.02em;
 	}
 
 	.subtitle {
-		max-width: 62ch;
+		max-width: 58ch;
 		font-size: 1.05rem;
 		line-height: 1.55;
 		color: var(--muted);
+		margin: 0;
 	}
 
 	.hero-actions {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.9rem;
-		margin-top: 1.4rem;
+		margin-top: 1.25rem;
 	}
 
-	.hero-actions a {
+	.hero-actions a,
+	.hero-actions button {
 		text-decoration: none;
 		padding: 0.72rem 1.2rem;
 		border-radius: 0.8rem;
 		font-weight: 700;
-		letter-spacing: 0.01em;
+		letter-spacing: 0.012em;
+		font-size: 0.95rem;
+		font-family: var(--font-display);
+		cursor: pointer;
+		border: 0;
+		transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+	}
+
+	.hero-actions a:hover,
+	.hero-actions button:hover {
+		transform: translateY(-1px);
 	}
 
 	.hero-actions .primary {
-		background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-		color: #04271f;
+		background: linear-gradient(135deg, var(--accent), var(--accent-2));
+		color: #081021;
 	}
 
 	.hero-actions .secondary {
-		border: 1px solid rgba(236, 244, 242, 0.32);
+		border: 1px solid rgba(238, 243, 255, 0.35);
 		color: var(--text);
 	}
 
-	.grid {
+	.inline-command {
+		font-family: var(--font-mono);
+		font-size: 0.84rem;
+		margin: 0.9rem 0 0;
+		padding: 0.6rem 0.75rem;
+		border-radius: 0.7rem;
+		border: 1px solid rgba(170, 184, 216, 0.28);
+		background: rgba(8, 13, 25, 0.82);
+		color: #c5d8ff;
+		overflow-wrap: anywhere;
+	}
+
+	.install-note {
+		margin: 0.45rem 0 0;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+
+	.proof-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+		margin-top: 0.95rem;
+	}
+
+	.proof-row span {
+		padding: 0.38rem 0.62rem;
+		border-radius: 999px;
+		font-size: 0.76rem;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		font-family: var(--font-mono);
+		border: 1px solid rgba(170, 184, 216, 0.24);
+		background: rgba(10, 16, 30, 0.7);
+	}
+
+	.hero-terminal {
+		border: 1px solid rgba(63, 124, 255, 0.32);
+		border-radius: 1rem;
+		overflow: hidden;
+		background: var(--surface-strong);
+		box-shadow: 0 24px 42px rgba(2, 5, 15, 0.45);
+	}
+
+	.terminal-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.7rem 0.9rem;
+		border-bottom: 1px solid rgba(170, 184, 216, 0.18);
+		font-family: var(--font-mono);
+		font-size: 0.74rem;
+		color: var(--muted);
+	}
+
+	.terminal-head p {
+		margin: 0;
+	}
+
+	.dots {
+		display: flex;
+		gap: 0.38rem;
+	}
+
+	.dots span {
+		display: inline-block;
+		width: 0.58rem;
+		height: 0.58rem;
+		border-radius: 999px;
+		background: rgba(206, 220, 255, 0.5);
+	}
+
+	.terminal-body {
+		font-family: var(--font-mono);
+		padding: 1rem;
+		font-size: 0.8rem;
+		line-height: 1.55;
+	}
+
+	.terminal-body p {
+		margin: 0 0 0.45rem;
+	}
+
+	.terminal-line {
+		overflow: hidden;
+		max-height: 2rem;
+		opacity: 1;
+		transform: translateY(0);
+		transition: max-height 0.24s ease, opacity 0.24s ease, transform 0.24s ease, margin-bottom 0.24s ease;
+	}
+
+	.terminal-line.is-hidden {
+		max-height: 0;
+		opacity: 0;
+		transform: translateY(4px);
+		margin-bottom: 0;
+	}
+
+	.prompt {
+		color: #84e8c5;
+	}
+
+	.dim {
+		color: #9fb0d6;
+	}
+
+	.approval-box {
+		margin-top: 0.72rem;
+		padding: 0.7rem;
+		border-radius: 0.66rem;
+		background: rgba(42, 18, 24, 0.42);
+		border: 1px solid rgba(249, 199, 79, 0.42);
+		overflow: hidden;
+		max-height: 8rem;
+		opacity: 1;
+		transform: translateY(0);
+		transition:
+			max-height 0.26s ease,
+			opacity 0.22s ease,
+			transform 0.22s ease,
+			margin-top 0.26s ease,
+			padding-top 0.26s ease,
+			padding-bottom 0.26s ease,
+			border-width 0.26s ease;
+	}
+
+	.approval-box.is-hidden {
+		max-height: 0;
+		opacity: 0;
+		transform: translateY(4px);
+		margin-top: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+		border-width: 0;
+	}
+
+	.approval-box .approve {
+		color: var(--warn);
+	}
+
+	.terminal-cursor {
+		display: inline-block;
+		width: 0.5ch;
+		height: 1em;
+		margin-left: 0.16rem;
+		vertical-align: -0.14em;
+		background: var(--warn);
+		animation: terminal-blink 1s step-end infinite;
+	}
+
+	@keyframes terminal-blink {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
+	}
+
+	.capabilities {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 1rem;
 	}
 
-	article {
+	.capabilities article {
 		padding: 1.2rem;
-		border: 1px solid rgba(158, 193, 191, 0.24);
+		border: 1px solid rgba(170, 184, 216, 0.24);
 		border-radius: 1rem;
-		background: rgba(8, 19, 27, 0.68);
+		background: rgba(9, 16, 30, 0.78);
 	}
 
 	h2 {
-		margin-top: 0;
-		margin-bottom: 0.55rem;
-		font-size: 1.08rem;
+		margin: 0;
+		font-size: clamp(1.36rem, 2.2vw, 2rem);
+		line-height: 1.2;
 	}
 
-	article p {
+	.capabilities article h2 {
+		font-size: 1.03rem;
+		margin-bottom: 0.55rem;
+	}
+
+	.capabilities article p {
 		margin: 0;
 		color: var(--muted);
 		line-height: 1.5;
 	}
 
+	.trust-protocol {
+		display: grid;
+		grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+		gap: 1rem;
+	}
+
+	.trust-copy,
+	.trust-diagram,
+	.stories,
+	.cta {
+		border: 1px solid var(--line);
+		border-radius: 1.1rem;
+		background: rgba(10, 16, 31, 0.82);
+	}
+
+	.trust-copy {
+		padding: 1.1rem;
+	}
+
+	.trust-copy ul {
+		list-style: none;
+		padding: 0;
+		margin: 1rem 0 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.trust-copy li {
+		color: var(--muted);
+		line-height: 1.55;
+	}
+
+	.trust-copy strong {
+		color: var(--text);
+	}
+
+	.link-inline {
+		display: inline-block;
+		margin-top: 1rem;
+		text-decoration: none;
+		color: #95ccff;
+		font-weight: 600;
+	}
+
+	.trust-diagram {
+		padding: 1rem;
+		display: grid;
+		gap: 0.66rem;
+		align-content: center;
+		background:
+			linear-gradient(rgba(104, 156, 255, 0.14) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(104, 156, 255, 0.14) 1px, transparent 1px),
+			rgba(10, 16, 31, 0.82);
+		background-size: 18px 18px;
+	}
+
+	.trust-diagram div {
+		border: 1px solid rgba(170, 184, 216, 0.32);
+		border-radius: 0.75rem;
+		padding: 0.64rem 0.72rem;
+		background: rgba(9, 14, 26, 0.95);
+	}
+
+	.trust-diagram .active {
+		border-color: rgba(63, 124, 255, 0.68);
+		box-shadow: 0 0 0 1px rgba(63, 124, 255, 0.3) inset;
+	}
+
+	.trust-diagram .warn {
+		border-color: rgba(249, 199, 79, 0.58);
+	}
+
+	.node-label,
+	.node-value {
+		margin: 0;
+	}
+
+	.node-label {
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #9fb0d6;
+	}
+
+	.node-value {
+		font-size: 0.9rem;
+		margin-top: 0.12rem;
+	}
+
+	.arrow {
+		height: 1rem;
+		width: 1px;
+		margin: 0 auto;
+		background: rgba(170, 184, 216, 0.45);
+	}
+
+	.stories {
+		padding: 1.1rem;
+	}
+
+	.stories h2 {
+		font-family: var(--font-mono);
+		font-size: 1rem;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.95rem;
+		border-bottom: 1px solid rgba(170, 184, 216, 0.25);
+		padding-bottom: 0.7rem;
+	}
+
+	.story-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.9rem;
+	}
+
+	.story-grid article {
+		border: 1px solid rgba(170, 184, 216, 0.22);
+		border-radius: 0.9rem;
+		padding: 0.88rem;
+		background: rgba(8, 13, 24, 0.82);
+	}
+
+	.story-grid p {
+		margin: 0;
+		line-height: 1.55;
+		color: var(--muted);
+	}
+
+	.story-type {
+		font-family: var(--font-mono);
+		font-size: 0.67rem;
+		letter-spacing: 0.08em;
+		margin-bottom: 0.5rem;
+		color: #97beff;
+	}
+
+	.story-role {
+		margin-top: 0.7rem;
+		font-size: 0.8rem;
+		color: #d4def5;
+	}
+
+	.cta {
+		padding: 1.4rem;
+		text-align: center;
+	}
+
+	.cta h2 {
+		max-width: 24ch;
+		margin: 0 auto;
+	}
+
+	.cta p {
+		max-width: 62ch;
+		margin: 0.8rem auto 0;
+		color: var(--muted);
+		line-height: 1.6;
+	}
+
+	.cta .hero-actions {
+		justify-content: center;
+	}
+
+	footer {
+		max-width: 1100px;
+		margin: 1.2rem auto 0;
+		padding: 0.95rem 1rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border: 1px solid rgba(170, 184, 216, 0.22);
+		border-radius: 0.9rem;
+		background: rgba(9, 14, 26, 0.72);
+		position: relative;
+		z-index: 1;
+	}
+
+	footer p {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.83rem;
+		letter-spacing: 0.08em;
+	}
+
+	footer div {
+		display: flex;
+		gap: 0.85rem;
+	}
+
+	footer a {
+		color: #cad7f8;
+		text-decoration: none;
+		font-size: 0.86rem;
+	}
+
 	@media (max-width: 860px) {
 		.page-shell {
-			padding: 1.2rem;
+			padding: 1rem;
 		}
 
 		.top-nav {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.8rem;
+			position: static;
+			padding: 0.8rem;
+			flex-wrap: wrap;
+			gap: 0.7rem;
 		}
 
-		.grid {
-			grid-template-columns: 1fr;
+		nav {
+			flex-wrap: wrap;
+			gap: 0.55rem;
+		}
+
+		main {
+			margin-top: 0.95rem;
+			gap: 1rem;
 		}
 
 		.hero {
-			padding: 1.25rem;
+			grid-template-columns: 1fr;
+			padding: 0.85rem;
+		}
+
+		.hero-copy {
+			padding: 0.65rem;
+		}
+
+		.capabilities,
+		.trust-protocol,
+		.story-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.cta {
+			text-align: left;
+		}
+
+		.cta h2,
+		.cta p {
+			margin-left: 0;
+		}
+
+		.cta .hero-actions {
+			justify-content: flex-start;
+		}
+
+		footer {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.6rem;
 		}
 	}
 </style>
