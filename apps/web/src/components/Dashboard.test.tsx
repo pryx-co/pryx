@@ -1,14 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import Dashboard from './Dashboard';
 
-// Mock WebSocket
-vi.stubGlobal('WebSocket', vi.fn(() => ({
-    onopen: null,
-    onclose: null,
-    onmessage: null,
-    close: vi.fn(),
-})));
+class MockWebSocket {
+    onopen: (() => void) | null = null;
+    onclose: (() => void) | null = null;
+    onmessage: ((event: { data: string }) => void) | null = null;
+    close = vi.fn();
+}
+
+vi.stubGlobal('WebSocket', MockWebSocket as unknown as typeof WebSocket);
 
 describe('Dashboard', () => {
     it('renders without crashing', () => {
@@ -16,13 +17,13 @@ describe('Dashboard', () => {
         expect(container).toBeDefined();
     });
 
-    it('shows disconnected state initially', () => {
-        const { getByText } = render(<Dashboard />);
-        expect(getByText('Disconnected')).toBeDefined();
+    it('shows offline state initially', () => {
+        render(<Dashboard />);
+        expect(screen.getByText('Offline')).toBeInTheDocument();
     });
 
-    it('displays header', () => {
-        const { getByText } = render(<Dashboard />);
-        expect(getByText('Observability Dashboard')).toBeDefined();
+    it('displays header title', () => {
+        render(<Dashboard />);
+        expect(screen.getByText('Pryx Cloud')).toBeInTheDocument();
     });
 });

@@ -1,3 +1,10 @@
+/**
+ * MCP Package
+ *
+ * Model Context Protocol (MCP) server management including configuration,
+ * validation, storage, and discovery of curated servers.
+ */
+
 export {
   TransportType,
   ServerSource,

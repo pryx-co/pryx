@@ -1,15 +1,54 @@
 name = "pryx"
 compatibility_date = "2025-08-15"
 compatibility_flags = ["nodejs_compat"]
-main = "./worker.ts"
+main = "./dist/_worker.js"
 account_id = "a37da71c38a2f7ab732057d87d5d0f6e"
 
 [vars]
+ENVIRONMENT = "development"
+
+[assets]
+binding = "ASSETS"
+directory = "./dist"
+
+# Secrets expected per environment (set via Wrangler secret management):
+# - ADMIN_API_KEY
+# - LOCALHOST_ADMIN_KEY (non-production only)
+
+# D1 Database binding for admin persistence
+[[d1_databases]]
+binding = "DB"
+database_name = "pryx-db"
+database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+preview_database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+
+[env.staging]
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "pryx-db-staging"
+database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+preview_database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+
+[[env.staging.routes]]
+pattern = "staging.pryx.dev"
+custom_domain = true
+
+[env.production]
+
+[env.production.vars]
 ENVIRONMENT = "production"
 
-# Custom domain routing - ALL under pryx.dev
-# pryx.dev/* → served by worker (API routes + static fallback)
-[[routes]]
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "pryx-db"
+database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+preview_database_id = "690fa544-1e7a-4acc-a4d1-8b899a057029"
+
+[[env.production.routes]]
 pattern = "pryx.dev"
 custom_domain = true
 
@@ -24,6 +63,10 @@ id = "d7c2e95e549842ce83ab6d9a4848fa95"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
+id = "580c90f74ca941ea91a460afc63d9474"
+
+[[kv_namespaces]]
+binding = "SESSION"
 id = "580c90f74ca941ea91a460afc63d9474"
 
 [observability]

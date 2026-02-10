@@ -1,3 +1,10 @@
+/**
+ * Vault Package
+ *
+ * Secure encryption and storage for sensitive data with key derivation,
+ * encryption/decryption, and vault management.
+ */
+
 export {
   VaultConfig,
   EncryptedData,

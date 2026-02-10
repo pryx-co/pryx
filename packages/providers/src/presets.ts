@@ -1,5 +1,15 @@
+/**
+ * Built-in Provider Presets
+ *
+ * Pre-configured settings for popular AI providers including OpenAI, Anthropic,
+ * Google, and local model servers like Ollama and LM Studio.
+ */
+
 import type { ProviderConfig, ModelConfig } from './types.js';
 
+/**
+ * Available OpenAI models with their configurations
+ */
 export const OPENAI_MODELS: ModelConfig[] = [
   {
     id: 'gpt-4o',
@@ -43,6 +53,9 @@ export const OPENAI_MODELS: ModelConfig[] = [
   },
 ];
 
+/**
+ * Available Anthropic Claude models with their configurations
+ */
 export const ANTHROPIC_MODELS: ModelConfig[] = [
   {
     id: 'claude-3-opus-20240229',
@@ -76,6 +89,9 @@ export const ANTHROPIC_MODELS: ModelConfig[] = [
   },
 ];
 
+/**
+ * Available Google Gemini models with their configurations
+ */
 export const GOOGLE_MODELS: ModelConfig[] = [
   {
     id: 'gemini-1.5-pro',
@@ -99,6 +115,9 @@ export const GOOGLE_MODELS: ModelConfig[] = [
   },
 ];
 
+/**
+ * Available local models for self-hosted inference
+ */
 export const LOCAL_MODELS: ModelConfig[] = [
   {
     id: 'llama2',
@@ -126,6 +145,9 @@ export const LOCAL_MODELS: ModelConfig[] = [
   },
 ];
 
+/**
+ * Pre-configured OpenAI provider preset
+ */
 export const OPENAI_PRESET: ProviderConfig = {
   id: 'openai',
   name: 'OpenAI',
@@ -137,6 +159,9 @@ export const OPENAI_PRESET: ProviderConfig = {
   retries: 3,
 };
 
+/**
+ * Pre-configured Anthropic provider preset
+ */
 export const ANTHROPIC_PRESET: ProviderConfig = {
   id: 'anthropic',
   name: 'Anthropic',
@@ -148,6 +173,9 @@ export const ANTHROPIC_PRESET: ProviderConfig = {
   retries: 3,
 };
 
+/**
+ * Pre-configured Google provider preset
+ */
 export const GOOGLE_PRESET: ProviderConfig = {
   id: 'google',
   name: 'Google',
@@ -159,6 +187,9 @@ export const GOOGLE_PRESET: ProviderConfig = {
   retries: 3,
 };
 
+/**
+ * Pre-configured Ollama local provider preset
+ */
 export const OLLAMA_PRESET: ProviderConfig = {
   id: 'ollama',
   name: 'Ollama (Local)',
@@ -171,6 +202,9 @@ export const OLLAMA_PRESET: ProviderConfig = {
   retries: 1,
 };
 
+/**
+ * Pre-configured LM Studio local provider preset
+ */
 export const LMSTUDIO_PRESET: ProviderConfig = {
   id: 'lmstudio',
   name: 'LM Studio (Local)',
@@ -182,6 +216,9 @@ export const LMSTUDIO_PRESET: ProviderConfig = {
   retries: 1,
 };
 
+/**
+ * Array of all built-in provider presets
+ */
 export const BUILTIN_PRESETS: ProviderConfig[] = [
   OPENAI_PRESET,
   ANTHROPIC_PRESET,
@@ -190,14 +227,27 @@ export const BUILTIN_PRESETS: ProviderConfig[] = [
   LMSTUDIO_PRESET,
 ];
 
+/**
+ * Retrieves a preset by its ID
+ * @param id - The preset identifier
+ * @returns The provider preset or undefined if not found
+ */
 export function getPreset(id: string): ProviderConfig | undefined {
   return BUILTIN_PRESETS.find((p) => p.id === id);
 }
 
+/**
+ * Returns all available built-in presets
+ * @returns Array of all provider presets
+ */
 export function getAllPresets(): ProviderConfig[] {
   return [...BUILTIN_PRESETS];
 }
 
+/**
+ * Returns the IDs of all available presets
+ * @returns Array of preset identifiers
+ */
 export function getPresetIds(): string[] {
   return BUILTIN_PRESETS.map((p) => p.id);
 }

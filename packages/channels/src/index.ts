@@ -1,3 +1,10 @@
+/**
+ * Channels Package
+ *
+ * Multi-channel integration support for Telegram, Discord, Slack, Email, WhatsApp, and Webhooks.
+ * Provides configuration management, validation, and registry functionality for channel integrations.
+ */
+
 export {
   ChannelType,
   RateLimitConfigSchema,

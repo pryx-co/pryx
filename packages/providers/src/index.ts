@@ -1,3 +1,10 @@
+/**
+ * Providers Package
+ *
+ * Complete provider management for AI services including configuration,
+ * validation, storage, and built-in presets for major providers.
+ */
+
 export {
   ProviderType,
   ModelConfigSchema,

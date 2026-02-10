@@ -242,16 +242,11 @@ jobs:
     name: Build All Components
     runs-on: ${{ matrix.os }}
     needs: [lint, test-host, test-runtime, test-tui]
+    env:
+      RUST_TARGET: ${{ matrix.os == 'ubuntu-latest' && 'x86_64-unknown-linux-gnu' || matrix.os == 'macos-latest' && 'x86_64-apple-darwin' || 'x86_64-pc-windows-msvc' }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        include:
-          - os: ubuntu-latest
-            target: ubuntu-latest
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -260,7 +255,7 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-          targets: ${{ matrix.target }}
+          targets: ${{ env.RUST_TARGET }}
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -286,7 +281,7 @@ jobs:
 
       - name: Build host (Rust + Tauri)
         run: |
-          cd apps/host && cargo build --release --lib --target ${{ matrix.target }}
+          cd apps/host && cargo build --release --lib --target ${{ env.RUST_TARGET }}
 
       - name: Build runtime (Go)
         working-directory: apps/runtime
@@ -301,6 +296,6 @@ jobs:
         with:
           name: pryx-${{ runner.os }}
           path: |
-            apps/host/target/${{ matrix.target }}/release
+            apps/host/target/${{ env.RUST_TARGET }}/release
             apps/runtime/bin
             apps/tui/dist

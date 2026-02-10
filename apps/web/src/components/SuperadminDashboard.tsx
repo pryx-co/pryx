@@ -70,23 +70,28 @@ export default function SuperadminDashboard(props: SuperadminDashboardProps) {
     setError(null);
 
     try {
+      const authToken = getCookieValue('auth_token');
+      const headers = authToken
+        ? { Authorization: `Bearer ${decodeURIComponent(authToken)}` }
+        : undefined;
+
       // Fetch global stats
-      const statsRes = await fetch('/api/admin/stats');
+      const statsRes = await fetch('/api/admin/stats', { headers });
       if (!statsRes.ok) throw new Error('Failed to load global stats');
       setGlobalStats(await statsRes.json());
 
       // Fetch users list
-      const usersRes = await fetch(`/api/admin/users?range=${timeRange}`);
+      const usersRes = await fetch(`/api/admin/users?range=${timeRange}`, { headers });
       if (!usersRes.ok) throw new Error('Failed to load users');
       setUsers(await usersRes.json());
 
       // Fetch device fleet
-      const devicesRes = await fetch('/api/admin/devices');
+      const devicesRes = await fetch('/api/admin/devices', { headers });
       if (!devicesRes.ok) throw new Error('Failed to load devices');
       setDevices(await devicesRes.json());
 
       // Fetch system health
-      const healthRes = await fetch('/api/admin/health');
+      const healthRes = await fetch('/api/admin/health', { headers });
       if (!healthRes.ok) throw new Error('Failed to load health status');
       setHealth(await healthRes.json());
     } catch (err) {
@@ -823,4 +828,18 @@ export default function SuperadminDashboard(props: SuperadminDashboardProps) {
       `}</style>
     </div>
   );
+}
+
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+
+  const needle = `${name}=`;
+  const cookies = document.cookie.split('; ');
+  for (const entry of cookies) {
+    if (entry.indexOf(needle) === 0) {
+      return entry.slice(needle.length);
+    }
+  }
+
+  return null;
 }

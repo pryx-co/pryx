@@ -1,11 +1,225 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Pryx Cloud | Sovereign AI Runtime">
+	<div class="page-shell">
+		<header class="top-nav">
+			<div class="brand">
+				<span class="brand-dot" aria-hidden="true"></span>
+				<span>Pryx</span>
+			</div>
+			<nav aria-label="Primary">
+				<a href="/install">Install</a>
+				<a href="/skills">Skills</a>
+				<a href="/dashboard">Dashboard</a>
+				<a href="/auth">Sign In</a>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero">
+				<p class="eyebrow">Pryx Cloud Platform</p>
+				<h1>Ship autonomous workflows with local-first control.</h1>
+				<p class="subtitle">
+					Connect channels, tools, and providers with explicit policy gates. Observe cost,
+					health, and device state from one secure control plane.
+				</p>
+				<div class="hero-actions">
+					<a class="primary" href="/install">Install Pryx</a>
+					<a class="secondary" href="/dashboard">Open Dashboard</a>
+				</div>
+			</section>
+
+			<section class="grid">
+				<article>
+					<h2>Runtime + API</h2>
+					<p>Device auth, telemetry ingest, and admin APIs designed for edge deployments.</p>
+				</article>
+				<article>
+					<h2>Operator Console</h2>
+					<p>Track users, devices, sessions, and spend with role-aware controls.</p>
+				</article>
+				<article>
+					<h2>Sovereign Security</h2>
+					<p>PII-redacted telemetry, scoped access, and explicit approvals for sensitive actions.</p>
+				</article>
+			</section>
+		</main>
+	</div>
 </Layout>
+
+<style>
+	:root {
+		--bg-1: #061217;
+		--bg-2: #0e1f28;
+		--card: rgba(8, 20, 28, 0.78);
+		--line: rgba(147, 197, 253, 0.24);
+		--text: #ecf4f2;
+		--muted: #9ec1bf;
+		--accent: #3dd8c5;
+		--accent-deep: #1aa793;
+	}
+
+	.page-shell {
+		min-height: 100vh;
+		padding: 2rem;
+		font-family: 'Space Grotesk', 'Trebuchet MS', 'Avenir Next', sans-serif;
+		background:
+			radial-gradient(circle at 12% 18%, rgba(61, 216, 197, 0.24), transparent 34%),
+			radial-gradient(circle at 82% 0%, rgba(250, 204, 21, 0.16), transparent 30%),
+			linear-gradient(165deg, var(--bg-1), var(--bg-2));
+		color: var(--text);
+	}
+
+	.top-nav {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		max-width: 1100px;
+		margin: 0 auto;
+		padding-bottom: 1.4rem;
+	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		font-size: 1.1rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+	}
+
+	.brand-dot {
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 999px;
+		background: linear-gradient(120deg, #3dd8c5, #facc15);
+	}
+
+	nav {
+		display: flex;
+		gap: 1rem;
+		font-size: 0.95rem;
+	}
+
+	nav a {
+		color: var(--text);
+		opacity: 0.88;
+		text-decoration: none;
+		padding: 0.4rem 0.75rem;
+		border-radius: 999px;
+		transition: background 0.2s ease, opacity 0.2s ease;
+	}
+
+	nav a:hover {
+		opacity: 1;
+		background: rgba(61, 216, 197, 0.14);
+	}
+
+	main {
+		max-width: 1100px;
+		margin: 0 auto;
+		display: grid;
+		gap: 2rem;
+	}
+
+	.hero {
+		padding: 2rem;
+		border: 1px solid var(--line);
+		border-radius: 1.2rem;
+		background: var(--card);
+		backdrop-filter: blur(10px);
+	}
+
+	.eyebrow {
+		margin: 0;
+		text-transform: uppercase;
+		letter-spacing: 0.09em;
+		font-size: 0.8rem;
+		color: #86efdd;
+	}
+
+	h1 {
+		margin: 0.7rem 0 1rem;
+		font-size: clamp(2rem, 5.2vw, 3.8rem);
+		line-height: 1.05;
+	}
+
+	.subtitle {
+		max-width: 62ch;
+		font-size: 1.05rem;
+		line-height: 1.55;
+		color: var(--muted);
+	}
+
+	.hero-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.9rem;
+		margin-top: 1.4rem;
+	}
+
+	.hero-actions a {
+		text-decoration: none;
+		padding: 0.72rem 1.2rem;
+		border-radius: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.01em;
+	}
+
+	.hero-actions .primary {
+		background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+		color: #04271f;
+	}
+
+	.hero-actions .secondary {
+		border: 1px solid rgba(236, 244, 242, 0.32);
+		color: var(--text);
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+	}
+
+	article {
+		padding: 1.2rem;
+		border: 1px solid rgba(158, 193, 191, 0.24);
+		border-radius: 1rem;
+		background: rgba(8, 19, 27, 0.68);
+	}
+
+	h2 {
+		margin-top: 0;
+		margin-bottom: 0.55rem;
+		font-size: 1.08rem;
+	}
+
+	article p {
+		margin: 0;
+		color: var(--muted);
+		line-height: 1.5;
+	}
+
+	@media (max-width: 860px) {
+		.page-shell {
+			padding: 1.2rem;
+		}
+
+		.top-nav {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.8rem;
+		}
+
+		.grid {
+			grid-template-columns: 1fr;
+		}
+
+		.hero {
+			padding: 1.25rem;
+		}
+	}
+</style>

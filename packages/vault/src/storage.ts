@@ -18,14 +18,37 @@ import {
   DuplicateEntryError,
 } from './storage-types.js';
 
+/**
+ * Manages encrypted vault storage operations including loading, saving,
+ * and managing encrypted entries with integrity verification.
+ * 
+ * Features:
+ * - Atomic file writes with temporary file and rename
+ * - Automatic backup creation before modifications
+ * - Entry-level encryption with AES-256-GCM
+ * - Integrity verification and corruption detection
+ * - Metadata tracking (creation, access counts, timestamps)
+ */
 export class VaultStorage {
   private backupManager: BackupManager;
 
+  /**
+   * Creates a new VaultStorage instance
+   * @param backupDir - Optional custom backup directory path (defaults to ~/.pryx/vault-backups)
+   */
   constructor(backupDir?: string) {
     const defaultBackupDir = join(process.env.HOME || process.env.USERPROFILE || '.', '.pryx', 'vault-backups');
     this.backupManager = new BackupManager(backupDir || defaultBackupDir);
   }
 
+  /**
+   * Loads a vault from disk and verifies its integrity
+   * @param filePath - Path to the vault file
+   * @param _password - Password for integrity verification (unused in current implementation)
+   * @returns The loaded vault file structure
+   * @throws {FileNotFoundError} If the vault file doesn't exist
+   * @throws {CorruptedVaultError} If the vault file is malformed or corrupted
+   */
   async load(filePath: string, _password: string): Promise<VaultFile> {
     try {
       await access(filePath, constants.R_OK);
@@ -49,6 +72,13 @@ export class VaultStorage {
     return vault;
   }
 
+  /**
+   * Saves a vault to disk atomically using a temporary file
+   * @param filePath - Path where the vault should be saved
+   * @param vault - The vault file structure to save
+   * @param _password - Password for encryption (unused in current implementation)
+   * @throws {StorageError} If the save operation fails
+   */
   async save(filePath: string, vault: VaultFile, _password: string): Promise<void> {
     vault.updatedAt = new Date().toISOString();
     
@@ -67,6 +97,14 @@ export class VaultStorage {
     }
   }
 
+  /**
+   * Adds a new encrypted entry to the vault
+   * @param vault - The vault file structure
+   * @param entryData - The entry data to encrypt and store
+   * @param password - Password for deriving the encryption key
+   * @returns The created vault entry with metadata
+   * @throws {DuplicateEntryError} If an entry with the same ID already exists
+   */
   async addEntry(vault: VaultFile, entryData: EntryData, password: string): Promise<VaultEntry> {
     const existingIndex = vault.entries.findIndex(e => e.id === entryData.id);
     if (existingIndex !== -1) {
@@ -100,6 +138,15 @@ export class VaultStorage {
     return entry;
   }
 
+  /**
+   * Updates an existing entry in the vault
+   * @param vault - The vault file structure
+   * @param id - The unique identifier of the entry to update
+   * @param updates - Partial entry data with fields to update
+   * @param password - Password for deriving the encryption key
+   * @returns The updated vault entry
+   * @throws {EntryNotFoundError} If the entry doesn't exist
+   */
   async updateEntry(
     vault: VaultFile,
     id: string,
@@ -135,6 +182,12 @@ export class VaultStorage {
     return entry;
   }
 
+  /**
+   * Deletes an entry from the vault
+   * @param vault - The vault file structure
+   * @param id - The unique identifier of the entry to delete
+   * @throws {EntryNotFoundError} If the entry doesn't exist
+   */
   async deleteEntry(vault: VaultFile, id: string): Promise<void> {
     const index = vault.entries.findIndex(e => e.id === id);
     if (index === -1) {
@@ -144,6 +197,15 @@ export class VaultStorage {
     vault.entries.splice(index, 1);
   }
 
+  /**
+   * Retrieves and decrypts an entry from the vault
+   * @param vault - The vault file structure
+   * @param id - The unique identifier of the entry to retrieve
+   * @param password - Password for deriving the decryption key
+   * @returns The decrypted entry data
+   * @throws {EntryNotFoundError} If the entry doesn't exist
+   * @throws {CorruptedVaultError} If decryption fails (indicates corruption)
+   */
   async getEntry(vault: VaultFile, id: string, password: string): Promise<EntryData> {
     const entry = vault.entries.find(e => e.id === id);
     if (!entry) {
@@ -174,6 +236,11 @@ export class VaultStorage {
     }
   }
 
+  /**
+   * Lists metadata for all entries in the vault
+   * @param vault - The vault file structure
+   * @returns Array of entry metadata (excluding encrypted data)
+   */
   listEntries(vault: VaultFile): EntryMetadata[] {
     return vault.entries.map(entry => ({
       id: entry.id,
@@ -186,10 +253,23 @@ export class VaultStorage {
     }));
   }
 
+  /**
+   * Creates a backup of the vault file
+   * @param filePath - Path to the vault file to backup
+   * @returns Path to the created backup file
+   */
   async createBackup(filePath: string): Promise<string> {
     return this.backupManager.createBackup(filePath);
   }
 
+  /**
+   * Restores a vault from a backup file
+   * @param backupPath - Path to the backup file
+   * @param targetPath - Path where the restored vault should be saved
+   * @returns The restored vault file structure
+   * @throws {FileNotFoundError} If the backup doesn't exist
+   * @throws {CorruptedVaultError} If the backup is corrupted
+   */
   async restoreFromBackup(backupPath: string, targetPath: string): Promise<VaultFile> {
     await this.backupManager.restoreBackup(backupPath, targetPath);
     
@@ -197,6 +277,12 @@ export class VaultStorage {
     return JSON.parse(data);
   }
 
+  /**
+   * Verifies the integrity of a vault file
+   * @param vault - The vault file structure to verify
+   * @param password - Optional password to verify entry decryption (if provided)
+   * @returns Integrity report with validation results
+   */
   async verifyIntegrity(vault: VaultFile, password?: string): Promise<IntegrityReport> {
     const report: IntegrityReport = {
       valid: true,
@@ -235,6 +321,10 @@ export class VaultStorage {
     return report;
   }
 
+  /**
+   * Creates a new empty vault with default configuration
+   * @returns A new vault file structure with initialized metadata
+   */
   createEmptyVault(): VaultFile {
     const salt = generateSalt();
     const now = new Date().toISOString();
@@ -282,6 +372,11 @@ export class VaultStorage {
   }
 }
 
+/**
+ * Creates a new VaultStorage instance
+ * @param backupDir - Optional custom backup directory path
+ * @returns A new VaultStorage instance
+ */
 export function createVaultStorage(backupDir?: string): VaultStorage {
   return new VaultStorage(backupDir);
 }

@@ -18,6 +18,8 @@ Pryx is a second-generation autonomous agent platform: local-first, sovereign, a
 
 ### Installation (One-Liners)
 
+Canonical installer source in this repository: `install.sh`
+
 **macOS (Intel + Apple Silicon)**
 ```bash
 brew install irfndi/pryx/pryx

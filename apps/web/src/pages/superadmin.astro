@@ -3,10 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import SuperadminDashboard from '../components/SuperadminDashboard.tsx';
 
 const handleLogout = () => {
-    // TODO: Implement logout logic - clear tokens and redirect
     if (typeof window !== 'undefined') {
-        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-        window.location.href = '/';
+        window.location.href = '/logout';
     }
 };
 ---
